@@ -135,6 +135,20 @@ export function ComposerInput({
                 onAcceptCompletion(composerAc.highlight);
                 return;
               }
+              if (event.key === " " && !event.shiftKey) {
+                const currentItem = composerAc.items[composerAc.highlight];
+                if (
+                  currentItem &&
+                  currentItem.kind === "command" &&
+                  currentItem.command.kind === "skill" &&
+                  (currentItem.command.name.toLowerCase() === composerAc.query.toLowerCase() ||
+                    currentItem.command.id?.toLowerCase() === composerAc.query.toLowerCase())
+                ) {
+                  event.preventDefault();
+                  onAcceptCompletion(composerAc.highlight);
+                  return;
+                }
+              }
             }
             if (
               event.key === "Enter" &&

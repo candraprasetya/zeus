@@ -64,7 +64,10 @@ export function rewriteIdeographicCommaTrigger(value: string): string {
 
 function isBoundary(value: string, index: number): boolean {
   if (index <= 0) return true;
-  return DELIMITERS.has(value[index - 1]);
+  const prev = value[index - 1]!;
+  const code = prev.codePointAt(0) ?? 0;
+  if (code >= 0xe000 && code <= 0xf8ff) return true;
+  return DELIMITERS.has(prev);
 }
 
 /** Detect the active autocomplete trigger for a draft + cursor, if any. */

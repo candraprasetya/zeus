@@ -471,8 +471,10 @@ export function Composer({
     const acceptedSkillReference = result.skillReference;
     if (acceptedSkillReference) {
       const token = nextChipToken();
+      const after = result.value.slice(result.cursor);
+      const separator = after.startsWith(" ") ? "" : " ";
       const nextText =
-        result.value.slice(0, result.cursor) + token + result.value.slice(result.cursor);
+        result.value.slice(0, result.cursor) + token + separator + after;
       applyEditorDraft(
         nextText,
         [
@@ -484,7 +486,7 @@ export function Composer({
             token,
           ),
         ],
-        result.cursor + token.length,
+        result.cursor + token.length + separator.length,
       );
       return;
     }
