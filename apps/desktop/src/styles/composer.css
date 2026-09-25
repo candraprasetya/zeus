@@ -313,6 +313,19 @@
   outline-offset: 1px;
 }
 
+.composer-chip.composer-chip-skill {
+  border-radius: var(--radius-full);
+  background: color-mix(in oklab, var(--ds-accent) 14%, var(--ds-tile-deep));
+  color: var(--ds-text-primary);
+  border: 1px solid color-mix(in oklab, var(--ds-accent) 28%, transparent);
+  padding: 0 5px 0 7px;
+  font-weight: 500;
+}
+
+.composer-chip.composer-chip-skill .composer-chip-icon {
+  color: var(--ds-accent);
+}
+
 .composer-chip-icon {
   display: inline-flex;
   flex: 0 0 auto;

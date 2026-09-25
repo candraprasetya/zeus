@@ -47,6 +47,7 @@ import {
 } from "../features/chat/composer/model";
 import {
   createFileReference,
+  createSkillReference,
   editorSelectionRange,
   isImageFilePath,
   nextChipToken,
@@ -467,6 +468,26 @@ export function Composer({
     const result = composerAc.accept(index);
     if (!result) return;
     invalidatePromptEnhancement();
+    const acceptedSkillReference = result.skillReference;
+    if (acceptedSkillReference) {
+      const token = nextChipToken();
+      const nextText =
+        result.value.slice(0, result.cursor) + token + result.value.slice(result.cursor);
+      applyEditorDraft(
+        nextText,
+        [
+          ...fileReferencesRef.current,
+          createSkillReference(
+            acceptedSkillReference.skillId,
+            acceptedSkillReference.name,
+            referenceSessionId,
+            token,
+          ),
+        ],
+        result.cursor + token.length,
+      );
+      return;
+    }
     // File accept strips the @ token (empty insert) and used to store a
     // token-less chip above the textarea. Inline chips only paint when a
     // sentinel is in the draft, so Enter looked like the reference vanished.

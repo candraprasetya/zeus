@@ -83,11 +83,7 @@ export function detectTrigger(
 
   if (cursor > tokenStart && value[tokenStart] === "/") {
     const head = value.slice(tokenStart + 1, cursor);
-    const prefix = value.slice(0, tokenStart);
-    const precedingTokens = prefix.trim().split(/\s+/).filter(Boolean);
-    const allPrecedingAreSlash = precedingTokens.every((tok) => tok.startsWith("/"));
-
-    if (allPrecedingAreSlash) {
+    if (tokenStart === 0 || isBoundary(value, tokenStart)) {
       return { mode: "slash", query: head, tokenStart, tokenEnd: cursor };
     }
   }
@@ -162,11 +158,11 @@ export function fileReferenceLabel(path: string, preferredName?: string): string
  */
 export function serializeComposerFileReferences(
   draft: string,
-  references: ReadonlyArray<{ path: string; token?: string }>,
+  references: ReadonlyArray<{ path: string; name?: string; token?: string; kind?: string }>,
 ): string {
   const content = serializeInlineComposerFileReferences(draft, references);
   const paths = references
-    .filter((reference) => !reference.token)
+    .filter((reference) => !reference.token && reference.kind !== "skill")
     .map((reference) => formatFileInsert(reference.path, "file"))
     .join("")
     .trim();
@@ -182,13 +178,16 @@ export function serializeComposerFileReferences(
  */
 export function serializeInlineComposerFileReferences(
   draft: string,
-  references: ReadonlyArray<{ path: string; token?: string }>,
+  references: ReadonlyArray<{ path: string; name?: string; token?: string; kind?: string }>,
 ): string {
   let content = draft;
   for (const reference of references) {
     const token = reference.token?.trim();
     if (!token || !content.includes(token)) continue;
-    const insert = formatFileInsert(reference.path, "file").trim();
+    const insert =
+      reference.kind === "skill"
+        ? `/${reference.name ?? reference.path}`
+        : formatFileInsert(reference.path, "file").trim();
     let index = content.indexOf(token);
     while (index !== -1) {
       const nextChar = content[index + token.length];

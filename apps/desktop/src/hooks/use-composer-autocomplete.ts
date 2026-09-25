@@ -251,7 +251,16 @@ export function useComposerAutocomplete({
   const items = useMemo<AutocompleteItem[]>(() => {
     if (!trigger || dismissed) return [];
     if (trigger.mode === "slash") {
-      return commands ? filterCommands(commands, trigger.query) : [];
+      if (!commands) return [];
+      const filtered = filterCommands(commands, trigger.query);
+      if (trigger.tokenStart > 0) {
+        return filtered.filter(
+          (item) =>
+            item.kind === "command" &&
+            (item.command.kind === "skill" || item.command.kind === "template"),
+        );
+      }
+      return filtered;
     }
     return files ? filterFiles(files.entries, trigger.query) : [];
   }, [trigger, dismissed, commands, files]);
@@ -279,6 +288,7 @@ export function useComposerAutocomplete({
           value: string;
           cursor: number;
           fileReference?: { path: string; name: string };
+          skillReference?: { id: string; name: string; skillId: string };
         }
       | null => {
       if (!trigger) return null;
@@ -290,6 +300,16 @@ export function useComposerAutocomplete({
           fileReference: {
             path: item.entry.path,
             name: fileReferenceLabel(item.entry.path),
+          },
+        };
+      }
+      if (item.kind === "command" && item.command.kind === "skill") {
+        return {
+          ...applyCompletion(value, trigger, ""),
+          skillReference: {
+            id: item.command.id ?? item.command.name,
+            name: item.command.name,
+            skillId: item.command.skillId ?? item.command.name,
           },
         };
       }

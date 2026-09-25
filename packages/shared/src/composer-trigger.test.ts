@@ -44,13 +44,33 @@ describe("detectTrigger — slash mode", () => {
     });
   });
 
-  it("never triggers mid-draft or on later lines", () => {
-    expect(detectTrigger("hi /cmd", 7)).toBeNull();
-    expect(detectTrigger("hi\n/cmd", 7)).toBeNull();
-    expect(detectTrigger("/cmd text /another", 18)).toBeNull();
+  it("does not trigger on mid-word slashes (URLs, paths)", () => {
+    expect(detectTrigger("word/cmd", 8)).toBeNull();
+    expect(detectTrigger("http://site.com/api", 20)).toBeNull();
   });
 
-  it("supports multi-skill chaining when preceded only by slash commands", () => {
+  it("triggers at word boundary anywhere in draft", () => {
+    expect(detectTrigger("buatkan landing page /", 22)).toEqual({
+      mode: "slash",
+      query: "",
+      tokenStart: 21,
+      tokenEnd: 22,
+    });
+    expect(detectTrigger("buatkan landing page /skill", 27)).toEqual({
+      mode: "slash",
+      query: "skill",
+      tokenStart: 21,
+      tokenEnd: 27,
+    });
+    expect(detectTrigger("hi\n/cmd", 7)).toEqual({
+      mode: "slash",
+      query: "cmd",
+      tokenStart: 3,
+      tokenEnd: 7,
+    });
+  });
+
+  it("supports multi-skill chaining", () => {
     expect(detectTrigger("/skill1 /", 9)).toEqual({
       mode: "slash",
       query: "",
@@ -279,6 +299,20 @@ describe("compact file references", () => {
         { path: "src/b.ts", token: "\uE002" },
       ]),
     ).toBe("@src/a.ts @src/b.ts inspect");
+  });
+
+  it("serializes inline skill references with a slash prefix and excludes them from footer paths", () => {
+    const references = [
+      { path: "skill-1", name: "skill-1", kind: "skill", token: "\uE001" },
+      { path: "skill-2", name: "skill-2", kind: "skill", token: "\uE002" },
+    ];
+    const draft = "buatkan saya landing page pakai \uE001 dan pakai design system \uE002";
+    expect(serializeInlineComposerFileReferences(draft, references)).toBe(
+      "buatkan saya landing page pakai /skill-1 dan pakai design system /skill-2",
+    );
+    expect(serializeComposerFileReferences(draft, references)).toBe(
+      "buatkan saya landing page pakai /skill-1 dan pakai design system /skill-2",
+    );
   });
 
   it("keeps inline chips intact while enhancing their surrounding text", () => {

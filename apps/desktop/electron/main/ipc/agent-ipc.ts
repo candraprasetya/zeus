@@ -442,28 +442,57 @@ export function registerAgentIpc({
     // /names stay literal text.
     let promptContent = sessionMessage?.content ?? req.content;
     let slashCommand: string | undefined;
-    if (!sessionMessage && req.content.startsWith("/")) {
+    if (!sessionMessage && req.content.includes("/")) {
       try {
         const root = await optionalWorkspaceRoot();
-        const commandEnd = req.content.search(/\s/);
-        const commandName = req.content.slice(
-          1,
-          commandEnd === -1 ? undefined : commandEnd,
-        );
         const commands = await composerCommandService.buildComposerCommands(
           launch.projectPath ?? root,
         );
-        const command = commands.find((item) => item.name === commandName);
-        if (command?.kind === "skill" && command.skillId) {
-          const body = commandEnd === -1 ? "" : req.content.slice(commandEnd).trim();
-          promptContent = [
-            `Call the \`Skill\` tool with id ${JSON.stringify(command.skillId)} before answering this request. Follow the loaded skill instructions.`,
-            body,
-          ]
-            .filter(Boolean)
-            .join("\n\n");
+
+        const slashTokens = req.content.match(/(?:^|\s)\/([^\s]+)/g);
+        const matchedSkills: Array<{ name: string; skillId: string }> = [];
+        const seenSkillIds = new Set<string>();
+
+        if (slashTokens) {
+          for (const rawToken of slashTokens) {
+            const rawName = rawToken.trim().slice(1);
+            const tokenName = rawName.replace(/[.,;:!?]+$/, "");
+            const command = commands.find(
+              (item) => item.name === tokenName || item.skillId === tokenName,
+            );
+            if (command?.kind === "skill" && command.skillId && !seenSkillIds.has(command.skillId)) {
+              seenSkillIds.add(command.skillId);
+              matchedSkills.push({ name: command.name, skillId: command.skillId });
+            }
+          }
+        }
+
+        if (matchedSkills.length > 0) {
+          let body = req.content;
+          if (body.startsWith("/")) {
+            while (body.startsWith("/")) {
+              const nextSpace = body.search(/\s/);
+              const tokName = body.slice(1, nextSpace === -1 ? undefined : nextSpace);
+              const isSkill = commands.some(
+                (item) =>
+                  item.kind === "skill" &&
+                  (item.name === tokName || item.skillId === tokName),
+              );
+              if (isSkill) {
+                body = nextSpace === -1 ? "" : body.slice(nextSpace).trim();
+              } else {
+                break;
+              }
+            }
+          }
+
+          const skillInstructions = matchedSkills.map(
+            (cmd) =>
+              `Call the \`Skill\` tool with id ${JSON.stringify(cmd.skillId)} before answering this request. Follow the loaded skill instructions.`,
+          );
+          promptContent = [...skillInstructions, body].filter(Boolean).join("\n\n");
           slashCommand = req.content;
-        } else {
+        } else if (req.content.startsWith("/")) {
           const templates = await loadComposerTemplatesCached(root);
           const expansion = expandSlashInvocation(req.content, templates);
           if (expansion) {

@@ -38,7 +38,7 @@ export function createFileReference(
   preferredName?: string,
   sessionId = "",
   metadata?: {
-    kind?: "image" | "file";
+    kind?: "image" | "file" | "skill";
     mimeType?: string;
     token?: string;
   },
@@ -48,10 +48,30 @@ export function createFileReference(
     id: `composer-file-${composerFileReferenceSequence}`,
     sessionId,
     path,
-    name: fileReferenceLabel(path, preferredName),
+    name:
+      metadata?.kind === "skill"
+        ? preferredName ?? path
+        : fileReferenceLabel(path, preferredName),
     kind: metadata?.kind ?? (isImageFilePath(path) ? "image" : "file"),
     ...(metadata?.mimeType ? { mimeType: metadata.mimeType } : {}),
     ...(metadata?.token ? { token: metadata.token } : {}),
+  };
+}
+
+export function createSkillReference(
+  skillId: string,
+  preferredName?: string,
+  sessionId = "",
+  token?: string,
+): ComposerFileReference {
+  composerFileReferenceSequence += 1;
+  return {
+    id: `composer-skill-${composerFileReferenceSequence}`,
+    sessionId,
+    path: skillId,
+    name: preferredName ?? skillId,
+    kind: "skill",
+    ...(token ? { token } : {}),
   };
 }
 
@@ -234,10 +254,13 @@ const CHIP_ICON_SVG: Record<string, string> = {
   video:
     '<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
   file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/>',
+  skill:
+    '<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 2v20"/>',
   x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
 };
 
 function chipIconKey(reference: ComposerFileReference): string {
+  if (reference.kind === "skill") return "skill";
   const mime = reference.mimeType ?? "";
   if (reference.kind === "image" || mime.startsWith("image/")) return "image";
   const name = reference.name;
@@ -274,9 +297,13 @@ function buildChipElement(
 ): HTMLElement {
   const chip = document.createElement("span");
   chip.className = "composer-chip";
+  if (reference.kind === "skill") {
+    chip.classList.add("composer-chip-skill");
+  }
   chip.contentEditable = "false";
   chip.dataset.token = token;
-  chip.title = reference.path;
+  chip.dataset.kind = reference.kind;
+  chip.title = reference.kind === "skill" ? `Skill: ${reference.name}` : reference.path;
   const editableText = isEditableTextReference(reference);
   const activate = editableText ? () => onExpandText(token) : undefined;
   chip.setAttribute("role", activate ? "button" : "listitem");
