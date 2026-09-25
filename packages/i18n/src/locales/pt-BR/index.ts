@@ -544,6 +544,8 @@ export const ptBR = {
     approving: "Aprovando…",
     autoWarning: "O modo automático executa o Bash sem perguntar e pode alterar arquivos.",
     reject: "Rejeitar",
+    edit: "Editar",
+    proceed: "Prosseguir",
     untitled: "Plano sem título",
     openArtifact: "Abrir plano",
     openArtifactLabel: "Abrir artefato do plano {{path}}"
@@ -562,6 +564,8 @@ export const ptBR = {
     approving: "Aprovando…",
     autoWarning: "O modo automático executa o Bash sem perguntar e pode alterar arquivos.",
     reject: "Rejeitar",
+    edit: "Editar",
+    proceed: "Prosseguir",
     untitled: "Objetivo sem título",
     openArtifact: "Abrir objetivo",
     openArtifactLabel: "Abrir artefato do objetivo {{path}}"

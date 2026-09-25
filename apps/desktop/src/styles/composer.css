@@ -729,14 +729,19 @@
     color var(--motion-duration-fast) var(--motion-ease-out);
 }
 
-.plan-approval-reject {
+.plan-approval-reject,
+.plan-approval-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   flex: 0 0 auto;
   padding: 0 9px;
   color: var(--ds-text-secondary);
   white-space: nowrap;
 }
 
-.plan-approval-reject:hover:not(:disabled) {
+.plan-approval-reject:hover:not(:disabled),
+.plan-approval-edit:hover:not(:disabled) {
   background: var(--ds-bg-hover);
   color: var(--ds-text-primary);
 }
