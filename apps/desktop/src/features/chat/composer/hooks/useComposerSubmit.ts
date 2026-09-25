@@ -312,6 +312,20 @@ export function useComposerSubmit({
           }
           return;
         }
+        if (command.id === "builtin.zeus.predev") {
+          try {
+            const promptText = commandBody
+              ? `Jalankan /zeus-predev: Evan (Lead Android Kotlin) dan Candra (Lead iOS SwiftUI), susun dokumen Pre-Dev Review Package lengkap untuk review arsitek & security perbankan dengan spesifikasi task berikut:\n\n${commandBody}`
+              : "Jalankan /zeus-predev: Evan (Lead Android Kotlin) dan Candra (Lead iOS SwiftUI), susun dokumen Pre-Dev Review Package lengkap (Clean Arch, Error Matrix, Blueprint/Excel Data Dictionary, Tri-lingual JSON i18n [en, id, zh], Security Checklist) untuk fitur aktif di proyek ini.";
+            const accepted = await sendPrompt(promptText, draft.draftSnapshot(promptText));
+            if (accepted) draft.clearDraftForKey(submittedDraftKey, submittedDraftRevision, submittedDraft);
+          } catch (error) {
+            showToast(error instanceof Error ? error.message : String(error), {
+              variant: "error",
+            });
+          }
+          return;
+        }
         if (!commandBody) {
           try {
             if (command.kind === "builtin") await runPaletteCommand(command.id);

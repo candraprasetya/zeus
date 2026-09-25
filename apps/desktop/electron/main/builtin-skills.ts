@@ -23,6 +23,8 @@ export const ZEUS_SQUAD_SKILL_ID = "zeus-squad";
 const ZEUS_SQUAD_SKILL_FILE = "zeus-squad.md";
 export const ZEUS_DEBATE_SKILL_ID = "zeus-debate";
 const ZEUS_DEBATE_SKILL_FILE = "zeus-debate.md";
+export const ZEUS_PREDEV_SKILL_ID = "zeus-predev";
+const ZEUS_PREDEV_SKILL_FILE = "zeus-predev.md";
 
 /** electron-builder copies `resources/skills` to `<resources>/skills`. */
 function resolveBuiltinSkillPath(fileName: string): string | null {
@@ -99,6 +101,7 @@ export function builtinSkills(input: BuiltinSkillInput): PluginSkillDef[] {
     ZEUS_PANTAU_SKILL_ID,
     ZEUS_SQUAD_SKILL_ID,
     ZEUS_DEBATE_SKILL_ID,
+    ZEUS_PREDEV_SKILL_ID,
   ];
   if (isPluginWorkspace(input.workspacePath, input.pluginPaths)) ids.push(PLUGIN_DEV_SKILL_ID);
   return ids.flatMap((id) => {
@@ -111,7 +114,9 @@ export function builtinSkills(input: BuiltinSkillInput): PluginSkillDef[] {
             ? ZEUS_SQUAD_SKILL_FILE
             : id === ZEUS_DEBATE_SKILL_ID
               ? ZEUS_DEBATE_SKILL_FILE
-              : PLUGIN_DEV_SKILL_FILE;
+              : id === ZEUS_PREDEV_SKILL_ID
+                ? ZEUS_PREDEV_SKILL_FILE
+                : PLUGIN_DEV_SKILL_FILE;
     const raw = readBuiltinSkill(file);
     if (!raw?.trim()) return [];
     const parsed = parseSkillFrontmatter(raw);
@@ -131,7 +136,8 @@ export function loadBuiltinSkillBody(
     id !== IMAGE_GENERATION_SKILL_ID &&
     id !== ZEUS_PANTAU_SKILL_ID &&
     id !== ZEUS_SQUAD_SKILL_ID &&
-    id !== ZEUS_DEBATE_SKILL_ID
+    id !== ZEUS_DEBATE_SKILL_ID &&
+    id !== ZEUS_PREDEV_SKILL_ID
   ) {
     return null;
   }
@@ -144,8 +150,10 @@ export function loadBuiltinSkillBody(
           ? ZEUS_SQUAD_SKILL_FILE
           : id === ZEUS_DEBATE_SKILL_ID
             ? ZEUS_DEBATE_SKILL_FILE
-            : PLUGIN_DEV_SKILL_FILE;
-  const raw = readBuiltinSkill(file);
+            : id === ZEUS_PREDEV_SKILL_ID
+              ? ZEUS_PREDEV_SKILL_FILE
+              : PLUGIN_DEV_SKILL_FILE;
+    const raw = readBuiltinSkill(file);
   if (!raw?.trim()) return null;
   const parsed = parseSkillFrontmatter(raw);
   if (!parsed.body) return null;
