@@ -1751,12 +1751,26 @@ sklm: {
       "browser": "Browser",
       "file": "Dateien",
       "plugin": "Plugin-Ansicht",
-      "subagent": "Subagent"
+      "subagent": "Subagent",
+      "mindmap": "Mindmap",
     },
     "pluginView": {
       "failed": "Diese Ansicht konnte nicht geladen werden. Laden Sie das Plugin neu und versuchen Sie es erneut."
     },
     "empty": {
+    },
+    "mindmap": {
+      "title": "Wissens-Mindmap",
+      "emptyTitle": "Noch kein Wissensgraph",
+      "emptyBody": "Führe /zeus-pantau im Chat aus oder füge Notizen in .knowledge/ hinzu.",
+      "openInObsidian": "Obsidian",
+      "zoomIn": "+",
+      "zoomOut": "-",
+      "resetZoom": "100%",
+      "nodesCount": "{{count}}",
+      "edgesCount": "{{count}}",
+      "loading": "...",
+      "error": "Error"
     },
     "review": {
       "filesChanged_one": "1 Datei geändert",

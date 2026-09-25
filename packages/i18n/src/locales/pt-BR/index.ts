@@ -1703,11 +1703,25 @@ export const ptBR = {
       file: "Arquivos",
       plugin: "Visualização de plugin",
       subagent: "Subagente",
+      mindmap: "Mapa mental",
     },
     pluginView: {
       failed: "Não foi possível carregar esta visualização. Recarregue o plugin e tente novamente."
     },
     empty: {
+    },
+    mindmap: {
+      title: "Mapa mental de conhecimento",
+      emptyTitle: "Ainda não há gráfico de conhecimento",
+      emptyBody: "Execute /zeus-pantau no chat ou adicione notas em .knowledge/.",
+      openInObsidian: "Obsidian",
+      zoomIn: "+",
+      zoomOut: "-",
+      resetZoom: "100%",
+      nodesCount: "{{count}}",
+      edgesCount: "{{count}}",
+      loading: "...",
+      error: "Error",
     },
     review: {
       filesChanged_one: "1 arquivo alterado",

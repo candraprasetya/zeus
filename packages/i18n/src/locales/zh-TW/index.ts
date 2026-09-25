@@ -1738,11 +1738,25 @@ sklm: {
       file: "檔案",
       plugin: "外掛檢視",
       subagent: "子智慧體",
+      mindmap: "心智圖",
     },
     pluginView: {
       failed: "無法載入該檢視。請重新載入外掛後重試。",
     },
     empty: {
+    },
+    mindmap: {
+      title: "知識心智圖",
+      emptyTitle: "尚無知識圖譜",
+      emptyBody: "在對話中執行 /zeus-pantau 或在 .knowledge/ 中新增筆記即可生成心智圖。",
+      openInObsidian: "Obsidian",
+      zoomIn: "+",
+      zoomOut: "-",
+      resetZoom: "100%",
+      nodesCount: "{{count}}",
+      edgesCount: "{{count}}",
+      loading: "...",
+      error: "Error",
     },
     review: {
       filesChanged_one: "1 個檔案有改動",

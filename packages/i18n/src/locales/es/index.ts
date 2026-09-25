@@ -1751,12 +1751,26 @@ sklm: {
       "browser": "Navegador",
       "file": "Archivos",
       "plugin": "Vista de complemento",
-      "subagent": "Subagente"
+      "subagent": "Subagente",
+      "mindmap": "Mapa mental",
     },
     "pluginView": {
       "failed": "Esta vista no se pudo cargar. Vuelva a cargar el complemento e inténtelo de nuevo."
     },
     "empty": {
+    },
+    "mindmap": {
+      "title": "Mapa mental de conocimiento",
+      "emptyTitle": "Aún no hay gráfico de conocimiento",
+      "emptyBody": "Ejecuta /zeus-pantau en el chat o agrega notas en .knowledge/.",
+      "openInObsidian": "Obsidian",
+      "zoomIn": "+",
+      "zoomOut": "-",
+      "resetZoom": "100%",
+      "nodesCount": "{{count}}",
+      "edgesCount": "{{count}}",
+      "loading": "...",
+      "error": "Error"
     },
     "review": {
       "filesChanged_one": "1 archivo cambiado",

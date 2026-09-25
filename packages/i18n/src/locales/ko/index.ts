@@ -1768,11 +1768,25 @@ sklm: {
       file: "파일",
       plugin: "플러그인 화면",
       subagent: "서브에이전트",
+      mindmap: "마인드맵",
     },
     pluginView: {
       failed: "이 화면을 불러올 수 없습니다. 플러그인을 새로 고친 후 다시 시도하세요.",
     },
     empty: {
+    },
+    mindmap: {
+      title: "지식 마인드맵",
+      emptyTitle: "아직 지식 그래프가 없습니다",
+      emptyBody: "채팅에서 /zeus-pantau를 실행하거나 .knowledge/에 노트를 추가하세요.",
+      openInObsidian: "Obsidian",
+      zoomIn: "+",
+      zoomOut: "-",
+      resetZoom: "100%",
+      nodesCount: "{{count}}",
+      edgesCount: "{{count}}",
+      loading: "...",
+      error: "Error",
     },
     review: {
       filesChanged_one: "파일 1개 변경됨",

@@ -1758,11 +1758,25 @@ sklm: {
       file: "Dosyalar",
       plugin: "Eklenti görünümü",
       subagent: "Alt ajan",
+      mindmap: "Zihin haritası",
     },
     pluginView: {
       failed: "Bu görünüm yüklenemedi. Eklentiyi yeniden yükleyip deneyin.",
     },
     empty: {
+    },
+    mindmap: {
+      title: "Bilgi Zihin Haritası",
+      emptyTitle: "Henüz bilgi grafiği yok",
+      emptyBody: "Sohbette /zeus-pantau komutunu çalıştırın veya .knowledge/ içine notlar ekleyin.",
+      openInObsidian: "Obsidian",
+      zoomIn: "+",
+      zoomOut: "-",
+      resetZoom: "100%",
+      nodesCount: "{{count}}",
+      edgesCount: "{{count}}",
+      loading: "...",
+      error: "Error",
     },
     review: {
       filesChanged_one: "1 dosya değişti",
