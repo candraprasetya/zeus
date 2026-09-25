@@ -7,25 +7,43 @@ description: Menghasilkan paket dokumen proposal Pre-Dev Review resmi untuk Revi
 
 Ketika pengguna menjalankan perintah `/zeus-predev [fitur / blueprint]`, hasilkan paket dokumen teknis **Pre-Dev Review** yang rapi, komprehensif, dan siap dikirimkan kepada Reviewer / Tech Lead / Security Officer.
 
-## 1. Single Source of Truth: JSON i18n Format (Shared Cross-Platform)
-Android dan iOS menggunakan **satu repositori wording terpusat berbasis JSON** di branch yang sama (sebelum di-build ke framework native masing-masing):
-- Format Wording JSON:
+## 1. Single Source of Truth: Modular JSON i18n Format (Shared Cross-Platform)
+Android dan iOS menggunakan **satu repositori wording terpusat berbasis JSON** di branch yang sama (sebelum di-build / di-compile ke framework native masing-masing).
+
+Setiap fitur memiliki folder tersendiri (misal: `flazz/`, `financialasset/`, `notification/`), dengan penamaan file terpisah per bahasa (`en`, `id`, `zh`) serta pemisahan antara string base (AI-generated / standard) dan string override:
+
+### Konvensi Struktur Folder & File:
+```text
+<feature_name>/
+├── <feature>-ai-string-en.json
+├── <feature>-ai-string-id.json
+├── <feature>-ai-string-zh.json
+├── <feature>-override-string-en.json
+├── <feature>-override-string-id.json
+└── <feature>-override-string-zh.json
+```
+
+Contoh untuk fitur `flazz`:
+- `flazz/flazz-ai-string-en.json`
+- `flazz/flazz-ai-string-id.json`
+- `flazz/flazz-ai-string-zh.json`
+- `flazz/flazz-override-string-en.json`
+- `flazz/flazz-override-string-id.json`
+- `flazz/flazz-override-string-zh.json`
+
+### Format Isi JSON:
+File JSON per-bahasa berbentuk flat key-value atau nested object per konteks:
 ```json
 {
-  "feature_name": {
-    "title": {
-      "en": "QRIS Payment",
-      "id": "Pembayaran QRIS",
-      "zh": "QRIS 支付"
-    },
-    "error_insufficient_balance": {
-      "en": "Your account balance is insufficient for this transaction.",
-      "id": "Saldo rekening Anda tidak mencukupi untuk transaksi ini.",
-      "zh": "您的账户余额不足以完成此交易。"
-    }
-  }
+  "flazz_card_title": "Flazz Card Balance",
+  "flazz_btn_topup": "Top Up",
+  "flazz_error_nfc_disabled": "Please enable NFC on your device to read the card."
 }
 ```
+*Catatan:*
+- `*-ai-string-<lang>.json`: Memuat dictionary string standar/otomatis dari blueprint & spec.
+- `*-override-string-<lang>.json`: Khusus menampung copy khusus dari tim Product / Compliance / Legal yang meng-override string bawaan.
+- Script generator framework native di Android (Kotlin) & iOS (SwiftUI) akan menggabungkan (*merge*) file `override` ke atas file `ai-string` lalu menghasilkan resource class / localization bundle di platform masing-masing.
 
 ## 2. Struktur Paket Dokumen Pre-Dev
 
