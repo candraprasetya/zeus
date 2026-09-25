@@ -1,8 +1,10 @@
 {
-  "name": "pi-desktop",
+  "name": "zeus-ai",
   "private": true,
   "version": "0.15.7-beta.1",
-  "description": "Local-first AI coding agent desktop client",
+  "description": "Zeus AI - Local-first AI coding agent desktop client",
+  "homepage": "https://github.com/candraprasetya/zeus",
+  "repository": "https://github.com/candraprasetya/zeus.git",
   "packageManager": "pnpm@10.34.5",
   "engines": {
     "node": ">=22.19.0",

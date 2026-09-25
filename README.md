@@ -1,35 +1,33 @@
 <div align="center">
 
-<img src="docs/image/readme/logo.png" alt="PI-Desktop" width="108" />
+<img src="docs/image/readme/logo.png" alt="Zeus AI" width="108" />
 
-# PI-Desktop
+# Zeus AI
 
-### A modular desktop workspace for AI agents
+### The Autonomous Desktop Workspace for AI Coding Agents
 
-**Bring projects, agents, models, plugins, and workflows into one persistent desktop environment.**
+**Bring projects, autonomous agents, models, plugins, and custom workflows into one persistent, local-first desktop environment.**
 
-Local-first · Model-agnostic · Plugin-powered · macOS / Windows / Linux
-
-<br />
-
-[![Release](https://img.shields.io/github/v/release/vastsa/PI-Desktop?label=release)](https://github.com/vastsa/PI-Desktop/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/vastsa/PI-Desktop/total?label=downloads)](https://github.com/vastsa/PI-Desktop/releases)
-[![Stars](https://img.shields.io/github/stars/vastsa/PI-Desktop?style=flat\&label=stars)](https://github.com/vastsa/PI-Desktop/stargazers)
-[![CI](https://github.com/vastsa/PI-Desktop/actions/workflows/ci.yml/badge.svg)](https://github.com/vastsa/PI-Desktop/actions/workflows/ci.yml)
-[![License](https://img.shields.io/github/license/vastsa/PI-Desktop)](LICENSE)
-[![Reddit](https://img.shields.io/badge/Reddit-r%2FAIUO-FF4500?logo=reddit\&logoColor=white)](https://www.reddit.com/r/AIUO/)
+Local-first · Model-agnostic · Plugin-powered · Multi-Agent · macOS / Windows / Linux
 
 <br />
 
-**[Download](https://github.com/vastsa/PI-Desktop/releases/latest)** ·
-[Documentation](https://pi-docs.aiuo.net/) ·
+[![Release](https://img.shields.io/github/v/release/candraprasetya/zeus?label=release)](https://github.com/candraprasetya/zeus/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/candraprasetya/zeus/total?label=downloads)](https://github.com/candraprasetya/zeus/releases)
+[![Stars](https://img.shields.io/github/stars/candraprasetya/zeus?style=flat&label=stars)](https://github.com/candraprasetya/zeus/stargazers)
+[![CI](https://github.com/candraprasetya/zeus/actions/workflows/ci.yml/badge.svg)](https://github.com/candraprasetya/zeus/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/candraprasetya/zeus)](LICENSE)
+
+<br />
+
+**[Download](https://github.com/candraprasetya/zeus/releases/latest)** ·
 [Build a Plugin](docs/plugin-development.md) ·
 [Screenshots](docs/guide/screenshots.md) ·
 [简体中文](README.zh-CN.md)
 
 <br />
 
-<img src="docs/image/readme/home.webp" alt="PI-Desktop" width="94%" />
+<img src="docs/image/readme/home.webp" alt="Zeus AI Desktop Interface" width="94%" />
 
 <br />
 
@@ -37,58 +35,58 @@ Local-first · Model-agnostic · Plugin-powered · macOS / Windows / Linux
 
 </div>
 
-> **Current release line: 0.15.x (Early Preview).**
+> **Current release line: 0.15.x (Active Preview).**
 
 ---
 
-## Why PI-Desktop?
+## Why Zeus AI?
 
-Terminal agents are great at execution. IDE agents are great at living inside an editor.
+Terminal agents excel at execution. IDE extensions live inside an editor.
 
-PI-Desktop goes one step further:
+Zeus AI takes the next step:
 
-> **Give AI agents a persistent, independent, and extensible desktop workspace of their own.**
+> **Providing AI coding agents with a persistent, independent, and deeply extensible desktop operating environment of their own.**
 
 <table>
 <tr>
 
 <td width="25%" valign="top">
 
-### Independent Workspace
+### ⚡ Independent Workspace
 
-No dependency on a specific IDE or terminal.
+No reliance on a specific IDE or terminal emulator.
 
-Projects, sessions, reviews, previews, and agents all live in their own workspace.
-
-</td>
-
-<td width="25%" valign="top">
-
-### Plugin-Powered
-
-Plugins extend more than the agent.
-
-Add panels, views, widgets, tools, MCP servers, themes, and background services.
+Projects, sessions, diff reviews, live previews, and agent swarms live in an optimized desktop studio.
 
 </td>
 
 <td width="25%" valign="top">
 
-### Agent Orchestration
+### 🧩 Plugin-Powered
 
-One agent is not always enough.
+Extensions go far beyond simple prompt tools.
 
-Delegate to Subagents or coordinate full Worker Sessions in parallel.
+Add native panels, custom widgets, tools, MCP servers, themes, and background daemons.
 
 </td>
 
 <td width="25%" valign="top">
 
-### Model Freedom
+### 🤖 Multi-Agent Swarms
 
-Cloud models, local models, custom gateways, compatible APIs.
+One agent is rarely enough for complex engineering.
 
-Switch models without rebuilding your workflow.
+Delegate to Subagents or orchestrate parallel Worker Sessions with supervision and automatic rollbacks.
+
+</td>
+
+<td width="25%" valign="top">
+
+### 🌐 Model Freedom
+
+Cloud providers (Claude, OpenAI, Gemini), local engines (Ollama, LM Studio), or custom gateways.
+
+Switch models seamlessly without rebuilding your workflows.
 
 </td>
 
@@ -97,667 +95,251 @@ Switch models without rebuilding your workflow.
 
 <div align="center">
 
-**It is not a wrapper around one model. It is not another IDE extension.**
+**Not a generic wrapper around a single API. Not another ephemeral terminal script.**
 
-### It is a desktop platform for agent workflows.
+### An autonomous, extensible operating environment for agentic workflows.
 
 </div>
 
 ---
 
-## Plugins are part of the workspace, not an afterthought
+## Deep Extensibility & Ecosystem
 
-PI-Desktop keeps the Core focused.
-
-**Your actual workflow is assembled through extensions.**
+Zeus AI keeps its core fast, native, and secure (backed by Rust host-core and SQLite), while empowering you to assemble your ultimate workflow through extensions.
 
 <table>
 <tr>
 
 <td width="33%" valign="top">
 
-### Agent
+### Agent Capabilities
 
-Extend what the agent can do
+Extend what the model can execute
 
-**Agent Tools**
-**Skills**
-**Completion**
-**pi Extensions**
-
-</td>
-
-<td width="33%" valign="top">
-
-### Workspace
-
-Extend the desktop itself
-
-**Commands**
-**Panels**
-**Work Panel Views**
-**Floating Widgets**
-**Themes**
+- **Agent Tools**: Native tools callable during reasoning
+- **Skills**: Domain-specific workflows & instructions
+- **MCP Servers**: Model Context Protocol integrations
+- **Autonomous Subagents**: Specialized background workers
 
 </td>
 
 <td width="33%" valign="top">
 
-### Platform
+### Desktop Experience
 
-Extend the runtime
+Extend the desktop environment
 
-**MCP Servers**
-**Resident Services**
-**Plugin Message Bus**
+- **Command Palette**: Global action orchestration
+- **Work Panels**: Sidecar code viewers & test runners
+- **Floating Widgets**: Status overlays, timers, voice orbs
+- **Theming**: Tailored dark and light palettes
+
+</td>
+
+<td width="33%" valign="top">
+
+### System Platform
+
+Extend the runtime backbone
+
+- **Resident Daemons**: Scheduled background tasks
+- **Plugin Message Bus**: Inter-plugin communication
+- **Secure Vault**: Encrypted credential storage
+- **Cross-process IPC**: Type-safe asynchronous events
 
 </td>
 
 </tr>
 </table>
-
-A plugin does not have to be “just another tool.”
-
-It can be an entire product:
 
 ```text
-Voice Agent
-├── Floating Widget
-├── Speech Service
-├── Agent Tool
-└── Commands
+Voice Engineering Agent
+├── Floating Orb Widget
+├── Whisper Speech Service
+├── Agent Tool (Audio Input)
+└── Command Registry
 
-GitHub Workspace
-├── Work Panel
-├── MCP Server
-├── Agent Tools
-└── Background Service
-
-Session Analytics
-├── Dashboard
-├── Commands
-└── Workspace View
+GitHub Release Assistant
+├── Work Panel Dashboard
+├── GitHub MCP Server
+├── Issue & PR Review Tools
+└── Background Polling Daemon
 ```
 
-### What can a plugin add?
+### Supported Plugin Capabilities
 
-| Capability          | What it enables                                                |
-| ------------------- | -------------------------------------------------------------- |
-| **Command**         | Add actions to the global command system                       |
-| **Panel**           | Open a standalone plugin interface                             |
-| **Floating Widget** | Build voice orbs, status lights, timers, and other floating UI |
-| **Work Panel View** | Add new views to the right-side workspace                      |
-| **Agent Tool**      | Register tools callable by the agent                           |
-| **Completion**      | Use the models already configured by the user                  |
-| **Skill**           | Add reusable agent capabilities and workflows                  |
-| **Theme**           | Customize workspace appearance                                 |
-| **MCP Server**      | Connect local or remote MCP servers                            |
-| **Service**         | Run persistent background work                                 |
-| **Message Bus**     | Let plugins communicate with each other                        |
-
-Plugins can be distributed as `.piplug` packages or installed through the marketplace.
+| Capability | Purpose |
+| --- | --- |
+| **Command** | Register actions into the universal Command Palette |
+| **Panel** | Launch dedicated standalone UI views |
+| **Floating Widget** | Render always-on-top interactive widgets |
+| **Work Panel View** | Expand the right-hand companion workspace |
+| **Agent Tool** | Expose host or API tools for LLM tool-calling |
+| **Skill** | Bundle system prompts, workflows, and task recipes |
+| **MCP Server** | Connect standardized external MCP endpoints |
+| **Background Service** | Execute persistent asynchronous monitoring tasks |
+| **Message Bus** | Coordinate events across multiple active plugins |
 
 <div align="center">
 
-### [Build your first plugin →](docs/plugin-development.md)
+### [Explore Plugin Development Guide →](docs/plugin-development.md)
 
 </div>
 
 ---
 
-## One foundation, many workflows
+## Unified Architecture
 
 ```text
-                         PI-Desktop
-                             │
-          ┌──────────────────┼──────────────────┐
-          │                  │                  │
-        Agent            Workspace           Platform
-          │                  │                  │
-     Agent Tools           Panels              MCP
-       Skills             Widgets            Services
-     Subagents             Views            Message Bus
-   pi Extensions          Themes
-          │                  │                  │
-          └──────────────────┼──────────────────┘
-                             │
-                       Your Workflow
+                           Zeus AI Desktop
+                                  │
+               ┌──────────────────┼──────────────────┐
+               │                  │                  │
+         Agent Layer       Workspace Layer     Host Platform
+               │                  │                  │
+          Agent Tools           Panels           Rust Host-Core
+            Skills              Widgets           Local SQLite
+          Subagents             Views             Encrypted Vault
+        MCP Integrations        Themes            Process Sandbox
+               │                  │                  │
+               └──────────────────┼──────────────────┘
+                                  │
+                         Your Work, Accelerated
 ```
-
-PI-Desktop can simply be your coding agent.
-
-Or you can turn it into:
-
-**AI Development Workspace · Voice Agent · DevOps Console · GitHub Workspace · Data Assistant · Multi-Agent Control Center · Automation Platform**
-
-> **The Core provides the foundation. Plugins decide what your workspace becomes.**
 
 ---
 
-## Three ways to work
+## Three Modes of Execution
 
 <table>
 <tr>
 
 <td width="33%" valign="top">
 
-### Agent
+### 1. Agent Mode
 
-**Give it a task. Let it work.**
+**Provide the objective, inspect the result.**
 
-Read code, edit files, run commands, test, and iterate.
-
-Best for day-to-day development.
+The agent searches your codebase, plans modifications, edits files surgical-style, runs tests, and diagnoses failures autonomously.
 
 </td>
 
 <td width="33%" valign="top">
 
-### Plan
+### 2. Plan Mode
 
-**Review the approach before execution.**
+**Review before execution.**
 
-The agent studies the project first and produces an implementation plan.
-
-Best for refactors and high-risk changes.
+The agent investigates the codebase, identifies constraints, and generates an actionable implementation plan for your approval before writing any code.
 
 </td>
 
 <td width="33%" valign="top">
 
-### Goal
+### 3. Subagent Swarms
 
-**Define the outcome. Let the agent choose the path.**
+**Parallelize complex engineering.**
 
-Lock the objective and acceptance criteria, then let the agent drive execution.
-
-Best for complex and long-running tasks.
+Spawn background workers (codebase researchers, a11y reviewers, test generators) while you continue interacting in the main session.
 
 </td>
 
 </tr>
 </table>
 
-Privileged operations still pass through PI-Desktop's permission layer.
-
 ---
 
-## When one agent is not enough
+## Getting Started
 
-Complex work should not be forced into one context window.
+### Quick Install
 
-PI-Desktop provides two levels of delegation.
-
-### Subagents
-
-Delegate independent work to background agents:
-
-**Code exploration · Implementation · Test analysis · Research · Review**
-
-Each Subagent gets its own context and reports the result back to the parent agent.
-
-### Session Orchestrator
-
-For longer-lived work, delegate to full Worker Sessions.
-
-```text
-Main Session
-│
-├── Worker A
-│   └── Frontend
-│
-├── Worker B
-│   └── Backend
-│
-├── Worker C
-│   └── Tests
-│
-└── Worker D
-    └── Review
-```
-
-Workers are full PI-Desktop sessions:
-
-**Independent context · Independent execution · Directly inspectable · Reusable · Full transcript**
-
-<table>
-<tr>
-
-<td width="50%">
-
-<img src="docs/image/readme/session-orchestrator-overview.png" alt="Session Orchestrator" />
-
-<p align="center"><sub>Coordinate multiple Worker Sessions from one parent Session</sub></p>
-
-</td>
-
-<td width="50%">
-
-<img src="docs/image/readme/session-orchestrator-worker.png" alt="Worker Session" />
-
-<p align="center"><sub>Each Worker remains a full, inspectable Session</sub></p>
-
-</td>
-
-</tr>
-</table>
+Download the latest prebuilt package for your operating system:
 
 <div align="center">
 
-**Move from “one agent helps me code” to “multiple agents divide and complete the work.”**
+### [Download Zeus AI Latest Release →](https://github.com/candraprasetya/zeus/releases/latest)
+
+**macOS (Apple Silicon & Intel) · Windows (Installer & Portable) · Linux (AppImage, deb, rpm)**
 
 </div>
 
----
-
-## Built for work that lasts
-
-PI-Desktop is organized around:
-
-<div align="center">
-
-### Project → Session → Agent → Work
-
-</div>
-
-—not around disposable chat threads.
-
-You can:
-
-* Manage multiple projects and sessions
-* Pin, archive, branch, and search sessions
-* Queue prompts while an agent is already running
-* Reference project files with `@`
-* Use slash commands
-* Review diffs
-* Inspect command output
-* Work with the right-side Work Panel
-* Keep streaming checkpoints
-* Recover interrupted work whenever possible
-
-**A Session can continue across multiple app launches.**
+| Platform | Architecture | Distribution |
+| --- | --- | --- |
+| **macOS** | Apple Silicon (`arm64`) / Intel (`x64`) | `.dmg` installer, `.zip` |
+| **Windows** | 64-bit (`x64`) | Setup executable, Portable `.zip` |
+| **Linux** | 64-bit (`x64`, glibc 2.35+) | `.AppImage`, `.deb`, `.rpm` |
 
 ---
 
-## See what the agent is doing
+## Developer Setup
 
-<table>
-<tr>
+Zeus AI is built as a high-performance monorepo: TypeScript/React frontend in Electron, backed by a native Rust `host-core` daemon.
 
-<td width="50%">
+### Prerequisites
 
-<img src="docs/image/readme/chat_en.png" alt="PI-Desktop Session" />
+- **Node.js** `>=22.19.0`
+- **pnpm** `>=10`
+- **Rust & Cargo** (Stable)
 
-<p align="center"><sub>Persistent Sessions instead of disposable chats</sub></p>
-
-</td>
-
-<td width="50%">
-
-<img src="docs/image/readme/model_en.png" alt="PI-Desktop Model" />
-
-<p align="center"><sub>Switch models and reasoning levels inside the Session</sub></p>
-
-</td>
-
-</tr>
-
-<tr>
-
-<td width="50%">
-
-<img src="docs/image/readme/plugins_en.png" alt="PI-Desktop Plugins" />
-
-<p align="center"><sub>A plugin marketplace that extends both the agent and the desktop</sub></p>
-
-</td>
-
-<td width="50%">
-
-<img src="docs/image/readme/addmodel_en.png" alt="PI-Desktop Providers" />
-
-<p align="center"><sub>Connect your own provider, gateway, or local model</sub></p>
-
-</td>
-
-</tr>
-</table>
-
-<div align="center">
-
-**[Explore more screenshots →](docs/guide/screenshots.md)**
-
-</div>
-
----
-
-## Swap the model, keep the workflow
-
-PI-Desktop does not tie your workflow to a single model vendor.
-
-Use:
-
-**OpenAI · Anthropic · OpenAI-Compatible APIs · Custom Gateways · Ollama · LM Studio · Local Models**
-
-Configure each model independently:
-
-**Provider · Model ID · Context Window · Output Limit · Reasoning / Thinking · Temperature · OAuth · API Key · Endpoint**
-
-Different Sessions can use different models.
-
-The same Session can switch models at any time.
-
-```text
-Planning     → Model A
-Coding       → Model B
-Review       → Model C
-Private Task → Local Model
-```
-
-> **The model is a replaceable component of the workflow — not the workflow itself.**
-
----
-
-## Already using another coding agent?
-
-Keep your existing work.
-
-PI-Desktop can import local sessions from:
-
-**Claude Code · Codex · OpenCode · Pi**
-
----
-
-## Local-first
-
-PI-Desktop does not require you to move your development environment into our cloud.
-
-| Data                 | Default behavior                          |
-| -------------------- | ----------------------------------------- |
-| Projects             | Local                                     |
-| Sessions             | Local                                     |
-| Settings             | Local                                     |
-| Logs                 | Local                                     |
-| API credentials      | OS Keychain                               |
-| PI-Desktop telemetry | None                                      |
-| Model requests       | Sent directly to your configured provider |
-
-**No mandatory PI-Desktop account.**
-
-**No mandatory PI-Desktop relay.**
-
-When using a remote model, the context required for the request is sent directly to that provider.
-
----
-
-## You control the permissions
-
-Agents can read files, edit code, run commands, call tools, use extensions, and delegate work.
-
-Privileged operations still pass through the permission layer:
-
-```text
-Agent
-  ↓
-Tool Request
-  ↓
-Permission Layer
-  ↓
-Allow / Ask / Deny
-  ↓
-Execution
-```
-
-**You decide how much autonomy each Session gets.**
-
----
-
-## Get started
-
-<table>
-<tr>
-
-<td width="25%" valign="top">
-
-### 01
-
-**Download**
-
-Install PI-Desktop
-
-</td>
-
-<td width="25%" valign="top">
-
-### 02
-
-**Connect a model**
-
-Configure a Provider
-
-</td>
-
-<td width="25%" valign="top">
-
-### 03
-
-**Open a project**
-
-Choose a local repository
-
-</td>
-
-<td width="25%" valign="top">
-
-### 04
-
-**Start working**
-
-Agent / Plan / Goal
-
-</td>
-
-</tr>
-</table>
-
-<div align="center">
-
-### [Download PI-Desktop →](https://github.com/vastsa/PI-Desktop/releases/latest)
-
-**macOS · Windows · Linux**
-
-</div>
-
-### Packages
-
-| Platform | Architecture  | Package                                 |
-| -------- | ------------- | --------------------------------------- |
-| macOS    | Apple Silicon | `.dmg` / `.zip`                         |
-| macOS    | Intel         | `.dmg` / `.zip`                         |
-| Windows  | x64           | Installer / `.zip`                      |
-| Linux    | x64           | `.AppImage` / `.deb` / `.rpm` / `.asar` |
-
-macOS releases are signed with a Developer ID certificate and notarized by Apple.
-
-<details>
-<summary><strong>Linux Compatibility</strong></summary>
-
-<br />
-
-Linux x64 packages require **glibc 2.35+**.
-
-Common supported distributions include:
-
-* Ubuntu 22.04+
-* Debian 12+
-* Fedora 36+
-
-Check your current version with:
+### Build & Run from Source
 
 ```bash
-ldd --version
-```
+# 1. Clone repository
+git clone https://github.com/candraprasetya/zeus.git
+cd zeus
 
-</details>
-
----
-
-## Built on Pi
-
-PI-Desktop is built on the [pi](https://github.com/badlogic/pi-mono) ecosystem.
-
-The Agent Runtime uses:
-
-* `pi-ai`
-* `pi-agent-core`
-
-> **Pi provides the Agent Engine. PI-Desktop builds the persistent desktop workspace, sessions, permissions, plugins, and agent orchestration around it.**
-
----
-
-## For Developers
-
-PI-Desktop can also serve as a host platform for building agent products.
-
-You can build:
-
-**Plugins · MCP Servers · Skills · Agent Tools · pi Extensions · Themes · Panels · Floating Widgets · Background Services**
-
-### Plugin quick start
-
-Built-in templates include:
-
-* `panel-basic`
-* `agent-tool-basic`
-* `skill-pack`
-* `full-demo`
-
-Plugins can be created and loaded directly as Development Plugins.
-
-**[Plugin Development Guide →](docs/plugin-development.md)**
-
-### Run from source
-
-<details>
-<summary><strong>Development Setup</strong></summary>
-
-<br />
-
-#### Requirements
-
-* Node.js `>=22.19`
-* pnpm `>=10`
-* Stable Rust Toolchain
-
-#### Start
-
-```bash
-git clone https://github.com/vastsa/PI-Desktop.git
-cd PI-Desktop
-
+# 2. Install workspace dependencies
 pnpm install
 
+# 3. Build native host-core & JavaScript packages
 cargo build -p host-core
 pnpm build:js
 
+# 4. Launch in development mode
 pnpm dev
 ```
 
-#### Validate
+### Running Validation & Tests
 
 ```bash
+# Typecheck across monorepo
 pnpm typecheck
+
+# Lint with Biome
 pnpm lint
+
+# Run unit tests
 pnpm test
 ```
 
-</details>
-
-### Documentation
-
-[Documentation](https://pi-docs.aiuo.net/) ·
-[Architecture](docs/spec/02-architecture/01-architecture.md) ·
-[Specification](docs/spec/README.md) ·
-[Plugin Development](docs/plugin-development.md) ·
-[E2E Test Plan](docs/spec/06-delivery/04-e2e-test-plan.md) ·
-[Release Runbook](docs/spec/06-delivery/06-release-runbook.md) ·
-[AGENTS.md](AGENTS.md)
-
 ---
 
-## Contributing
+## Community & Feedback
 
-Contributions are welcome:
-
-**Issues · Pull Requests · Plugins · Skills · MCP Integrations · Documentation · Translations**
-
-For standalone capabilities, consider one question first:
-
-> **Would this be better as a Plugin?**
-
-Keep the Core focused. Let the ecosystem grow.
-
-**[Report an Issue](https://github.com/vastsa/PI-Desktop/issues/new/choose)** ·
-[Open Issues](https://github.com/vastsa/PI-Desktop/issues) ·
-[Build a Plugin](docs/plugin-development.md)
-
----
-
-## Project Trend
-
-<div align="center">
-
-<a href="https://trendshift.io/repositories/178787?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-178787">
-<img src="https://trendshift.io/api/badge/repositories/178787" alt="PI-Desktop on Trendshift" width="230" height="51" />
-</a>
-
-</div>
-
----
-
-## Friends
-
-[Linux.Do](https://linux.do/) — A new ideal community
-
----
-
-## Model Acknowledgements
-
-> **Not by a lone genius, but by a token-powered construction crew.**
-
-PI-Desktop has been built with the help of models from multiple providers.
-
-More than **27 billion tokens** have been used across development, refactoring, review, design, and debugging.
-
-Thanks to every human contributor — and every model that helped us build it.
+- **Report Bugs & Suggest Features**: [GitHub Issues](https://github.com/candraprasetya/zeus/issues)
+- **Security Inquiries**: See [SECURITY.md](SECURITY.md)
 
 ---
 
 ## License
 
-PI-Desktop is licensed under the **GNU Lesser General Public License v3.0**.
-
-See [LICENSE](LICENSE) for details.
-
----
+Zeus AI is licensed under the **GNU Lesser General Public License v3.0 (LGPL-3.0-or-later)**.
+See [LICENSE](LICENSE) for complete terms.
 
 <div align="center">
 
-<img src="docs/image/readme/logo.png" alt="PI-Desktop" width="72" />
+<img src="docs/image/readme/logo.png" alt="Zeus AI" width="72" />
 
-## PI-Desktop
+## Zeus AI
 
-### Build your own Agent workspace.
+### Build your autonomous agent studio.
 
-**Your models · Your agents · Your plugins · Your workspace**
+**Your code · Your models · Your agents · Your workspace**
 
 <br />
 
-**[Download](https://github.com/vastsa/PI-Desktop/releases/latest)** ·
-[Documentation](https://pi-docs.aiuo.net/) ·
+**[Download](https://github.com/candraprasetya/zeus/releases/latest)** ·
 [Build a Plugin](docs/plugin-development.md)
-
-<br /><br />
 
 <sub>Local-first · Model-agnostic · Plugin-powered</sub>
 
