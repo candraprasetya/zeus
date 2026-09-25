@@ -326,6 +326,20 @@ export function useComposerSubmit({
           }
           return;
         }
+        if (command.id === "builtin.zeus.mock") {
+          try {
+            const promptText = commandBody
+              ? `Jalankan /zeus-mock: Buat endpoint schema Mockkiwi yang kompatibel dengan MockKiwi App / CLI untuk endpoint perbankan berikut:\n\n${commandBody}\n\nPastikan format JSON valid Mockkiwi dengan error_schema bilingual dan output_schema lengkap.`
+              : "Jalankan /zeus-mock: Buat endpoint schema Mockkiwi lengkap (200 OK, 400 Bad Request, 401 Unauthorized, 504 Timeout) dengan format JSON standar MockKiwi untuk endpoint perbankan yang sedang dirancang.";
+            const accepted = await sendPrompt(promptText, draft.draftSnapshot(promptText));
+            if (accepted) draft.clearDraftForKey(submittedDraftKey, submittedDraftRevision, submittedDraft);
+          } catch (error) {
+            showToast(error instanceof Error ? error.message : String(error), {
+              variant: "error",
+            });
+          }
+          return;
+        }
         if (!commandBody) {
           try {
             if (command.kind === "builtin") await runPaletteCommand(command.id);

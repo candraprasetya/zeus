@@ -33,6 +33,8 @@ export const ZEUS_SECURITY_SKILL_ID = "zeus-security";
 const ZEUS_SECURITY_SKILL_FILE = "zeus-security.md";
 export const ZEUS_QA_SKILL_ID = "zeus-qa";
 const ZEUS_QA_SKILL_FILE = "zeus-qa.md";
+export const ZEUS_MOCK_SKILL_ID = "zeus-mock";
+const ZEUS_MOCK_SKILL_FILE = "zeus-mock.md";
 
 /** electron-builder copies `resources/skills` to `<resources>/skills`. */
 function resolveBuiltinSkillPath(fileName: string): string | null {
@@ -114,6 +116,7 @@ export function builtinSkills(input: BuiltinSkillInput): PluginSkillDef[] {
     ZEUS_UX_DESIGNER_SKILL_ID,
     ZEUS_SECURITY_SKILL_ID,
     ZEUS_QA_SKILL_ID,
+    ZEUS_MOCK_SKILL_ID,
   ];
   if (isPluginWorkspace(input.workspacePath, input.pluginPaths)) ids.push(PLUGIN_DEV_SKILL_ID);
   return ids.flatMap((id) => {
@@ -136,7 +139,9 @@ export function builtinSkills(input: BuiltinSkillInput): PluginSkillDef[] {
                       ? ZEUS_SECURITY_SKILL_FILE
                       : id === ZEUS_QA_SKILL_ID
                         ? ZEUS_QA_SKILL_FILE
-                        : PLUGIN_DEV_SKILL_FILE;
+                        : id === ZEUS_MOCK_SKILL_ID
+                          ? ZEUS_MOCK_SKILL_FILE
+                          : PLUGIN_DEV_SKILL_FILE;
     const raw = readBuiltinSkill(file);
     if (!raw?.trim()) return [];
     const parsed = parseSkillFrontmatter(raw);
@@ -161,7 +166,8 @@ export function loadBuiltinSkillBody(
     id !== ZEUS_UI_DESIGNER_SKILL_ID &&
     id !== ZEUS_UX_DESIGNER_SKILL_ID &&
     id !== ZEUS_SECURITY_SKILL_ID &&
-    id !== ZEUS_QA_SKILL_ID
+    id !== ZEUS_QA_SKILL_ID &&
+    id !== ZEUS_MOCK_SKILL_ID
   ) {
     return null;
   }
@@ -184,7 +190,9 @@ export function loadBuiltinSkillBody(
                     ? ZEUS_SECURITY_SKILL_FILE
                     : id === ZEUS_QA_SKILL_ID
                       ? ZEUS_QA_SKILL_FILE
-                      : PLUGIN_DEV_SKILL_FILE;
+                      : id === ZEUS_MOCK_SKILL_ID
+                        ? ZEUS_MOCK_SKILL_FILE
+                        : PLUGIN_DEV_SKILL_FILE;
     const raw = readBuiltinSkill(file);
   if (!raw?.trim()) return null;
   const parsed = parseSkillFrontmatter(raw);
