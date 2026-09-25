@@ -284,6 +284,34 @@ export function useComposerSubmit({
           }
           return;
         }
+        if (command.id === "builtin.zeus.squad") {
+          try {
+            const promptText = commandBody
+              ? `Jalankan /zeus-squad: Evan (Team Lead Android Native / Kotlin) dan Candra (Team Lead iOS Native / SwiftUI) tolong rancang dan implementasikan fitur berikut sesuai Clean Architecture, Design System bank, dan Security:\n\n${commandBody}`
+              : "Jalankan /zeus-squad: Evan (Team Lead Android Native / Kotlin) dan Candra (Team Lead iOS Native / SwiftUI) tolong koordinasikan arsitektur mobile banking, modul, dan fitur yang sedang aktif di proyek ini.";
+            const accepted = await sendPrompt(promptText, draft.draftSnapshot(promptText));
+            if (accepted) draft.clearDraftForKey(submittedDraftKey, submittedDraftRevision, submittedDraft);
+          } catch (error) {
+            showToast(error instanceof Error ? error.message : String(error), {
+              variant: "error",
+            });
+          }
+          return;
+        }
+        if (command.id === "builtin.zeus.debate") {
+          try {
+            const promptText = commandBody
+              ? `Jalankan /zeus-debate: Mulai sesi adversarial code review antara Evan (Lead Android) dan Candra (Lead iOS) bersama Bank Security & Architecture Reviewer. Saling uji dan bantah celah arsitektur, security, dan design system dari task berikut sebelum hasilkan kode final:\n\n${commandBody}`
+              : "Jalankan /zeus-debate: Mulai sesi adversarial code review antara Evan (Lead Android) dan Candra (Lead iOS) untuk mengaudit kode dan arsitektur aktif di proyek ini.";
+            const accepted = await sendPrompt(promptText, draft.draftSnapshot(promptText));
+            if (accepted) draft.clearDraftForKey(submittedDraftKey, submittedDraftRevision, submittedDraft);
+          } catch (error) {
+            showToast(error instanceof Error ? error.message : String(error), {
+              variant: "error",
+            });
+          }
+          return;
+        }
         if (!commandBody) {
           try {
             if (command.kind === "builtin") await runPaletteCommand(command.id);

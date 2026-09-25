@@ -19,6 +19,10 @@ export const IMAGE_GENERATION_SKILL_ID = "pi-desktop/imagegen";
 const IMAGE_GENERATION_SKILL_FILE = "image-generation.md";
 export const ZEUS_PANTAU_SKILL_ID = "zeus-pantau";
 const ZEUS_PANTAU_SKILL_FILE = "zeus-pantau.md";
+export const ZEUS_SQUAD_SKILL_ID = "zeus-squad";
+const ZEUS_SQUAD_SKILL_FILE = "zeus-squad.md";
+export const ZEUS_DEBATE_SKILL_ID = "zeus-debate";
+const ZEUS_DEBATE_SKILL_FILE = "zeus-debate.md";
 
 /** electron-builder copies `resources/skills` to `<resources>/skills`. */
 function resolveBuiltinSkillPath(fileName: string): string | null {
@@ -90,7 +94,12 @@ export type BuiltinSkillInput = {
  * fresh so a packaged update takes effect without a restart.
  */
 export function builtinSkills(input: BuiltinSkillInput): PluginSkillDef[] {
-  const ids = [IMAGE_GENERATION_SKILL_ID, ZEUS_PANTAU_SKILL_ID];
+  const ids = [
+    IMAGE_GENERATION_SKILL_ID,
+    ZEUS_PANTAU_SKILL_ID,
+    ZEUS_SQUAD_SKILL_ID,
+    ZEUS_DEBATE_SKILL_ID,
+  ];
   if (isPluginWorkspace(input.workspacePath, input.pluginPaths)) ids.push(PLUGIN_DEV_SKILL_ID);
   return ids.flatMap((id) => {
     const file =
@@ -98,7 +107,11 @@ export function builtinSkills(input: BuiltinSkillInput): PluginSkillDef[] {
         ? IMAGE_GENERATION_SKILL_FILE
         : id === ZEUS_PANTAU_SKILL_ID
           ? ZEUS_PANTAU_SKILL_FILE
-          : PLUGIN_DEV_SKILL_FILE;
+          : id === ZEUS_SQUAD_SKILL_ID
+            ? ZEUS_SQUAD_SKILL_FILE
+            : id === ZEUS_DEBATE_SKILL_ID
+              ? ZEUS_DEBATE_SKILL_FILE
+              : PLUGIN_DEV_SKILL_FILE;
     const raw = readBuiltinSkill(file);
     if (!raw?.trim()) return [];
     const parsed = parseSkillFrontmatter(raw);
@@ -116,7 +129,9 @@ export function loadBuiltinSkillBody(
   if (
     id !== PLUGIN_DEV_SKILL_ID &&
     id !== IMAGE_GENERATION_SKILL_ID &&
-    id !== ZEUS_PANTAU_SKILL_ID
+    id !== ZEUS_PANTAU_SKILL_ID &&
+    id !== ZEUS_SQUAD_SKILL_ID &&
+    id !== ZEUS_DEBATE_SKILL_ID
   ) {
     return null;
   }
@@ -125,7 +140,11 @@ export function loadBuiltinSkillBody(
       ? IMAGE_GENERATION_SKILL_FILE
       : id === ZEUS_PANTAU_SKILL_ID
         ? ZEUS_PANTAU_SKILL_FILE
-        : PLUGIN_DEV_SKILL_FILE;
+        : id === ZEUS_SQUAD_SKILL_ID
+          ? ZEUS_SQUAD_SKILL_FILE
+          : id === ZEUS_DEBATE_SKILL_ID
+            ? ZEUS_DEBATE_SKILL_FILE
+            : PLUGIN_DEV_SKILL_FILE;
   const raw = readBuiltinSkill(file);
   if (!raw?.trim()) return null;
   const parsed = parseSkillFrontmatter(raw);

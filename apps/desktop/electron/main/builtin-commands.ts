@@ -16,6 +16,8 @@ export const BUILTIN_COMMANDS: BuiltinCommandDef[] = [
   { id: "builtin.mode.plan", title: "Switch to Plan mode", category: "Session", keywords: ["mode", "plan", "planning"], source: "builtin", slash: "plan-mode" },
   { id: "builtin.mode.goal", title: "Switch to Goal mode", category: "Session", keywords: ["mode", "goal", "objective", "autonomous"], source: "builtin", slash: "goal-mode" },
   { id: "builtin.zeus.pantau", title: "Zeus Pantau (Knowledge & Mindmap)", category: "Knowledge", keywords: ["pantau", "mindmap", "brain", "knowledge", "obsidian"], source: "builtin", slash: "zeus-pantau" },
+  { id: "builtin.zeus.squad", title: "Zeus Squad (Evan - Android Lead & Candra - iOS Lead)", category: "Mobile Squad", keywords: ["squad", "android", "ios", "evan", "candra", "clean-arch"], source: "builtin", slash: "zeus-squad" },
+  { id: "builtin.zeus.debate", title: "Zeus Debate (Adversarial Code Review - Evan & Candra)", category: "Mobile Squad", keywords: ["debate", "review", "bantah", "security", "evan", "candra"], source: "builtin", slash: "zeus-debate" },
 ];
 
 /** Palette-shaped items (no slash field leaks into the palette contract). */
