@@ -15,6 +15,7 @@ export const BUILTIN_COMMANDS: BuiltinCommandDef[] = [
   { id: "builtin.mode.agent", title: "Switch to Agent mode", category: "Session", keywords: ["mode", "agent"], source: "builtin", slash: "agent-mode" },
   { id: "builtin.mode.plan", title: "Switch to Plan mode", category: "Session", keywords: ["mode", "plan", "planning"], source: "builtin", slash: "plan-mode" },
   { id: "builtin.mode.goal", title: "Switch to Goal mode", category: "Session", keywords: ["mode", "goal", "objective", "autonomous"], source: "builtin", slash: "goal-mode" },
+  { id: "builtin.zeus.pantau", title: "Zeus Pantau (Knowledge & Mindmap)", category: "Knowledge", keywords: ["pantau", "mindmap", "brain", "knowledge", "obsidian"], source: "builtin", slash: "zeus-pantau" },
 ];
 
 /** Palette-shaped items (no slash field leaks into the palette contract). */

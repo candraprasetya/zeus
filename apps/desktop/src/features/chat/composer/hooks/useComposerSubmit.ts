@@ -269,6 +269,21 @@ export function useComposerSubmit({
           }
           return;
         }
+        if (command.id === "builtin.zeus.pantau") {
+          try {
+            await runPaletteCommand(command.id);
+            const promptText = commandBody
+              ? `Jalankan pemetaan knowledge zeus-pantau: ${commandBody}`
+              : "Jalankan pemetaan knowledge zeus-pantau: analisis proyek ini dan buat/perbarui file .knowledge/graph.canvas serta catatan terkait.";
+            const accepted = await sendPrompt(promptText, draft.draftSnapshot(promptText));
+            if (accepted) draft.clearDraftForKey(submittedDraftKey, submittedDraftRevision, submittedDraft);
+          } catch (error) {
+            showToast(error instanceof Error ? error.message : String(error), {
+              variant: "error",
+            });
+          }
+          return;
+        }
         if (!commandBody) {
           try {
             if (command.kind === "builtin") await runPaletteCommand(command.id);
