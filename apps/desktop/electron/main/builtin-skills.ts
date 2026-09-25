@@ -25,6 +25,14 @@ export const ZEUS_DEBATE_SKILL_ID = "zeus-debate";
 const ZEUS_DEBATE_SKILL_FILE = "zeus-debate.md";
 export const ZEUS_PREDEV_SKILL_ID = "zeus-predev";
 const ZEUS_PREDEV_SKILL_FILE = "zeus-predev.md";
+export const ZEUS_UI_DESIGNER_SKILL_ID = "zeus-ui-designer";
+const ZEUS_UI_DESIGNER_SKILL_FILE = "zeus-ui-designer.md";
+export const ZEUS_UX_DESIGNER_SKILL_ID = "zeus-ux-designer";
+const ZEUS_UX_DESIGNER_SKILL_FILE = "zeus-ux-designer.md";
+export const ZEUS_SECURITY_SKILL_ID = "zeus-security";
+const ZEUS_SECURITY_SKILL_FILE = "zeus-security.md";
+export const ZEUS_QA_SKILL_ID = "zeus-qa";
+const ZEUS_QA_SKILL_FILE = "zeus-qa.md";
 
 /** electron-builder copies `resources/skills` to `<resources>/skills`. */
 function resolveBuiltinSkillPath(fileName: string): string | null {
@@ -102,6 +110,10 @@ export function builtinSkills(input: BuiltinSkillInput): PluginSkillDef[] {
     ZEUS_SQUAD_SKILL_ID,
     ZEUS_DEBATE_SKILL_ID,
     ZEUS_PREDEV_SKILL_ID,
+    ZEUS_UI_DESIGNER_SKILL_ID,
+    ZEUS_UX_DESIGNER_SKILL_ID,
+    ZEUS_SECURITY_SKILL_ID,
+    ZEUS_QA_SKILL_ID,
   ];
   if (isPluginWorkspace(input.workspacePath, input.pluginPaths)) ids.push(PLUGIN_DEV_SKILL_ID);
   return ids.flatMap((id) => {
@@ -116,7 +128,15 @@ export function builtinSkills(input: BuiltinSkillInput): PluginSkillDef[] {
               ? ZEUS_DEBATE_SKILL_FILE
               : id === ZEUS_PREDEV_SKILL_ID
                 ? ZEUS_PREDEV_SKILL_FILE
-                : PLUGIN_DEV_SKILL_FILE;
+                : id === ZEUS_UI_DESIGNER_SKILL_ID
+                  ? ZEUS_UI_DESIGNER_SKILL_FILE
+                  : id === ZEUS_UX_DESIGNER_SKILL_ID
+                    ? ZEUS_UX_DESIGNER_SKILL_FILE
+                    : id === ZEUS_SECURITY_SKILL_ID
+                      ? ZEUS_SECURITY_SKILL_FILE
+                      : id === ZEUS_QA_SKILL_ID
+                        ? ZEUS_QA_SKILL_FILE
+                        : PLUGIN_DEV_SKILL_FILE;
     const raw = readBuiltinSkill(file);
     if (!raw?.trim()) return [];
     const parsed = parseSkillFrontmatter(raw);
@@ -137,7 +157,11 @@ export function loadBuiltinSkillBody(
     id !== ZEUS_PANTAU_SKILL_ID &&
     id !== ZEUS_SQUAD_SKILL_ID &&
     id !== ZEUS_DEBATE_SKILL_ID &&
-    id !== ZEUS_PREDEV_SKILL_ID
+    id !== ZEUS_PREDEV_SKILL_ID &&
+    id !== ZEUS_UI_DESIGNER_SKILL_ID &&
+    id !== ZEUS_UX_DESIGNER_SKILL_ID &&
+    id !== ZEUS_SECURITY_SKILL_ID &&
+    id !== ZEUS_QA_SKILL_ID
   ) {
     return null;
   }
@@ -152,7 +176,15 @@ export function loadBuiltinSkillBody(
             ? ZEUS_DEBATE_SKILL_FILE
             : id === ZEUS_PREDEV_SKILL_ID
               ? ZEUS_PREDEV_SKILL_FILE
-              : PLUGIN_DEV_SKILL_FILE;
+              : id === ZEUS_UI_DESIGNER_SKILL_ID
+                ? ZEUS_UI_DESIGNER_SKILL_FILE
+                : id === ZEUS_UX_DESIGNER_SKILL_ID
+                  ? ZEUS_UX_DESIGNER_SKILL_FILE
+                  : id === ZEUS_SECURITY_SKILL_ID
+                    ? ZEUS_SECURITY_SKILL_FILE
+                    : id === ZEUS_QA_SKILL_ID
+                      ? ZEUS_QA_SKILL_FILE
+                      : PLUGIN_DEV_SKILL_FILE;
     const raw = readBuiltinSkill(file);
   if (!raw?.trim()) return null;
   const parsed = parseSkillFrontmatter(raw);
