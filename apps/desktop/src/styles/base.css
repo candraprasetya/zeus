@@ -166,7 +166,7 @@ html {
   display: flex;
   height: 100%;
   min-height: 0;
-  background: var(--ds-bg-primary);
+  background: var(--ds-bg-under);
   color: var(--ds-text-primary);
 }
 

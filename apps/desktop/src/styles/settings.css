@@ -126,6 +126,15 @@
   -webkit-app-region: drag;
 }
 
+.settings-shell-full .settings-titlebar {
+  top: var(--ds-app-panel-inset, 8px);
+  left: calc(var(--ds-settings-nav-width) + var(--ds-app-panel-inset, 8px));
+  right: var(--ds-app-panel-inset, 8px);
+  border-top-left-radius: var(--ds-app-panel-radius, var(--radius-2xl));
+  border-top-right-radius: var(--ds-app-panel-radius, var(--radius-2xl));
+  background: transparent;
+}
+
 .settings-shell-full .settings-nav {
   /* Column rail: search band, scrolling directory, pinned back-to-app footer. */
   display: flex;
@@ -300,6 +309,11 @@
   /* webContents has no traffic-light chrome; keep airy top like gold content band */
   padding: calc(var(--ds-toolbar-height) + 8px) 48px 56px 40px;
   background: var(--ds-bg-primary);
+  margin: var(--ds-app-panel-inset, 8px);
+  height: calc(100% - var(--ds-app-panel-inset, 8px) * 2);
+  border-radius: var(--ds-app-panel-radius, var(--radius-2xl));
+  border: 1px solid var(--ds-border-default);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
 }
 
 .settings-content-inner {

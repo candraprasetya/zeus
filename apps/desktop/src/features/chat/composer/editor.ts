@@ -38,7 +38,7 @@ export function createFileReference(
   preferredName?: string,
   sessionId = "",
   metadata?: {
-    kind?: "image" | "file" | "skill";
+    kind?: "image" | "file" | "skill" | "command";
     mimeType?: string;
     token?: string;
   },
@@ -49,7 +49,7 @@ export function createFileReference(
     sessionId,
     path,
     name:
-      metadata?.kind === "skill"
+      metadata?.kind === "skill" || metadata?.kind === "command"
         ? preferredName ?? path
         : fileReferenceLabel(path, preferredName),
     kind: metadata?.kind ?? (isImageFilePath(path) ? "image" : "file"),
@@ -71,6 +71,22 @@ export function createSkillReference(
     path: skillId,
     name: preferredName ?? skillId,
     kind: "skill",
+    ...(token ? { token } : {}),
+  };
+}
+
+export function createCommandReference(
+  name: string,
+  sessionId = "",
+  token?: string,
+): ComposerFileReference {
+  composerFileReferenceSequence += 1;
+  return {
+    id: `composer-cmd-${composerFileReferenceSequence}`,
+    sessionId,
+    path: name,
+    name,
+    kind: "command",
     ...(token ? { token } : {}),
   };
 }
@@ -256,11 +272,13 @@ const CHIP_ICON_SVG: Record<string, string> = {
   file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/>',
   skill:
     '<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 2v20"/>',
+  command: '<path d="m22 2-18 20"/>',
   x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
 };
 
 function chipIconKey(reference: ComposerFileReference): string {
   if (reference.kind === "skill") return "skill";
+  if (reference.kind === "command") return "command";
   const mime = reference.mimeType ?? "";
   if (reference.kind === "image" || mime.startsWith("image/")) return "image";
   const name = reference.name;
@@ -299,11 +317,18 @@ function buildChipElement(
   chip.className = "composer-chip";
   if (reference.kind === "skill") {
     chip.classList.add("composer-chip-skill");
+  } else if (reference.kind === "command") {
+    chip.classList.add("composer-chip-command");
   }
   chip.contentEditable = "false";
   chip.dataset.token = token;
   chip.dataset.kind = reference.kind;
-  chip.title = reference.kind === "skill" ? `Skill: ${reference.name}` : reference.path;
+  chip.title = reference.path;
+  if (reference.kind === "skill") {
+    chip.title = `Skill: ${reference.name}`;
+  } else if (reference.kind === "command") {
+    chip.title = `Command: /${reference.name}`;
+  }
   const editableText = isEditableTextReference(reference);
   const activate = editableText ? () => onExpandText(token) : undefined;
   chip.setAttribute("role", activate ? "button" : "listitem");

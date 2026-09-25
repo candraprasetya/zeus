@@ -315,6 +315,20 @@ describe("compact file references", () => {
     );
   });
 
+  it("serializes inline command references with a slash prefix and excludes them from footer paths", () => {
+    const references = [
+      { path: "clear", name: "clear", kind: "command", token: "\uE001" },
+      { path: "compact", name: "compact", kind: "command", token: "\uE002" },
+    ];
+    const draft = "\uE001 lalu \uE002 periksa kode ini";
+    expect(serializeInlineComposerFileReferences(draft, references)).toBe(
+      "/clear lalu /compact periksa kode ini",
+    );
+    expect(serializeComposerFileReferences(draft, references)).toBe(
+      "/clear lalu /compact periksa kode ini",
+    );
+  });
+
   it("keeps inline chips intact while enhancing their surrounding text", () => {
     const references = [{ path: "/tmp/image.png", token: "\uE001" }];
     const source = "\uE001make this clearer";

@@ -140,7 +140,6 @@ export function ComposerInput({
                 if (
                   currentItem &&
                   currentItem.kind === "command" &&
-                  currentItem.command.kind === "skill" &&
                   (currentItem.command.name.toLowerCase() === composerAc.query.toLowerCase() ||
                     currentItem.command.id?.toLowerCase() === composerAc.query.toLowerCase())
                 ) {

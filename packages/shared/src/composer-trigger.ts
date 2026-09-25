@@ -165,7 +165,7 @@ export function serializeComposerFileReferences(
 ): string {
   const content = serializeInlineComposerFileReferences(draft, references);
   const paths = references
-    .filter((reference) => !reference.token && reference.kind !== "skill")
+    .filter((reference) => !reference.token && reference.kind !== "skill" && reference.kind !== "command")
     .map((reference) => formatFileInsert(reference.path, "file"))
     .join("")
     .trim();
@@ -188,7 +188,7 @@ export function serializeInlineComposerFileReferences(
     const token = reference.token?.trim();
     if (!token || !content.includes(token)) continue;
     const insert =
-      reference.kind === "skill"
+      reference.kind === "skill" || reference.kind === "command"
         ? `/${reference.name ?? reference.path}`
         : formatFileInsert(reference.path, "file").trim();
     let index = content.indexOf(token);

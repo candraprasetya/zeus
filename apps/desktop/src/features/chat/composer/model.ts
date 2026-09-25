@@ -60,7 +60,7 @@ export type ComposerFileReference = {
   sessionId: string;
   path: string;
   name: string;
-  kind: "image" | "file" | "skill";
+  kind: "image" | "file" | "skill" | "command";
   mimeType?: string;
   token?: string;
 };

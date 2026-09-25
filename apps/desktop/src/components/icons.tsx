@@ -1,109 +1,113 @@
 import type { CSSProperties, SVGProps } from "react";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import {
-  Activity,
-  AppWindow,
-  Archive,
-  ArchiveRestore,
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  ArrowUpRight,
-  AtSign,
-  Bell,
-  BookOpen,
-  Bot,
-  Camera,
-  Check,
-  CheckCheck,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  CircleAlert,
-  CircleCheck,
-  CircleHelp,
-  ClipboardPaste,
-  Clock,
-  CloudDownload,
-  Code2,
-  Database,
-  Download,
-  Copy,
-  Dot,
-  ExternalLink,
-  Eye,
-  EyeOff,
-  FileDiff,
-  FileSpreadsheet,
-  FileText,
-  Folder,
-  FolderOpen,
-  FolderPlus,
-  GripVertical,
-  Globe2,
-  GitFork,
-  GitPullRequestArrow,
-  Image,
-  Info,
-  Keyboard,
-  KeyRound,
-  Link,
-  ListChecks,
-  LogOut,
-  Mic,
-  Minus,
-  MessageSquare,
-  MessageSquarePlus,
-  Monitor,
-  Moon,
-  MoreHorizontal,
-  Music,
-  Palette,
-  PanelLeft,
-  PanelRight,
-  PanelRightOpen,
-  Maximize2,
-  Minimize2,
-  PawPrint,
-  PencilLine,
-  Pin,
-  Play,
-  Plug,
-  Plus,
-  Power,
-  RefreshCcw,
-  RefreshCw,
-  RotateCw,
-  Search,
-  Server,
-  Settings,
-  Shield,
-  SlidersHorizontal,
-  Slash,
-  Smile,
-  Sparkles,
-  Square,
-  Star,
-  Sun,
-  Target,
-  Terminal,
-  TextSelect,
-  Trash2,
-  TriangleAlert,
-  UserRound,
-  Undo2,
-  Video,
-  Webhook,
-  Workflow,
-  Wrench,
-  X,
-  type LucideIcon,
-  type LucideProps,
-} from "lucide-react";
+  Activity01Icon,
+  Add01Icon,
+  AlertCircleIcon,
+  AppWindowIcon,
+  Archive01Icon,
+  ArchiveRestoreIcon,
+  ArrowDown01Icon,
+  ArrowUp01Icon,
+  ArrowUpDownIcon,
+  ArrowUpRight01Icon,
+  AtSignIcon,
+  BellIcon,
+  BookOpen01Icon,
+  BotIcon,
+  Camera01Icon,
+  Cancel01Icon,
+  CheckCheckIcon,
+  CheckIcon,
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CircleCheckIcon,
+  ClipboardPasteIcon,
+  Clock01Icon,
+  CloudDownloadIcon,
+  CodeIcon,
+  Copy01Icon,
+  Database01Icon,
+  Delete02Icon,
+  DotIcon,
+  Download01Icon,
+  ExternalLinkIcon,
+  EyeIcon,
+  EyeOffIcon,
+  FileDiffIcon,
+  FileSpreadsheetIcon,
+  FileTextIcon,
+  Folder01Icon,
+  FolderOpenIcon,
+  FolderPlusIcon,
+  GitForkIcon,
+  GitPullRequestArrowIcon,
+  Globe02Icon,
+  GripVerticalIcon,
+  HelpCircleIcon,
+  Image01Icon,
+  InformationCircleIcon,
+  KeyboardIcon,
+  KeyRoundIcon,
+  Link01Icon,
+  ListChecksIcon,
+  LogOutIcon,
+  Maximize01Icon,
+  MessageSquareIcon,
+  MessageSquarePlusIcon,
+  Mic01Icon,
+  Minimize01Icon,
+  MinusSignIcon,
+  MonitorIcon,
+  Moon01Icon,
+  MoreHorizontalIcon,
+  Music01Icon,
+  PaletteIcon,
+  PanelLeftIcon,
+  PanelRightIcon,
+  PanelRightOpenIcon,
+  PawPrintIcon,
+  PencilLineIcon,
+  PinIcon,
+  PlayIcon,
+  Plug01Icon,
+  PowerIcon,
+  RefreshCcwIcon,
+  RefreshCwIcon,
+  RotateCwIcon,
+  Search01Icon,
+  ServerIcon,
+  Settings01Icon,
+  Shield01Icon,
+  SlashIcon,
+  SlidersHorizontalIcon,
+  SmileIcon,
+  SparklesIcon,
+  SquareIcon,
+  SquareTerminalIcon,
+  StarIcon,
+  StopIcon,
+  Sun01Icon,
+  Target01Icon,
+  TextSelectIcon,
+  TriangleAlertIcon,
+  Undo02Icon,
+  UserRoundIcon,
+  Video01Icon,
+  WebhookIcon,
+  WorkflowIcon,
+  Wrench01Icon,
+} from "@hugeicons/core-free-icons";
 
-export type IconProps = LucideProps;
+export interface IconProps extends SVGProps<SVGSVGElement> {
+  size?: number | string;
+  strokeWidth?: number;
+  color?: string;
+}
 
 /**
- * Lucide sizes are fixed px attributes. Multiply them by `--font-scale` so
+ * Sizes are fixed px attributes. Multiply them by `--font-scale` so
  * chrome glyphs stay in proportion with the Appearance type scale (D343).
  */
 function scaledIconBox(size: IconProps["size"] = 16): string {
@@ -127,13 +131,21 @@ function withScaledIconStyle(
   return { width: box, height: box, ...style };
 }
 
-/* Defaults (16px, 1.75 stroke) match the app's previous hand-drawn icon set. */
-function icon(Lucide: LucideIcon) {
-  return function Icon({ size = 16, style, ...props }: IconProps) {
+/* Defaults (16px, 1.75 stroke) match the app's clean iconography. */
+function icon(hugeIcon: IconSvgElement) {
+  return function Icon({
+    size = 16,
+    style,
+    strokeWidth = 1.75,
+    color = "currentColor",
+    ...props
+  }: IconProps) {
     return (
-      <Lucide
+      <HugeiconsIcon
+        icon={hugeIcon}
         size={size}
-        strokeWidth={1.75}
+        color={color}
+        strokeWidth={typeof strokeWidth === "number" ? strokeWidth : 1.75}
         {...props}
         style={withScaledIconStyle(size, style)}
       />
@@ -141,139 +153,149 @@ function icon(Lucide: LucideIcon) {
   };
 }
 
-export const IconPlus = icon(Plus);
-export const IconPower = icon(Power);
-export const IconPlay = icon(Play);
-export const IconBookOpen = icon(BookOpen);
+export const IconPlus = icon(Add01Icon);
+export const IconPower = icon(PowerIcon);
+export const IconPlay = icon(PlayIcon);
+export const IconBookOpen = icon(BookOpen01Icon);
 /** Paste-from-clipboard actions (MCP config import). */
-export const IconClipboard = icon(ClipboardPaste);
-export const IconArchive = icon(Archive);
-export const IconArchiveRestore = icon(ArchiveRestore);
-export const IconActivity = icon(Activity);
-export const IconArrowUpDown = icon(ArrowUpDown);
-export const IconSearch = icon(Search);
-export const IconRefresh = icon(RefreshCcw);
-export const IconChat = icon(MessageSquare);
+export const IconClipboard = icon(ClipboardPasteIcon);
+export const IconArchive = icon(Archive01Icon);
+export const IconArchiveRestore = icon(ArchiveRestoreIcon);
+export const IconActivity = icon(Activity01Icon);
+export const IconArrowUpDown = icon(ArrowUpDownIcon);
+export const IconSearch = icon(Search01Icon);
+export const IconRefresh = icon(RefreshCcwIcon);
+export const IconChat = icon(MessageSquareIcon);
 /** Session creation affordance. Keep it distinct from generic add actions. */
-export const IconNewSession = icon(MessageSquarePlus);
-export const IconFolder = icon(Folder);
-export const IconFolderOpen = icon(FolderOpen);
-export const IconNewProject = icon(FolderPlus);
-export const IconGripVertical = icon(GripVertical);
-export const IconFileText = icon(FileText);
-export const IconGlobe = icon(Globe2);
-export const IconBranch = icon(GitFork);
-export const IconTerminal = icon(Terminal);
-export const IconPencil = icon(PencilLine);
-export const IconWrench = icon(Wrench);
-export const IconPullRequest = icon(GitPullRequestArrow);
-export const IconClock = icon(Clock);
-export const IconAt = icon(AtSign);
-export const IconSettings = icon(Settings);
-export const IconHelp = icon(CircleHelp);
-export const IconPanel = icon(PanelRight);
-export const IconPanelOpen = icon(PanelRightOpen);
-export const IconPanelMaximize = icon(Maximize2);
-export const IconPanelRestore = icon(Minimize2);
-export const IconDiff = icon(FileDiff);
-export const IconSidebar = icon(PanelLeft);
-export const IconArrowUp = icon(ArrowUp);
-export const IconArrowDown = icon(ArrowDown);
-export const IconCopy = icon(Copy);
+export const IconNewSession = icon(MessageSquarePlusIcon);
+export const IconFolder = icon(Folder01Icon);
+export const IconFolderOpen = icon(FolderOpenIcon);
+export const IconNewProject = icon(FolderPlusIcon);
+export const IconGripVertical = icon(GripVerticalIcon);
+export const IconFileText = icon(FileTextIcon);
+export const IconGlobe = icon(Globe02Icon);
+export const IconBranch = icon(GitForkIcon);
+export const IconTerminal = icon(SquareTerminalIcon);
+export const IconPencil = icon(PencilLineIcon);
+export const IconWrench = icon(Wrench01Icon);
+export const IconPullRequest = icon(GitPullRequestArrowIcon);
+export const IconClock = icon(Clock01Icon);
+export const IconAt = icon(AtSignIcon);
+export const IconSettings = icon(Settings01Icon);
+export const IconHelp = icon(HelpCircleIcon);
+export const IconPanel = icon(PanelRightIcon);
+export const IconPanelOpen = icon(PanelRightOpenIcon);
+export const IconPanelMaximize = icon(Maximize01Icon);
+export const IconPanelRestore = icon(Minimize01Icon);
+export const IconDiff = icon(FileDiffIcon);
+export const IconSidebar = icon(PanelLeftIcon);
+export const IconArrowUp = icon(ArrowUp01Icon);
+export const IconArrowDown = icon(ArrowDown01Icon);
+export const IconCopy = icon(Copy01Icon);
 /* Chat context menus: hand a message's rendered text to the platform selection. */
-export const IconTextSelect = icon(TextSelect);
-export const IconCode = icon(Code2);
-export const IconDatabase = icon(Database);
-export const IconCheck = icon(Check);
-export const IconBell = icon(Bell);
-export const IconBot = icon(Bot);
-export const IconCheckCheck = icon(CheckCheck);
-export const IconShield = icon(Shield);
-export const IconChevronDown = icon(ChevronDown);
-export const IconClose = icon(X);
+export const IconTextSelect = icon(TextSelectIcon);
+export const IconCode = icon(CodeIcon);
+export const IconDatabase = icon(Database01Icon);
+export const IconCheck = icon(CheckIcon);
+export const IconBell = icon(BellIcon);
+export const IconBot = icon(BotIcon);
+export const IconCheckCheck = icon(CheckCheckIcon);
+export const IconShield = icon(Shield01Icon);
+export const IconChevronDown = icon(ChevronDownIcon);
+export const IconClose = icon(Cancel01Icon);
 /* Frameless window chrome (WindowControls): minimize / maximize / restore. */
-export const IconMinus = icon(Minus);
-export const IconSquare = icon(Square);
-export const IconSliders = icon(SlidersHorizontal);
-export const IconConfig = icon(RefreshCcw);
-export const IconChevronLeft = icon(ChevronLeft);
-export const IconChevronRight = icon(ChevronRight);
-export const IconExternal = icon(ExternalLink);
-export const IconArrowUpRight = icon(ArrowUpRight);
-export const IconUndo2 = icon(Undo2);
-export const IconCloudDown = icon(CloudDownload);
-export const IconDownload = icon(Download);
-export const IconImage = icon(Image);
-export const IconCamera = icon(Camera);
+export const IconMinus = icon(MinusSignIcon);
+export const IconSquare = icon(SquareIcon);
+export const IconSliders = icon(SlidersHorizontalIcon);
+export const IconConfig = icon(RefreshCcwIcon);
+export const IconChevronLeft = icon(ChevronLeftIcon);
+export const IconChevronRight = icon(ChevronRightIcon);
+export const IconExternal = icon(ExternalLinkIcon);
+export const IconArrowUpRight = icon(ArrowUpRight01Icon);
+export const IconUndo2 = icon(Undo02Icon);
+export const IconCloudDown = icon(CloudDownloadIcon);
+export const IconDownload = icon(Download01Icon);
+export const IconImage = icon(Image01Icon);
+export const IconCamera = icon(Camera01Icon);
 /* Composer attachment chips: one glyph per file family. */
-export const IconSheet = icon(FileSpreadsheet);
-export const IconAudio = icon(Music);
-export const IconVideo = icon(Video);
-export const IconReview = icon(RefreshCw);
-export const IconKeyboard = icon(Keyboard);
-export const IconMic = icon(Mic);
-export const IconPlug = icon(Plug);
-export const IconSlash = icon(Slash);
-export const IconUser = icon(UserRound);
+export const IconSheet = icon(FileSpreadsheetIcon);
+export const IconAudio = icon(Music01Icon);
+export const IconVideo = icon(Video01Icon);
+export const IconReview = icon(RefreshCwIcon);
+export const IconKeyboard = icon(KeyboardIcon);
+export const IconMic = icon(Mic01Icon);
+export const IconPlug = icon(Plug01Icon);
+export const IconSlash = icon(SlashIcon);
+export const IconUser = icon(UserRoundIcon);
 /** A signed-in vendor account, as opposed to a pasted key. */
-export const IconKey = icon(KeyRound);
-export const IconLogOut = icon(LogOut);
-export const IconSparkles = icon(Sparkles);
-export const IconListChecks = icon(ListChecks);
+export const IconKey = icon(KeyRoundIcon);
+export const IconLogOut = icon(LogOutIcon);
+export const IconSparkles = icon(SparklesIcon);
+export const IconListChecks = icon(ListChecksIcon);
 /** Goal mode: an outcome to reach, as opposed to Plan's list of steps. */
-export const IconTarget = icon(Target);
-export const IconBrowser = icon(AppWindow);
-export const IconHook = icon(Webhook);
-export const IconWorkflow = icon(Workflow);
-export const IconLink = icon(Link);
-export const IconPalette = icon(Palette);
-export const IconPerson = icon(Smile);
-export const IconInfo = icon(Info);
-export const IconServer = icon(Server);
-export const IconSun = icon(Sun);
-export const IconMoon = icon(Moon);
-export const IconMonitor = icon(Monitor);
-export const IconPet = icon(PawPrint);
-export const IconSnapshot = icon(RotateCw);
-export const IconGear = icon(Settings);
-export const IconPin = icon(Pin);
-export const IconMore = icon(MoreHorizontal);
-export const IconX = icon(X);
-export const IconTrash = icon(Trash2);
-export const IconStar = icon(Star);
+export const IconTarget = icon(Target01Icon);
+export const IconBrowser = icon(AppWindowIcon);
+export const IconHook = icon(WebhookIcon);
+export const IconWorkflow = icon(WorkflowIcon);
+export const IconLink = icon(Link01Icon);
+export const IconPalette = icon(PaletteIcon);
+export const IconPerson = icon(SmileIcon);
+export const IconInfo = icon(InformationCircleIcon);
+export const IconServer = icon(ServerIcon);
+export const IconSun = icon(Sun01Icon);
+export const IconMoon = icon(Moon01Icon);
+export const IconMonitor = icon(MonitorIcon);
+export const IconPet = icon(PawPrintIcon);
+export const IconSnapshot = icon(RotateCwIcon);
+export const IconGear = icon(Settings01Icon);
+export const IconPin = icon(PinIcon);
+export const IconMore = icon(MoreHorizontalIcon);
+export const IconX = icon(Cancel01Icon);
+export const IconTrash = icon(Delete02Icon);
+export const IconStar = icon(StarIcon);
 /* Toast status glyphs (see ToastHost) */
-export const IconCircleCheck = icon(CircleCheck);
-export const IconCircleAlert = icon(CircleAlert);
-export const IconTriangleAlert = icon(TriangleAlert);
+export const IconCircleCheck = icon(CircleCheckIcon);
+export const IconCircleAlert = icon(AlertCircleIcon);
+export const IconTriangleAlert = icon(TriangleAlertIcon);
 /* Password field reveal toggle (see PasswordInput). */
-export const IconEye = icon(Eye);
-export const IconEyeOff = icon(EyeOff);
+export const IconEye = icon(EyeIcon);
+export const IconEyeOff = icon(EyeOffIcon);
 
-export function IconStop({ size = 16, style, ...props }: IconProps) {
+export function IconStop({
+  size = 16,
+  style,
+  fill = "currentColor",
+  ...props
+}: IconProps) {
   return (
-    <Square
+    <HugeiconsIcon
+      icon={StopIcon}
       size={size}
-      strokeWidth={0}
-      fill="currentColor"
+      fill={fill}
       {...props}
       style={withScaledIconStyle(size, style)}
     />
   );
 }
 
-/* Heavy round-capped stroke renders Lucide's Dot at the old filled-dot size. */
-export function IconDot({ size = 16, style, ...props }: IconProps) {
+export function IconDot({
+  size = 16,
+  style,
+  strokeWidth = 4,
+  ...props
+}: IconProps) {
   return (
-    <Dot
+    <HugeiconsIcon
+      icon={DotIcon}
       size={size}
-      strokeWidth={6.5}
+      strokeWidth={typeof strokeWidth === "number" ? strokeWidth : 4}
       {...props}
       style={withScaledIconStyle(size, style)}
     />
   );
 }
 
-/** VS Code brand mark (settings open-target pill) — logos stay custom, no Lucide equivalent. */
+/** VS Code brand mark (settings open-target pill) — logos stay custom, no standard icon equivalent. */
 export function IconVSCode(props: SVGProps<SVGSVGElement> & { size?: number }) {
   const { size = 14, style, ...rest } = props;
   return (

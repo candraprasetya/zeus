@@ -444,6 +444,12 @@
   background-repeat: no-repeat;
 }
 
+.app-shell .sidebar,
+.settings-shell .settings-nav {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
 :root[data-platform="darwin"] .sidebar-rail {
   position: relative;
 }
@@ -663,8 +669,8 @@
  * non-Settings route and above the panel header throughout both animations. */
 .app-work-panel-toggle {
   position: fixed;
-  top: 9px;
-  right: var(--ds-work-panel-toggle-inset);
+  top: calc(9px + var(--ds-app-panel-inset, 8px));
+  right: calc(var(--ds-work-panel-toggle-inset) + var(--ds-app-panel-inset, 8px));
   z-index: 30;
   pointer-events: auto;
   -webkit-app-region: no-drag;
@@ -699,7 +705,7 @@
 :root[data-platform="win32"] .app-work-panel-toggle,
 :root[data-platform="linux"] .app-work-panel-toggle {
   right: calc(
-    var(--ds-window-controls-width) + var(--ds-work-panel-toggle-inset)
+    var(--ds-window-controls-width) + var(--ds-work-panel-toggle-inset) + var(--ds-app-panel-inset, 8px)
   );
 }
 

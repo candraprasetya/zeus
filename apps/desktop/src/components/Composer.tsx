@@ -46,6 +46,7 @@ import {
   type ComposerPrefill,
 } from "../features/chat/composer/model";
 import {
+  createCommandReference,
   createFileReference,
   createSkillReference,
   editorSelectionRange,
@@ -469,22 +470,32 @@ export function Composer({
     if (!result) return;
     invalidatePromptEnhancement();
     const acceptedSkillReference = result.skillReference;
-    if (acceptedSkillReference) {
+    const acceptedCommandReference = result.commandReference;
+    if (acceptedCommandReference || acceptedSkillReference) {
+      const ref = acceptedCommandReference ?? acceptedSkillReference!;
       const token = nextChipToken();
       const after = result.value.slice(result.cursor);
       const separator = after.startsWith(" ") ? "" : " ";
       const nextText =
         result.value.slice(0, result.cursor) + token + separator + after;
+      const isSkill =
+        "kind" in ref ? ref.kind === "skill" : Boolean(acceptedSkillReference);
       applyEditorDraft(
         nextText,
         [
           ...fileReferencesRef.current,
-          createSkillReference(
-            acceptedSkillReference.skillId,
-            acceptedSkillReference.name,
-            referenceSessionId,
-            token,
-          ),
+          isSkill
+            ? createSkillReference(
+                ("skillId" in ref && ref.skillId) || ref.name,
+                ref.name,
+                referenceSessionId,
+                token,
+              )
+            : createCommandReference(
+                ref.name,
+                referenceSessionId,
+                token,
+              ),
         ],
         result.cursor + token.length + separator.length,
       );

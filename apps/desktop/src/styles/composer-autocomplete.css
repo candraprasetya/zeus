@@ -50,12 +50,32 @@
 
 .composer-ac-item {
   gap: 8px;
+  position: relative;
+  transition:
+    background var(--motion-duration-fast) var(--motion-ease-out),
+    color var(--motion-duration-fast) var(--motion-ease-out),
+    box-shadow var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+.composer-ac-item:hover,
+.composer-ac-item.kb-active {
+  background: color-mix(in oklab, var(--ds-accent) 9%, var(--ds-bg-hover));
+  box-shadow: inset 2px 0 0 var(--ds-accent);
+}
+
+.composer-ac-item:hover .composer-ac-icon,
+.composer-ac-item.kb-active .composer-ac-icon {
+  color: var(--ds-accent);
+  transform: scale(1.1);
 }
 
 .composer-ac-icon {
   display: inline-flex;
   flex: 0 0 auto;
   color: var(--ds-text-secondary);
+  transition:
+    color var(--motion-duration-fast) var(--motion-ease-out),
+    transform var(--motion-duration-fast) var(--motion-ease-out);
 }
 
 .composer-ac-name {
@@ -66,6 +86,12 @@
   white-space: nowrap;
   font-family: var(--font-mono, ui-monospace, monospace);
   font-size: var(--text-sm-plus, var(--text-md));
+  transition: color var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+.composer-ac-item:hover .composer-ac-name,
+.composer-ac-item.kb-active .composer-ac-name {
+  color: var(--ds-text-primary);
 }
 
 .composer-ac-hint {
@@ -75,6 +101,21 @@
   white-space: nowrap;
   color: var(--ds-text-muted);
   font-size: var(--text-xs-plus, var(--text-sm));
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: color-mix(in oklab, var(--ds-text-muted) 10%, transparent);
+  border: 1px solid color-mix(in oklab, var(--ds-text-muted) 14%, transparent);
+  transition:
+    color var(--motion-duration-fast) var(--motion-ease-out),
+    background var(--motion-duration-fast) var(--motion-ease-out),
+    border-color var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+.composer-ac-item:hover .composer-ac-hint,
+.composer-ac-item.kb-active .composer-ac-hint {
+  color: var(--ds-text-secondary);
+  background: color-mix(in oklab, var(--ds-accent) 14%, transparent);
+  border-color: color-mix(in oklab, var(--ds-accent) 26%, transparent);
 }
 
 .composer-ac-desc {

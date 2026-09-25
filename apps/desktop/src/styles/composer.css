@@ -302,6 +302,16 @@
   white-space: nowrap;
   user-select: none;
   -webkit-user-select: none;
+  transition:
+    background var(--motion-duration-fast) var(--motion-ease-out),
+    border-color var(--motion-duration-fast) var(--motion-ease-out),
+    box-shadow var(--motion-duration-fast) var(--motion-ease-out),
+    color var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+.composer-chip:hover {
+  background: color-mix(in oklab, var(--ds-text-primary) 7%, var(--ds-tile-deep));
+  color: var(--ds-text-primary);
 }
 
 .composer-chip[data-action="expand-text-reference"] {
@@ -313,23 +323,53 @@
   outline-offset: 1px;
 }
 
-.composer-chip.composer-chip-skill {
+.composer-chip.composer-chip-skill,
+.composer-chip.composer-chip-command {
   border-radius: var(--radius-full);
   background: color-mix(in oklab, var(--ds-accent) 14%, var(--ds-tile-deep));
   color: var(--ds-text-primary);
   border: 1px solid color-mix(in oklab, var(--ds-accent) 28%, transparent);
   padding: 0 5px 0 7px;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
-.composer-chip.composer-chip-skill .composer-chip-icon {
+.composer-chip.composer-chip-command {
+  background: color-mix(in oklab, var(--ds-accent) 11%, var(--ds-tile-deep));
+  border-color: color-mix(in oklab, var(--ds-accent) 24%, transparent);
+}
+
+.composer-chip.composer-chip-skill .composer-chip-icon,
+.composer-chip.composer-chip-command .composer-chip-icon {
   color: var(--ds-accent);
+}
+
+.composer-chip.composer-chip-skill:hover {
+  background: color-mix(in oklab, var(--ds-accent) 22%, var(--ds-tile-deep));
+  border-color: color-mix(in oklab, var(--ds-accent) 46%, transparent);
+  box-shadow: 0 1px 4px color-mix(in oklab, var(--ds-accent) 20%, transparent);
+}
+
+.composer-chip.composer-chip-skill:hover .composer-chip-icon {
+  filter: drop-shadow(0 0 2px color-mix(in oklab, var(--ds-accent) 45%, transparent));
+}
+
+.composer-chip.composer-chip-command:hover {
+  background: color-mix(in oklab, var(--ds-accent) 19%, var(--ds-tile-deep));
+  border-color: color-mix(in oklab, var(--ds-accent) 42%, transparent);
+  box-shadow: 0 1px 4px color-mix(in oklab, var(--ds-accent) 16%, transparent);
+}
+
+.composer-chip.composer-chip-command:hover .composer-chip-icon {
+  filter: drop-shadow(0 0 2px color-mix(in oklab, var(--ds-accent) 45%, transparent));
 }
 
 .composer-chip-icon {
   display: inline-flex;
   flex: 0 0 auto;
   color: var(--ds-text-muted);
+  transition:
+    color var(--motion-duration-fast) var(--motion-ease-out),
+    filter var(--motion-duration-fast) var(--motion-ease-out);
 }
 
 .composer-chip-name {
@@ -348,15 +388,18 @@
   justify-content: center;
   border-radius: var(--radius-full);
   color: var(--ds-text-muted);
+  cursor: pointer;
   transition:
     background var(--motion-duration-fast) var(--motion-ease-out),
-    color var(--motion-duration-fast) var(--motion-ease-out);
+    color var(--motion-duration-fast) var(--motion-ease-out),
+    transform var(--motion-duration-fast) var(--motion-ease-out);
 }
 
 .composer-chip-remove:hover,
 .composer-chip-remove:focus-visible {
-  background: var(--ds-bg-hover);
+  background: color-mix(in oklab, var(--ds-accent) 25%, var(--ds-bg-hover));
   color: var(--ds-text-primary);
+  transform: scale(1.15);
 }
 
 .composer-input::placeholder {

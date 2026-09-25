@@ -252,15 +252,7 @@ export function useComposerAutocomplete({
     if (!trigger || dismissed) return [];
     if (trigger.mode === "slash") {
       if (!commands) return [];
-      const filtered = filterCommands(commands, trigger.query);
-      if (trigger.tokenStart > 0) {
-        return filtered.filter(
-          (item) =>
-            item.kind === "command" &&
-            (item.command.kind === "skill" || item.command.kind === "template"),
-        );
-      }
-      return filtered;
+      return filterCommands(commands, trigger.query);
     }
     return files ? filterFiles(files.entries, trigger.query) : [];
   }, [trigger, dismissed, commands, files]);
@@ -289,6 +281,12 @@ export function useComposerAutocomplete({
           cursor: number;
           fileReference?: { path: string; name: string };
           skillReference?: { id: string; name: string; skillId: string };
+          commandReference?: {
+            id: string;
+            name: string;
+            kind: "skill" | "command";
+            skillId?: string;
+          };
         }
       | null => {
       if (!trigger) return null;
@@ -303,20 +301,26 @@ export function useComposerAutocomplete({
           },
         };
       }
-      if (item.kind === "command" && item.command.kind === "skill") {
+      if (item.kind === "command") {
+        const isSkill = item.command.kind === "skill";
         return {
           ...applyCompletion(value, trigger, ""),
-          skillReference: {
+          commandReference: {
             id: item.command.id ?? item.command.name,
             name: item.command.name,
+            kind: isSkill ? ("skill" as const) : ("command" as const),
             skillId: item.command.skillId ?? item.command.name,
           },
+          skillReference: isSkill
+            ? {
+                id: item.command.id ?? item.command.name,
+                name: item.command.name,
+                skillId: item.command.skillId ?? item.command.name,
+              }
+            : undefined,
         };
       }
-      const insert =
-        item.kind === "command"
-          ? formatCommandInsert(item.command.name)
-          : formatFileInsert(item.entry.path, item.entry.kind);
+      const insert = formatFileInsert(item.entry.path, item.entry.kind);
       return applyCompletion(value, trigger, insert);
     },
     [trigger, items, value],

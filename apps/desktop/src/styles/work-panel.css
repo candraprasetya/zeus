@@ -12,8 +12,14 @@
   flex: 0 0 var(--work-panel-width);
   width: var(--work-panel-width);
   min-width: 0;
-  height: 100%;
+  height: calc(100% - var(--ds-app-panel-inset, 8px) * 2);
   min-height: 0;
+  margin: var(--ds-app-panel-inset, 8px) var(--ds-app-panel-inset, 8px) var(--ds-app-panel-inset, 8px) 0;
+  border-radius: 0 var(--ds-app-panel-radius, var(--radius-2xl)) var(--ds-app-panel-radius, var(--radius-2xl)) 0;
+  overflow: hidden;
+  border: 1px solid var(--ds-border-default);
+  border-left: 0;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
   z-index: 20;
   /* The dock is a step lighter than the conversation pane, and that tone
      change is its only edge (D297): no divider against the chat column.
@@ -334,6 +340,9 @@
   flex: 1 1 auto;
   width: auto;
   max-width: none;
+  margin: var(--ds-app-panel-inset, 8px);
+  border-radius: var(--ds-app-panel-radius, var(--radius-2xl));
+  border-left: 1px solid var(--ds-border-default);
 }
 
 .work-panel.is-maximized .work-panel-resize {
