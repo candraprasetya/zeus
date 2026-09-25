@@ -38,9 +38,11 @@ import {
   IconPanelRestore,
   IconPlug,
   IconPlus,
+  IconWorkflow,
 } from "../icons";
 import { ReviewTab } from "./ReviewTab";
 import { FilesTab } from "./FilesTab";
+import { MindmapTab } from "./MindmapTab";
 import { PluginViewTab } from "./PluginViewTab";
 import { SubagentTranscriptTab } from "./SubagentTranscriptTab";
 import {
@@ -57,6 +59,7 @@ const TAB_ICONS = {
   new: IconPlus,
   review: IconDiff,
   file: IconFileText,
+  mindmap: IconWorkflow,
   plugin: IconPlug,
   subagent: IconBot,
 } as const;
@@ -121,7 +124,7 @@ function workPanelTools(
   t: (key: string) => string,
   pluginViews: PluginViewMeta[],
 ): WorkPanelTool[] {
-  // Review is the only host-owned launcher. Files, Browser, and every future
+  // Review and Mindmap are host-owned launchers. Files, Browser, and every future
   // tool are plugin-contributed views, so their list stays data-driven.
   return [
     {
@@ -129,6 +132,13 @@ function workPanelTools(
       tab: toolWorkPanelTab("review"),
       label: t("panel.tabs.review"),
       icon: IconDiff,
+    },
+    {
+      id: "mindmap",
+      tab: toolWorkPanelTab("mindmap"),
+      label: t("panel.tabs.mindmap"),
+      icon: IconWorkflow,
+      description: t("panel.mindmap.title"),
     },
     ...pluginViews.map((view) => {
       const Icon = pluginViewIcon(view.icon);
@@ -932,6 +942,17 @@ export function WorkPanel({
               aria-labelledby={`work-panel-tab-${activeTab.id}`}
             >
               <FilesTab />
+            </div>
+          )}
+          {activeTab?.kind === "mindmap" && (
+            <div
+              key={activeTab.id}
+              id={`work-panel-surface-${activeTab.id}`}
+              className="work-panel-tabpane"
+              role="tabpanel"
+              aria-labelledby={`work-panel-tab-${activeTab.id}`}
+            >
+              <MindmapTab />
             </div>
           )}
           {activeTab?.kind === "plugin" &&

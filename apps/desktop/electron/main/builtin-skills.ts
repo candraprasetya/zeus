@@ -17,6 +17,8 @@ export const PLUGIN_DEV_SKILL_FILE = "plugin-development.md";
 export const PLUGIN_DEV_SKILL_ID = "pi-desktop/plugin-development";
 export const IMAGE_GENERATION_SKILL_ID = "pi-desktop/imagegen";
 const IMAGE_GENERATION_SKILL_FILE = "image-generation.md";
+export const ZEUS_PANTAU_SKILL_ID = "zeus-pantau";
+const ZEUS_PANTAU_SKILL_FILE = "zeus-pantau.md";
 
 /** electron-builder copies `resources/skills` to `<resources>/skills`. */
 function resolveBuiltinSkillPath(fileName: string): string | null {
@@ -88,10 +90,15 @@ export type BuiltinSkillInput = {
  * fresh so a packaged update takes effect without a restart.
  */
 export function builtinSkills(input: BuiltinSkillInput): PluginSkillDef[] {
-  const ids = [IMAGE_GENERATION_SKILL_ID];
+  const ids = [IMAGE_GENERATION_SKILL_ID, ZEUS_PANTAU_SKILL_ID];
   if (isPluginWorkspace(input.workspacePath, input.pluginPaths)) ids.push(PLUGIN_DEV_SKILL_ID);
   return ids.flatMap((id) => {
-    const file = id === IMAGE_GENERATION_SKILL_ID ? IMAGE_GENERATION_SKILL_FILE : PLUGIN_DEV_SKILL_FILE;
+    const file =
+      id === IMAGE_GENERATION_SKILL_ID
+        ? IMAGE_GENERATION_SKILL_FILE
+        : id === ZEUS_PANTAU_SKILL_ID
+          ? ZEUS_PANTAU_SKILL_FILE
+          : PLUGIN_DEV_SKILL_FILE;
     const raw = readBuiltinSkill(file);
     if (!raw?.trim()) return [];
     const parsed = parseSkillFrontmatter(raw);
@@ -106,8 +113,20 @@ export function builtinSkills(input: BuiltinSkillInput): PluginSkillDef[] {
 export function loadBuiltinSkillBody(
   id: string,
 ): { id: string; name: string; body: string } | null {
-  if (id !== PLUGIN_DEV_SKILL_ID && id !== IMAGE_GENERATION_SKILL_ID) return null;
-  const raw = readBuiltinSkill(id === IMAGE_GENERATION_SKILL_ID ? IMAGE_GENERATION_SKILL_FILE : PLUGIN_DEV_SKILL_FILE);
+  if (
+    id !== PLUGIN_DEV_SKILL_ID &&
+    id !== IMAGE_GENERATION_SKILL_ID &&
+    id !== ZEUS_PANTAU_SKILL_ID
+  ) {
+    return null;
+  }
+  const file =
+    id === IMAGE_GENERATION_SKILL_ID
+      ? IMAGE_GENERATION_SKILL_FILE
+      : id === ZEUS_PANTAU_SKILL_ID
+        ? ZEUS_PANTAU_SKILL_FILE
+        : PLUGIN_DEV_SKILL_FILE;
+  const raw = readBuiltinSkill(file);
   if (!raw?.trim()) return null;
   const parsed = parseSkillFrontmatter(raw);
   if (!parsed.body) return null;

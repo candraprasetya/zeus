@@ -177,6 +177,7 @@ test("only plugin views are launchable tools", () => {
   assert.equal(isToolWorkPanelTab(pluginWorkPanelTab("pi.file-manager", "manager")), true);
   assert.equal(isKnownWorkPanelTab({ id: "browser", kind: "browser" }), false);
   assert.equal(isKnownWorkPanelTab(newWorkPanelTab()), true);
+  assert.equal(isKnownWorkPanelTab(toolWorkPanelTab("mindmap")), true);
 });
 
 test("a host-chosen project file prefers the bundled file view", () => {

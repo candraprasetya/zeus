@@ -1736,6 +1736,7 @@ sklm: {
       review: "审阅",
       browser: "浏览器",
       file: "文件",
+      mindmap: "脑图",
       plugin: "插件视图",
       subagent: "子智能体",
     },
@@ -1743,6 +1744,19 @@ sklm: {
       failed: "无法加载该视图。请重新加载插件后重试。",
     },
     empty: {
+    },
+    mindmap: {
+      title: "知识脑图",
+      emptyTitle: "暂无知识图谱",
+      emptyBody: "在对话中运行 /zeus-pantau 或在 .knowledge/ 中添加笔记即可生成脑图。",
+      openInObsidian: "在 Obsidian 中打开",
+      zoomIn: "放大",
+      zoomOut: "缩小",
+      resetZoom: "重置缩放",
+      nodesCount: "{{count}} 个概念",
+      edgesCount: "{{count}} 条关联",
+      loading: "正在构建知识图谱…",
+      error: "无法加载知识图谱",
     },
     review: {
       filesChanged_one: "1 个文件有改动",

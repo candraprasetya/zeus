@@ -1769,6 +1769,7 @@ sklm: {
       review: "Review",
       browser: "Browser",
       file: "Files",
+      mindmap: "Mindmap",
       plugin: "Plugin view",
       subagent: "Subagent",
     },
@@ -1776,6 +1777,19 @@ sklm: {
       failed: "This view could not be loaded. Reload the plugin and try again.",
     },
     empty: {
+    },
+    mindmap: {
+      title: "Knowledge Mindmap",
+      emptyTitle: "No knowledge graph yet",
+      emptyBody: "Run /zeus-pantau in chat or add notes in .knowledge/ to generate your brain mindmap.",
+      openInObsidian: "Open in Obsidian",
+      zoomIn: "Zoom in",
+      zoomOut: "Zoom out",
+      resetZoom: "Reset zoom",
+      nodesCount: "{{count}} concepts",
+      edgesCount: "{{count}} connections",
+      loading: "Building knowledge graph…",
+      error: "Could not load knowledge graph",
     },
     review: {
       filesChanged_one: "1 file changed",
