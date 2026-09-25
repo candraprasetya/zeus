@@ -4,8 +4,9 @@
  * tested away from React and IME timing.
  *
  * Grammar mirrors the pi CLI editor:
- * - "/" opens command mode only as the very first character of the draft,
- *   while the cursor is still inside that first whitespace-free token.
+ * - "/" opens command mode at the start of the draft or when preceded only
+ *   by other slash commands (allowing multi-skill chaining), while the cursor
+ *   is inside that whitespace-free token.
  * - "@" opens file mode when the token containing the cursor starts with
  *   "@" and the character before it is start-of-input, whitespace, or one
  *   of the pi delimiters (" ' =). A `@"` prefix starts a quoted token that
@@ -73,18 +74,21 @@ export function detectTrigger(
 ): ComposerTrigger | null {
   if (cursor < 0 || cursor > value.length) return null;
 
-  // Slash mode: draft starts with "/", cursor inside the first token.
-  if (value.startsWith("/") && cursor >= 1) {
-    const head = value.slice(1, cursor);
-    let hasWhitespace = false;
-    for (const ch of head) {
-      if (WHITESPACE.has(ch)) {
-        hasWhitespace = true;
-        break;
-      }
-    }
-    if (!hasWhitespace) {
-      return { mode: "slash", query: head, tokenStart: 0, tokenEnd: cursor };
+  // Slash mode: scan back to find the start of the current whitespace-delimited token.
+  // Triggers for the first token or when preceded only by other slash tokens (multi-skill chaining).
+  let tokenStart = cursor;
+  while (tokenStart > 0 && !WHITESPACE.has(value[tokenStart - 1])) {
+    tokenStart -= 1;
+  }
+
+  if (cursor > tokenStart && value[tokenStart] === "/") {
+    const head = value.slice(tokenStart + 1, cursor);
+    const prefix = value.slice(0, tokenStart);
+    const precedingTokens = prefix.trim().split(/\s+/).filter(Boolean);
+    const allPrecedingAreSlash = precedingTokens.every((tok) => tok.startsWith("/"));
+
+    if (allPrecedingAreSlash) {
+      return { mode: "slash", query: head, tokenStart, tokenEnd: cursor };
     }
   }
 

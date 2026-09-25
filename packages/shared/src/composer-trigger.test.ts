@@ -47,6 +47,28 @@ describe("detectTrigger — slash mode", () => {
   it("never triggers mid-draft or on later lines", () => {
     expect(detectTrigger("hi /cmd", 7)).toBeNull();
     expect(detectTrigger("hi\n/cmd", 7)).toBeNull();
+    expect(detectTrigger("/cmd text /another", 18)).toBeNull();
+  });
+
+  it("supports multi-skill chaining when preceded only by slash commands", () => {
+    expect(detectTrigger("/skill1 /", 9)).toEqual({
+      mode: "slash",
+      query: "",
+      tokenStart: 8,
+      tokenEnd: 9,
+    });
+    expect(detectTrigger("/skill1 /kar", 12)).toEqual({
+      mode: "slash",
+      query: "kar",
+      tokenStart: 8,
+      tokenEnd: 12,
+    });
+    expect(detectTrigger("/skill1 /skill2 /", 17)).toEqual({
+      mode: "slash",
+      query: "",
+      tokenStart: 16,
+      tokenEnd: 17,
+    });
   });
 });
 
@@ -180,6 +202,22 @@ describe("applyCompletion", () => {
     expect(step1.value).toBe("@src/");
     const next = detectTrigger(step1.value, step1.cursor);
     expect(next).toMatchObject({ mode: "file", query: "src/" });
+  });
+
+  it("chains multiple slash commands smoothly", () => {
+    const step1 = applyCompletion("/", detectTrigger("/", 1)!, formatCommandInsert("skill1"));
+    expect(step1).toEqual({ value: "/skill1 ", cursor: 8 });
+
+    const input2 = step1.value + "/";
+    const trigger2 = detectTrigger(input2, input2.length);
+    expect(trigger2).toMatchObject({ mode: "slash", query: "", tokenStart: 8, tokenEnd: 9 });
+
+    const step2 = applyCompletion(input2, trigger2!, formatCommandInsert("skill2"));
+    expect(step2).toEqual({ value: "/skill1 /skill2 ", cursor: 16 });
+
+    const input3 = step2.value + "/";
+    const trigger3 = detectTrigger(input3, input3.length);
+    expect(trigger3).toMatchObject({ mode: "slash", query: "", tokenStart: 16, tokenEnd: 17 });
   });
 });
 
