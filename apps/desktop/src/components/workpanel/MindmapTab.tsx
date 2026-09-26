@@ -69,6 +69,9 @@ function parseWikilinks(text: string): string[] {
   return links;
 }
 
+// Tracks projects whose mindmap intro animation has already been played in this app session
+const playedIntroProjects = new Set<string>();
+
 export function MindmapTab() {
   const { t } = useTranslation();
   const workspace = useAppStore((s) => s.workspace);
@@ -84,8 +87,10 @@ export function MindmapTab() {
   const [selectedNode, setSelectedNode] = useState<MindmapNode | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  // true while the initial pop-in entry animation is still running
+  // true while the sequential entry animation is running
   const [introAnimating, setIntroAnimating] = useState(false);
+  // how many nodes have been revealed so far in the sequence (1 by 1)
+  const [revealedCount, setRevealedCount] = useState<number>(Infinity);
   // measured container dimensions in pixels
   const [containerSize, setContainerSize] = useState({ w: 0, h: 0 });
   // temporary flag to apply smooth CSS glide on button actions (Reset View / Center on Node)
@@ -417,18 +422,42 @@ export function MindmapTab() {
     };
   }, [containerEl, graph.nodes, fitToBounds]);
 
-  // Fire molecule-core + droplet-detach animation on loading → done transition
+  // Fire sequential 1-by-1 liquid travel animation on initial project load or manual reload
   useEffect(() => {
     if (prevLoadingRef.current && !loading && graph.nodes.length > 0) {
-      setIntroAnimating(true);
-      // Node 0 appears first; nodes 1..N detach sequentially at 450ms + (i-1)*160ms
-      const totalMs = 450 + Math.max(0, graph.nodes.length - 1) * 160 + 900;
-      const id = setTimeout(() => setIntroAnimating(false), totalMs);
       prevLoadingRef.current = false;
-      return () => clearTimeout(id);
+
+      const alreadyPlayed = root ? playedIntroProjects.has(root) : false;
+      if (alreadyPlayed) {
+        setRevealedCount(graph.nodes.length);
+        setIntroAnimating(false);
+        return;
+      }
+
+      // Start with 1 circle first (Node 0)
+      setIntroAnimating(true);
+      setRevealedCount(1);
+
+      let current = 1;
+      const stepInterval = 440; // ms per node
+
+      const timer = setInterval(() => {
+        current++;
+        setRevealedCount(current);
+
+        if (current >= graph.nodes.length) {
+          clearInterval(timer);
+          setTimeout(() => {
+            setIntroAnimating(false);
+            if (root) playedIntroProjects.add(root);
+          }, 450);
+        }
+      }, stepInterval);
+
+      return () => clearInterval(timer);
     }
     prevLoadingRef.current = loading;
-  }, [loading, graph.nodes]);
+  }, [loading, graph.nodes, root]);
 
   // Pan handling: allow panning everywhere EXCEPT on node clicks or HUD controls
   const handlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -570,6 +599,14 @@ export function MindmapTab() {
     setPan({ x: -node.x * zoom, y: -node.y * zoom });
   }, [zoom, triggerSmooth]);
 
+  // Reload knowledge data and replay the liquid animation on demand
+  const handleReload = useCallback(() => {
+    if (root) playedIntroProjects.delete(root);
+    hasAutoCenteredRef.current = false;
+    prevLoadingRef.current = true;
+    void loadKnowledgeData();
+  }, [root, loadKnowledgeData]);
+
   if (!root) {
     return (
       <WorkTabEmpty
@@ -650,19 +687,24 @@ export function MindmapTab() {
               const to = nodeMap.get(edge.to);
               if (!from || !to) return null;
 
+              const fromIdx = graph.nodes.findIndex((n) => n.id === edge.from);
+              const toIdx = graph.nodes.findIndex((n) => n.id === edge.to);
+
+              // Only show edge when both connected nodes are revealed
+              if (introAnimating && (fromIdx >= revealedCount || toIdx >= revealedCount)) {
+                return null;
+              }
+
               const isEdgeHighlighted =
                 activeFocusId && (edge.from === activeFocusId || edge.to === activeFocusId);
               const isEdgeDimmed = activeFocusId && !isEdgeHighlighted;
-              const toIdx = graph.nodes.findIndex((n) => n.id === edge.to);
-              const edgeDelay = introAnimating && toIdx > 0
-                ? `${450 + (toIdx - 1) * 160 + 80}ms`
-                : undefined;
+              const isTraveling =
+                introAnimating && (toIdx === revealedCount - 1 || fromIdx === revealedCount - 1);
 
               return (
                 <g
                   key={edge.id}
-                  className={`mindmap-edge-group ${introAnimating && toIdx > 0 ? "mindmap-edge-group--animate-in" : ""} ${isEdgeHighlighted ? "highlighted" : ""} ${isEdgeDimmed ? "dimmed" : ""}`}
-                  style={edgeDelay ? { animationDelay: edgeDelay } : undefined}
+                  className={`mindmap-edge-group ${isTraveling ? "mindmap-edge-travel" : ""} ${isEdgeHighlighted ? "highlighted" : ""} ${isEdgeDimmed ? "dimmed" : ""}`}
                 >
                   {/* Invisible thicker hit-line for hover precision */}
                   <line
@@ -698,6 +740,11 @@ export function MindmapTab() {
           {/* Nodes */}
           <g className="mindmap-nodes-layer">
             {graph.nodes.map((node, index) => {
+              // Do not render nodes that haven't appeared yet in the sequence
+              if (introAnimating && index >= revealedCount) {
+                return null;
+              }
+
               const colorMeta = COLOR_MAP[node.color ?? "default"] ?? COLOR_MAP.default;
               const isSelected = selectedNode?.id === node.id;
               const isHovered = hoveredNodeId === node.id;
@@ -706,24 +753,23 @@ export function MindmapTab() {
               const isSearchMatch = searchMatchingIds ? searchMatchingIds.has(node.id) : null;
               const isSearchDimmed = searchMatchingIds !== null && !isSearchMatch;
 
-              // Node 0 is the root molecule core (appears first). Nodes 1..N detach one by one.
               const isMoleculeCore = index === 0;
-              const animClass = introAnimating
+              const isNewest = introAnimating && index === revealedCount - 1;
+
+              const animClass = isNewest
                 ? isMoleculeCore
-                  ? "mindmap-node-group--molecule-core"
-                  : "mindmap-node-group--liquid-droplet"
+                  ? "mindmap-node-core-spawn"
+                  : "mindmap-node-travel"
                 : "";
-              const animDelay = introAnimating
-                ? isMoleculeCore
-                  ? "0ms"
-                  : `${450 + (index - 1) * 160}ms`
-                : undefined;
+
+              const node0 = graph.nodes[0];
+              const fromX = (node0?.x ?? 0) - node.x;
+              const fromY = (node0?.y ?? 0) - node.y;
 
               return (
                 <g
                   key={node.id}
-                  className={`mindmap-node-group ${isSelected ? "selected" : ""} ${isHovered ? "hovered" : ""} ${isDimmed || isSearchDimmed ? "dimmed" : ""} ${isSearchMatch ? "search-match" : ""} ${animClass}`}
-                  style={animDelay ? { animationDelay: animDelay } : undefined}
+                  className={`mindmap-node-group ${isSelected ? "selected" : ""} ${isHovered ? "hovered" : ""} ${isDimmed || isSearchDimmed ? "dimmed" : ""} ${isSearchMatch ? "search-match" : ""}`}
                   transform={`translate(${node.x}, ${node.y})`}
                   onPointerEnter={() => setHoveredNodeId(node.id)}
                   onPointerLeave={() => setHoveredNodeId((curr) => (curr === node.id ? null : curr))}
@@ -735,67 +781,93 @@ export function MindmapTab() {
                     }
                   }}
                 >
-                  {/* Search Match Halo */}
-                  {isSearchMatch && (
-                    <circle
-                      r={node.radius + 12}
-                      fill="none"
-                      stroke="var(--ds-accent)"
-                      strokeWidth={2}
-                      strokeDasharray="4 3"
-                      className="mindmap-search-halo"
-                    />
-                  )}
-
-                  {/* Outer Glow Halo on hover, active, or connection */}
-                  <circle
-                    r={node.radius + 8}
-                    fill={colorMeta.glow}
-                    filter="url(#nodeGlowFilter)"
-                    className="mindmap-node-glow"
-                    opacity={isSelected ? 0.9 : isHovered ? 0.75 : isConnected && activeFocusId ? 0.5 : 0}
-                  />
-
-                  {/* Node Outer Ring */}
-                  <circle
-                    r={node.radius + 3}
-                    fill="none"
-                    stroke={isSelected || isHovered ? colorMeta.border : "transparent"}
-                    strokeWidth={1.5}
-                    className="mindmap-node-ring"
-                  />
-
-                  {/* Node Main Disk */}
-                  <circle
-                    r={node.radius}
-                    fill={colorMeta.bg}
-                    stroke={colorMeta.border}
-                    strokeWidth={2}
-                    className="mindmap-node-circle"
-                  />
-
-                  {/* Inner Ambient Accent Pulse */}
-                  <circle
-                    r={node.radius * 0.45}
-                    fill="#ffffff"
-                    opacity={isSelected || isHovered ? 0.95 : 0.8}
-                    className="mindmap-node-core"
-                  />
-
-                  {/* Node Label Pill Background */}
-                  <text
-                    y={node.radius + 18}
-                    className="mindmap-node-label"
-                    textAnchor="middle"
+                  {/* Inner animating container so CSS transform does NOT overwrite SVG translate */}
+                  <g
+                    className={animClass}
+                    style={
+                      animClass
+                        ? ({
+                            "--from-x": `${fromX}px`,
+                            "--from-y": `${fromY}px`,
+                          } as React.CSSProperties)
+                        : undefined
+                    }
                   >
-                    {node.label}
-                  </text>
+                    {/* Search Match Halo */}
+                    {isSearchMatch && (
+                      <circle
+                        r={node.radius + 12}
+                        fill="none"
+                        stroke="var(--ds-accent)"
+                        strokeWidth={2}
+                        strokeDasharray="4 3"
+                        className="mindmap-search-halo"
+                      />
+                    )}
+
+                    {/* Outer Glow Halo on hover, active, or connection */}
+                    <circle
+                      r={node.radius + 8}
+                      fill={colorMeta.glow}
+                      filter="url(#nodeGlowFilter)"
+                      className="mindmap-node-glow"
+                      opacity={isSelected ? 0.9 : isHovered ? 0.75 : isConnected && activeFocusId ? 0.5 : 0}
+                    />
+
+                    {/* Node Outer Ring */}
+                    <circle
+                      r={node.radius + 3}
+                      fill="none"
+                      stroke={isSelected || isHovered ? colorMeta.border : "transparent"}
+                      strokeWidth={1.5}
+                      className="mindmap-node-ring"
+                    />
+
+                    {/* Node Main Disk */}
+                    <circle
+                      r={node.radius}
+                      fill={colorMeta.bg}
+                      stroke={colorMeta.border}
+                      strokeWidth={2}
+                      className="mindmap-node-circle"
+                    />
+
+                    {/* Inner Ambient Accent Pulse */}
+                    <circle
+                      r={node.radius * 0.45}
+                      fill="#ffffff"
+                      opacity={isSelected || isHovered ? 0.95 : 0.8}
+                      className="mindmap-node-core"
+                    />
+
+                    {/* Node Label Pill Background */}
+                    <text
+                      y={node.radius + 18}
+                      className="mindmap-node-label"
+                      textAnchor="middle"
+                    >
+                      {node.label}
+                    </text>
+                  </g>
                 </g>
               );
             })}
           </g>
         </g>
       </svg>
+
+      {/* Top-Right Dedicated Reload / Refresh Button */}
+      <div className="mindmap-top-bar no-drag">
+        <button
+          type="button"
+          className={`mindmap-reload-btn ${loading ? "is-reloading" : ""}`}
+          title="Reload & Replay Mindmap"
+          onClick={handleReload}
+        >
+          <IconRefresh size={14} />
+          <span>Reload</span>
+        </button>
+      </div>
 
       {/* Floating Toolbar with Search, Zoom, and Recenter */}
       <div className="mindmap-controls no-drag">
@@ -877,7 +949,7 @@ export function MindmapTab() {
             className="icon-btn icon-btn-square"
             tooltip="Refresh Mindmap"
             ariaLabel="Refresh Mindmap"
-            onClick={() => void loadKnowledgeData()}
+            onClick={handleReload}
           >
             <IconRefresh size={14} />
           </TooltipButton>
