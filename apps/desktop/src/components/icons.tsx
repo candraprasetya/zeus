@@ -52,6 +52,7 @@ import {
   KeyRoundIcon,
   Link01Icon,
   ListChecksIcon,
+  LayoutLeftIcon,
   LogOutIcon,
   Maximize01Icon,
   MessageSquareIcon,
@@ -241,6 +242,7 @@ export const IconMindmap = icon(WorkflowIcon);
 export const IconFork = icon(GitForkIcon);
 export const IconLink = icon(Link01Icon);
 export const IconPalette = icon(PaletteIcon);
+export const IconLayout = icon(LayoutLeftIcon);
 export const IconPerson = icon(SmileIcon);
 export const IconInfo = icon(InformationCircleIcon);
 export const IconServer = icon(ServerIcon);

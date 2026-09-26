@@ -527,12 +527,14 @@ export function HelpIcon({
 export function Button({
   variant = "secondary",
   size = "md",
+  pill,
   className,
   ref,
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "secondary" | "ghost";
   size?: "sm" | "md";
+  pill?: boolean;
   /* React 19 passes ref as a plain prop; an anchored menu needs the element. */
   ref?: Ref<HTMLButtonElement>;
 }) {
@@ -544,6 +546,7 @@ export function Button({
         variant === "primary" && "btn-primary",
         variant === "secondary" && "btn-secondary",
         variant === "ghost" && "btn-ghost",
+        pill && "btn-pill",
         size === "sm" && "px-2.5 py-1 text-xs",
         className,
       )}
@@ -698,6 +701,7 @@ export function SegmentedControl<T extends string>({
   options: readonly {
     readonly value: T;
     readonly label: ReactNode;
+    readonly icon?: ReactNode;
     readonly id?: string;
     readonly controls?: string;
   }[];
@@ -731,7 +735,10 @@ export function SegmentedControl<T extends string>({
           disabled={disabled}
           onClick={() => onChange(option.value)}
         >
-          {option.label}
+          {option.icon ? (
+            <span className="settings-segment-icon">{option.icon}</span>
+          ) : null}
+          <span className="settings-segment-text">{option.label}</span>
         </button>
       ))}
     </div>

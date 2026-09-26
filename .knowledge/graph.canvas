@@ -1,0 +1,96 @@
+{
+  "nodes": [
+    {
+      "id": "zeus-core",
+      "type": "text",
+      "text": "# Zeus AI Engine\nLocal-first autonomous AI desktop client",
+      "x": 0,
+      "y": 0,
+      "width": 260,
+      "height": 130,
+      "color": "1"
+    },
+    {
+      "id": "zeus-electron",
+      "type": "text",
+      "text": "### Electron Main\nDesktop orchestrator & IPC bridge",
+      "x": -320,
+      "y": -140,
+      "width": 240,
+      "height": 110,
+      "color": "2"
+    },
+    {
+      "id": "zeus-renderer",
+      "type": "text",
+      "text": "### UI Renderer\nReact 19 + WorkPanel + Mindmap Graph",
+      "x": -320,
+      "y": 140,
+      "width": 240,
+      "height": 110,
+      "color": "5"
+    },
+    {
+      "id": "zeus-host-core",
+      "type": "text",
+      "text": "### Rust Host-Core\nSQLite persistence, native search, tools",
+      "x": 320,
+      "y": -140,
+      "width": 240,
+      "height": 110,
+      "color": "4"
+    },
+    {
+      "id": "zeus-agent-runtime",
+      "type": "text",
+      "text": "### Node Agent Runtime\nLLM streams, MCP, skills, tools",
+      "x": 320,
+      "y": 140,
+      "width": 240,
+      "height": 110,
+      "color": "6"
+    },
+    {
+      "id": "zeus-knowledge-node",
+      "type": "text",
+      "text": "### Knowledge & Mindmap\nObsidian JSON Canvas & Markdown Wikilinks",
+      "x": 0,
+      "y": 280,
+      "width": 260,
+      "height": 110,
+      "color": "3"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "fromNode": "zeus-core",
+      "toNode": "zeus-electron",
+      "label": "orchestrates"
+    },
+    {
+      "id": "e2",
+      "fromNode": "zeus-electron",
+      "toNode": "zeus-renderer",
+      "label": "preloads IPC"
+    },
+    {
+      "id": "e3",
+      "fromNode": "zeus-core",
+      "toNode": "zeus-host-core",
+      "label": "persists state"
+    },
+    {
+      "id": "e4",
+      "fromNode": "zeus-core",
+      "toNode": "zeus-agent-runtime",
+      "label": "executes agent"
+    },
+    {
+      "id": "e5",
+      "fromNode": "zeus-renderer",
+      "toNode": "zeus-knowledge-node",
+      "label": "visualizes"
+    }
+  ]
+}

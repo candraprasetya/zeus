@@ -259,3 +259,32 @@ test("a project folder never loses to the scratch store", async () => {
   assert.equal(match?.root, "workspace");
   assert.equal(match?.projectRoot?.path, sibling);
 });
+
+test("a wikilink resolves to an exact markdown file or slugified file in a folder", async () => {
+  const workspace = tempTree("ws", [
+    "knowledge/Core Network & DI.md",
+    "knowledge/feature-auth.md",
+    "docs/architecture-overview.md",
+  ]);
+
+  // Exact wikilink name
+  const match1 = await resolve("[[Core Network & DI]]", { workspace });
+  assert.equal(match1?.root, "workspace");
+  assert.equal(match1?.relativePath, "knowledge/Core Network & DI.md");
+
+  // Slugified wikilink name
+  const match2 = await resolve("[[Feature Auth]]", { workspace });
+  assert.equal(match2?.root, "workspace");
+  assert.equal(match2?.relativePath, "knowledge/feature-auth.md");
+
+  // Wikilink with alias and anchor
+  const match3 = await resolve("[[Feature Auth#Login Flow|User Auth]]", { workspace });
+  assert.equal(match3?.root, "workspace");
+  assert.equal(match3?.relativePath, "knowledge/feature-auth.md");
+
+  // Bare name without brackets
+  const match4 = await resolve("Core Network & DI", { workspace });
+  assert.equal(match4?.root, "workspace");
+  assert.equal(match4?.relativePath, "knowledge/Core Network & DI.md");
+});
+

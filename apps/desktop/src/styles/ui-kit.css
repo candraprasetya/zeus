@@ -176,6 +176,10 @@
   color: var(--ds-text-primary);
 }
 
+.btn-pill {
+  border-radius: var(--radius-full);
+}
+
 /* Icon-only control geometry. `.icon-btn` (styles/composer.css) is shared with
    label-driven pills and takes its width from its content — glyph plus padding
    — so an icon-only use states the square instead: both axes pinned to the same

@@ -195,8 +195,19 @@ export class PluginViewHost {
       loaded: false,
     };
     this.views.set(key, entry);
-    view.webContents.once("did-finish-load", () => {
+    view.webContents.on("did-finish-load", () => {
       entry.loaded = true;
+      void view.webContents
+        .insertCSS(
+          `header {
+            overflow-x: auto !important;
+            scrollbar-width: none !important;
+          }
+          header::-webkit-scrollbar {
+            display: none !important;
+          }`,
+        )
+        .catch(() => {});
     });
     this.load(entry);
     this.evictBeyondLimit();

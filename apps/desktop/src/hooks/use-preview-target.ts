@@ -83,7 +83,20 @@ export function useOpenChatFileRef() {
       void (async () => {
         let match = null;
         try {
-          match = (await api.fsResolveRef(anchored ?? raw, sessionId)).match;
+          const scopedRef =
+            baseDir && !isDotRelative(raw) && !raw.startsWith("/")
+              ? `${baseDir}/${raw}`
+              : null;
+          if (scopedRef) {
+            try {
+              match = (await api.fsResolveRef(scopedRef, sessionId)).match;
+            } catch {
+              match = null;
+            }
+          }
+          if (!match) {
+            match = (await api.fsResolveRef(anchored ?? raw, sessionId)).match;
+          }
         } catch {
           match = null;
         }
