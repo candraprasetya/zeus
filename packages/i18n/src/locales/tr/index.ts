@@ -25,6 +25,7 @@ export const tr = {
     save: "Kaydet",
     saving: "Kaydediliyor…",
     loading: "Yükleniyor…",
+    clear: "Temizle",
   },
   window: {
     minimize: "Simge durumuna küçült",

@@ -23,6 +23,7 @@ export const en = {
     save: "Save",
     saving: "Saving…",
     loading: "Loading…",
+    clear: "Clear",
   },
   window: {
     minimize: "Minimize",

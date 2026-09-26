@@ -44,6 +44,23 @@ export function useSubagentsData() {
   const getPreset = (handle: string): SubagentPreset | undefined =>
     SUBAGENT_PRESETS.find((p) => p.id === handle);
 
+  // Dynamic Lead Agent: Zeus
+  const zeusSubagent: ResolvedSubagent = (() => {
+    const custom = pageData.owned.find((o) => o.id === "zeus");
+    return {
+      id: "zeus",
+      name: custom?.name || "⚡ Zeus (Lead Agent)",
+      tag: "Main Orchestrator",
+      description:
+        custom?.description ||
+        "Mengoordinasikan alur kerja, mendistribusikan task ke sub-agent",
+      tools:
+        custom?.tools || ["Read", "Glob", "Grep", "Bash", "Edit", "Write"],
+      enabled: custom?.enabled ?? true,
+      isCustom: Boolean(custom),
+    };
+  })();
+
   // Dynamic Built-in Subagent 1: Fixer
   const fixerSubagent: ResolvedSubagent = (() => {
     const custom = pageData.owned.find((o) => o.id === "fixer");
@@ -169,6 +186,7 @@ export function useSubagentsData() {
 
   // User-created custom subagents from Settings
   const builtinHandles = new Set([
+    "zeus",
     "fixer",
     "explorer",
     "test-runner",
@@ -190,6 +208,7 @@ export function useSubagentsData() {
 
   return {
     pageData,
+    zeusSubagent,
     fixerSubagent,
     explorerSubagent,
     testRunnerSubagent,

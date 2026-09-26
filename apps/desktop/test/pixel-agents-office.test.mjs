@@ -51,14 +51,16 @@ test("Pixel Agents Office and View Office button adhere to repository contracts"
 });
 
 test("PixelAgentsOffice and ZeusSubagentTasksFloatingPanel use dynamic settings subagent data", async () => {
-  const [pixelOfficeSrc, floatingPanelSrc, subagentsHookSrc] = await Promise.all([
+  const [pixelOfficeSrc, floatingPanelSrc, subagentsHookSrc, subagentsPageSrc] = await Promise.all([
     read("../src/features/chat/transcript/PixelAgentsOffice.tsx"),
     read("../src/components/ZeusSubagentTasksFloatingPanel.tsx"),
     read("../src/hooks/use-subagents-data.ts"),
+    read("../src/components/settings/AgentSubagentsPage.tsx"),
   ]);
 
-  // Hook exports useSubagentsData and handles presets & custom subagents
+  // Hook exports useSubagentsData and handles zeus, presets & custom subagents
   assert.match(subagentsHookSrc, /export function useSubagentsData/);
+  assert.match(subagentsHookSrc, /zeusSubagent/);
   assert.match(subagentsHookSrc, /Task\(fixer\)/);
   assert.match(subagentsHookSrc, /Task\(explorer\)/);
   assert.match(subagentsHookSrc, /Task\(test-runner\)/);
@@ -75,4 +77,11 @@ test("PixelAgentsOffice and ZeusSubagentTasksFloatingPanel use dynamic settings 
   assert.match(floatingPanelSrc, /fixerSubagent\.tag/);
   assert.match(floatingPanelSrc, /explorerSubagent\.tag/);
   assert.match(floatingPanelSrc, /testRunnerSubagent\.tag/);
+
+  // Settings page provides Lead Orchestrator group and Zeus customization
+  assert.match(subagentsPageSrc, /Lead Orchestrator/);
+  assert.match(subagentsPageSrc, /⚡ Zeus \(Lead Agent\)/);
+  assert.match(subagentsPageSrc, /Main Orchestrator/);
+  assert.match(subagentsPageSrc, /Mengoordinasikan alur kerja, mendistribusikan task ke sub-agent/);
+  assert.match(subagentsPageSrc, /openEditZeus/);
 });

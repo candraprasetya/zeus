@@ -25,6 +25,7 @@ export const ZeusSubagentTasksFloatingPanel = memo(
     activePermission,
   }: ZeusSubagentTasksFloatingPanelProps) {
     const {
+      zeusSubagent,
       fixerSubagent,
       explorerSubagent,
       testRunnerSubagent,
@@ -127,8 +128,8 @@ export const ZeusSubagentTasksFloatingPanel = memo(
             </div>
             <div className="subagent-item-content">
               <div className="subagent-item-top">
-                <span className="subagent-item-name">Zeus (Lead)</span>
-                <span className="subagent-item-role">Main System Coordinator</span>
+                <span className="subagent-item-name">{zeusSubagent.name}</span>
+                <span className="subagent-item-role">{zeusSubagent.tag} · Main System Coordinator</span>
                 <span
                   className={cx(
                     "subagent-item-tag",
@@ -150,7 +151,7 @@ export const ZeusSubagentTasksFloatingPanel = memo(
                 {isWaitingApproval
                   ? `Menunggu persetujuan user untuk eksekusi tool "${activePermission?.toolName || "action"}"`
                   : isSessionRunning
-                    ? "Mengoordinasikan alur kerja sub-agen & pembagian tugas"
+                    ? zeusSubagent.description
                     : "Standby siap menerima perintah"}
               </p>
             </div>

@@ -24,6 +24,7 @@ export const zhCN = {
     save: "保存",
     saving: "正在保存…",
     loading: "正在加载…",
+    clear: "清除",
   },
   window: {
     minimize: "最小化",

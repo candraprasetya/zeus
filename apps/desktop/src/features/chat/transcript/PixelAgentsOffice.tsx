@@ -179,6 +179,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
   }, [cycleTick, soundEnabled, isWorking]);
 
   const {
+    zeusSubagent,
     fixerSubagent,
     explorerSubagent,
     testRunnerSubagent,
@@ -189,17 +190,17 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
     () => [
       {
         id: "zeus",
-        name: "Zeus (Lead)",
+        name: zeusSubagent.name,
         role: "Main System Coordinator",
-        title: "Lead Orchestrator",
+        title: zeusSubagent.tag,
         color: "#f59e0b",
         accentBg: "rgba(245, 158, 11, 0.15)",
         avatarChar: "⚡",
         station: "Command Center",
-        task: "Mengoordinasikan alur kerja sub-agen & mendistribusikan task",
+        task: zeusSubagent.description,
         status: "planning",
         load: 85,
-        stats: "Subagents active",
+        stats: zeusSubagent.tools.join(" · "),
       },
       {
         id: "athena",
@@ -466,7 +467,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               <text x="25" y="-1" textAnchor="middle" fontSize="18">⚡</text>
               {/* Name & Role */}
               <text x="-65" y="24" fill="#f8fafc" fontSize="11" fontFamily="sans-serif" fontWeight="700">
-                Zeus (Lead)
+                {zeusSubagent.name}
               </text>
               <text x="-65" y="37" fill="#94a3b8" fontSize="9" fontFamily="sans-serif">
                 {isWaitingPermission

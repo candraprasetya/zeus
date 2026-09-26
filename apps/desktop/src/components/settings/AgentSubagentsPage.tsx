@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { SubagentDefinition, UserSubagentRecord } from "@pi-desktop/shared";
+import { GLOBAL_SCOPE, type SubagentDefinition, type UserSubagentRecord } from "@pi-desktop/shared";
 import { api } from "../../lib/api";
 import { useAppStore } from "../../stores/app-store";
 import { useHostCollection } from "../../hooks/use-host-collection";
@@ -177,6 +177,7 @@ export function AgentSubagentsPage() {
     if (!editor) return;
     const { draft, editing } = editor;
     const payload = {
+      ...(draft.id ? { id: draft.id } : {}),
       name: draft.name.trim(),
       description: draft.description.trim(),
       body: draft.body,
@@ -233,11 +234,89 @@ export function AgentSubagentsPage() {
     }
   };
 
+  const DEFAULT_ZEUS_NAME = "⚡ Zeus (Lead Agent)";
+  const DEFAULT_ZEUS_DESC = "Mengoordinasikan alur kerja, mendistribusikan task ke sub-agent";
+  const DEFAULT_ZEUS_TOOLS = ["Read", "Glob", "Grep", "Edit", "Write", "Bash"];
+
+  const zeusOwned = owned.find((r) => r.id === "zeus");
+  const zeusName = zeusOwned?.name || DEFAULT_ZEUS_NAME;
+  const zeusDesc = zeusOwned?.description || DEFAULT_ZEUS_DESC;
+  const zeusMatchesSearch = matchesCapabilitySearch(search, zeusName, "zeus", zeusDesc);
+
+  const openEditZeus = async () => {
+    if (zeusOwned) {
+      await openEdit(zeusOwned);
+    } else {
+      setEditor({
+        draft: {
+          id: "zeus",
+          name: DEFAULT_ZEUS_NAME,
+          description: DEFAULT_ZEUS_DESC,
+          tools: [...DEFAULT_ZEUS_TOOLS],
+          inheritTools: false,
+          model: "",
+          fallbackModels: [],
+          thinkingLevel: "",
+          maxTokens: 0,
+          body:
+            `You are Zeus (Lead Agent) — the Main System Coordinator and Orchestrator.\n\n` +
+            `## Mission\n` +
+            `Mengoordinasikan alur kerja, mendistribusikan task ke sub-agent:\n` +
+            `- Athena / Explorer untuk eksplorasi codebase dan verifikasi spesifikasi.\n` +
+            `- Hermes / Fixer untuk implementasi kode multi-file sesuai spesifikasi.\n` +
+            `- Apollo / Test runner untuk verifikasi pengujian dan validasi.\n\n` +
+            `## Guidelines\n` +
+            `- Pertahankan arsitektur yang bersih dan backward compatible.\n` +
+            `- Delegasikan sub-task dengan instruksi dan acceptance criteria yang jelas.\n` +
+            `- Rangkum hasil pekerjaan sub-agent kepada user.\n`,
+          enabled: true,
+          scope: GLOBAL_SCOPE,
+        },
+        editing: null,
+      });
+    }
+  };
+
+  const toggleZeus = async () => {
+    if (!zeusOwned) {
+      const payload = {
+        id: "zeus",
+        name: DEFAULT_ZEUS_NAME,
+        description: DEFAULT_ZEUS_DESC,
+        body: "You are Zeus (Lead Agent) — Main Orchestrator.",
+        tools: [...DEFAULT_ZEUS_TOOLS],
+        model: "",
+        fallbackModels: [],
+        thinkingLevel: "" as const,
+        maxTokens: 0,
+        enabled: false,
+        scope: GLOBAL_SCOPE,
+      };
+      setBusyId("zeus");
+      try {
+        await api.createUserSubagent(payload);
+        await load();
+        showToast(
+          t("settings.capabilityDisabled", { name: DEFAULT_ZEUS_NAME }),
+          { variant: "success" },
+        );
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : String(error), { variant: "error" });
+      } finally {
+        setBusyId(null);
+      }
+    } else {
+      await toggle(zeusOwned);
+    }
+  };
+
   const visibleOwned = useMemo(
     () =>
-      owned.filter((subagent) =>
-        matchesCapabilitySearch(search, subagent.name, subagent.id, subagent.description),
-      ),
+      owned
+        .filter((subagent) => subagent.id !== "zeus")
+        .filter((subagent) =>
+          matchesCapabilitySearch(search, subagent.name, subagent.id, subagent.description),
+        ),
     [search, owned],
   );
 
@@ -256,7 +335,11 @@ export function AgentSubagentsPage() {
 
   const openCreate = () => setEditor({ draft: emptySubagentDraft(), editing: null });
   const searching = Boolean(search.trim());
-  const noMatches = searching && visibleOwned.length === 0 && visibleBuiltins.length === 0;
+  const noMatches =
+    searching &&
+    !zeusMatchesSearch &&
+    visibleOwned.length === 0 &&
+    visibleBuiltins.length === 0;
   const showOwnedGroup = !searching || visibleOwned.length > 0;
 
   const renderBuiltin = (definition: BuiltinSubagentRow) => {
@@ -391,6 +474,73 @@ export function AgentSubagentsPage() {
     );
   };
 
+  const renderLeadAgent = () => {
+    if (searching && !zeusMatchesSearch) return null;
+    const isCustomized = Boolean(zeusOwned);
+    const enabled = zeusOwned ? zeusOwned.enabled : true;
+    const tools = zeusOwned?.tools?.length ? zeusOwned.tools : DEFAULT_ZEUS_TOOLS;
+    const busy = busyId === "zeus";
+
+    return (
+      <CapabilityRow
+        key="lead-agent:zeus"
+        glyph={<span style={{ fontSize: 16 }}>⚡</span>}
+        name={zeusName}
+        off={!enabled}
+        command="Main Orchestrator"
+        badges={
+          <>
+            <span className="agent-capability-badge">Lead Agent</span>
+            {isCustomized ? (
+              <span
+                className="agent-capability-badge"
+                style={{ borderColor: "#10b981", color: "#10b981" }}
+              >
+                Customized
+              </span>
+            ) : null}
+          </>
+        }
+        description={zeusDesc}
+        meta={tools.map((tool) => (
+          <code key={tool}>{tool}</code>
+        ))}
+        actions={
+          <>
+            <TooltipButton
+              type="button"
+              className="settings-icon-button"
+              tooltip="Customize Lead Agent (Zeus)"
+              disabled={busy}
+              onClick={() => void openEditZeus()}
+            >
+              <IconPencil size={15} />
+            </TooltipButton>
+            {zeusOwned ? (
+              <TooltipButton
+                type="button"
+                className="settings-icon-button"
+                tooltip="Reset to Default"
+                disabled={busy}
+                onClick={() => {
+                  if (zeusOwned) void remove(zeusOwned);
+                }}
+              >
+                <IconTrash size={15} />
+              </TooltipButton>
+            ) : null}
+            <CapabilityToggle
+              checked={enabled}
+              busy={busy}
+              label={t("settings.toggleCapability", { name: zeusName })}
+              onChange={() => void toggleZeus()}
+            />
+          </>
+        }
+      />
+    );
+  };
+
   const addButton = (
     <CapabilityButton variant="primary" onClick={openCreate}>
       <IconPlus size={14} />
@@ -422,6 +572,15 @@ export function AgentSubagentsPage() {
           />
         ) : (
           <>
+            {(!searching || zeusMatchesSearch) ? (
+              <>
+                <CapabilityGroupHeader
+                  label="Lead Orchestrator"
+                  count={1}
+                />
+                {renderLeadAgent()}
+              </>
+            ) : null}
             {visibleBuiltins.length > 0 ? (
               <>
                 <CapabilityGroupHeader
