@@ -1,4 +1,16 @@
 import { useState, useEffect, useId, useMemo, type CSSProperties, memo } from "react";
+import {
+  FlashIcon,
+  Coffee01Icon,
+  VolumeHighIcon,
+  VolumeMute01Icon,
+  Cancel01Icon,
+  AiSparklesIcon,
+  Search01Icon,
+  Wrench01Icon,
+  CheckCheckIcon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { cx } from "../../../components/ui";
 import { portalToBody } from "../../../lib/portal-visibility";
 import { useSubagentsData } from "../../../hooks/use-subagents-data";
@@ -268,7 +280,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
       <div className="pixel-office-topbar">
         <div className="pixel-office-topbar-left">
           <div className="office-header-badge">
-            <span className="office-header-icon">⚡</span>
+            <HugeiconsIcon icon={AiSparklesIcon} size={15} color="#f59e0b" strokeWidth={2} />
             <span className="pixel-office-title">AI AGENT TEAM · STUDIO</span>
           </div>
           <span className="pixel-office-subtitle">
@@ -280,10 +292,10 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               )}
             />
             {isWaitingPermission
-              ? `PAUSED · MENUNGGU APPROVAL USER (${(pendingPermission?.toolName || "IZIN").toUpperCase()})`
+              ? `Menunggu Persetujuan (${(pendingPermission?.toolName || "Izin").toUpperCase()})`
               : isWorking
-                ? "ACTIVE WORKFLOW · 4 AGENTS IN SYNC"
-                : "STANDBY · READY FOR INSTRUCTIONS"}
+                ? "Workflow Aktif · 4 Sub-agen Terhubung"
+                : "Standby · Siap Menerima Instruksi"}
           </span>
         </div>
 
@@ -292,19 +304,21 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
           <div className="pixel-mode-switch-pill" role="group" aria-label="Office State Mode">
             <button
               type="button"
-              className={cx("pixel-switch-btn", isWorking && "is-active")}
+              className={cx("pixel-switch-btn", isWorking && "is-active is-working-active")}
               onClick={() => setManualMode("working")}
               title="Tampilkan Animasi Sedang Bekerja"
             >
-              ⚡ Working
+              <HugeiconsIcon icon={FlashIcon} size={13} strokeWidth={2} />
+              <span>Working</span>
             </button>
             <button
               type="button"
-              className={cx("pixel-switch-btn", !isWorking && "is-active")}
+              className={cx("pixel-switch-btn", !isWorking && "is-active is-idle-active")}
               onClick={() => setManualMode("idle")}
               title="Tampilkan Animasi Idle / Standby"
             >
-              ☕ Idle
+              <HugeiconsIcon icon={Coffee01Icon} size={13} strokeWidth={2} />
+              <span>Idle</span>
             </button>
           </div>
 
@@ -326,7 +340,12 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
             }}
             title="Efek Suara Audio"
           >
-            {soundEnabled ? "🔊 ON" : "🔇 OFF"}
+            <HugeiconsIcon
+              icon={soundEnabled ? VolumeHighIcon : VolumeMute01Icon}
+              size={14}
+              strokeWidth={1.8}
+            />
+            <span>{soundEnabled ? "Audio" : "Mute"}</span>
           </button>
 
           {onClose && (
@@ -340,7 +359,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               title="Tutup Virtual Office (ESC)"
               aria-label="Close"
             >
-              ✕
+              <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2} />
             </button>
           )}
         </div>
@@ -348,7 +367,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
 
       {/* ── 2. Clean Modern Stage (AI Agent Team Studio) ── */}
       {/* ── 2. Japanese Anime Chibi Office Studio Stage ── */}
-      <div className="pixel-office-stage clean-stage" style={{ background: "#0f1420" }}>
+      <div className="pixel-office-stage clean-stage" style={{ background: "#090d16" }}>
         <svg
           viewBox="0 0 860 410"
           className="pixel-office-svg clean-svg"
@@ -356,7 +375,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
         >
           <defs>
             <clipPath id={clipId}>
-              <rect x="0" y="0" width="860" height="410" rx="10" />
+              <rect x="0" y="0" width="860" height="410" rx="18" />
             </clipPath>
 
             {/* Office Gradients */}
@@ -438,15 +457,15 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
 
             {/* Cozy Wall Scrum Whiteboard (Left) */}
             <g transform="translate(20, 22)">
-              <rect x="0" y="0" width="65" height="75" rx="3" fill="#f8fafc" stroke="#64748b" strokeWidth="1.5" />
-              <text x="32" y="12" textAnchor="middle" fill="#334155" fontSize="7" fontWeight="700" fontFamily="sans-serif">SPRINT</text>
+              <rect x="0" y="0" width="65" height="75" rx="8" fill="#f8fafc" stroke="#64748b" strokeWidth="1.5" />
+              <text x="32" y="12" textAnchor="middle" fill="#334155" fontSize="7" fontWeight="700" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif">SPRINT</text>
               {/* Cute Sticky Notes */}
-              <rect x="6" y="18" width="14" height="12" rx="1" fill="#fde047" stroke="#ca8a04" strokeWidth="0.5" />
-              <rect x="25" y="18" width="14" height="12" rx="1" fill="#67e8f9" stroke="#0891b2" strokeWidth="0.5" />
-              <rect x="44" y="18" width="14" height="12" rx="1" fill="#f472b6" stroke="#db2777" strokeWidth="0.5" />
-              <rect x="6" y="34" width="14" height="12" rx="1" fill="#4ade80" stroke="#16a34a" strokeWidth="0.5" />
-              <rect x="25" y="34" width="14" height="12" rx="1" fill="#fde047" stroke="#ca8a04" strokeWidth="0.5" />
-              <rect x="44" y="34" width="14" height="12" rx="1" fill="#c084fc" stroke="#9333ea" strokeWidth="0.5" />
+              <rect x="6" y="18" width="14" height="12" rx="2" fill="#fde047" stroke="#ca8a04" strokeWidth="0.5" />
+              <rect x="25" y="18" width="14" height="12" rx="2" fill="#67e8f9" stroke="#0891b2" strokeWidth="0.5" />
+              <rect x="44" y="18" width="14" height="12" rx="2" fill="#f472b6" stroke="#db2777" strokeWidth="0.5" />
+              <rect x="6" y="34" width="14" height="12" rx="2" fill="#4ade80" stroke="#16a34a" strokeWidth="0.5" />
+              <rect x="25" y="34" width="14" height="12" rx="2" fill="#fde047" stroke="#ca8a04" strokeWidth="0.5" />
+              <rect x="44" y="34" width="14" height="12" rx="2" fill="#c084fc" stroke="#9333ea" strokeWidth="0.5" />
               {/* Done checkmark */}
               <text x="51" y="43" fill="#15803d" fontSize="7" fontWeight="bold">✓</text>
             </g>
@@ -584,13 +603,13 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
 
               {/* Core AI AGENT TEAM Indicator */}
               <circle cx="0" cy="0" r="28" fill="#090d16" stroke="#38bdf8" strokeWidth="1.5" />
-              <text x="0" y="-5" textAnchor="middle" fill="#38bdf8" fontSize="10" fontFamily="var(--font-mono, monospace)" fontWeight="800" letterSpacing="1">
+              <text x="0" y="-5" textAnchor="middle" fill="#38bdf8" fontSize="10" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="700" letterSpacing="0.5">
                 AI
               </text>
-              <text x="0" y="6" textAnchor="middle" fill="#f8fafc" fontSize="7" fontFamily="var(--font-mono, monospace)" fontWeight="700">
+              <text x="0" y="6" textAnchor="middle" fill="#f8fafc" fontSize="7" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="700">
                 AGENT TEAM
               </text>
-              <text x="0" y="16" textAnchor="middle" fill={isWorking ? "#4ade80" : "#94a3b8"} fontSize="6.5" fontFamily="var(--font-mono, monospace)">
+              <text x="0" y="16" textAnchor="middle" fill={isWorking ? "#4ade80" : "#94a3b8"} fontSize="6.5" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="600">
                 {isWorking ? "● RUNNING" : "● STANDBY"}
               </text>
 
@@ -616,7 +635,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               style={{ cursor: "pointer" }}
             >
               {/* Workstation Floor Mat */}
-              <rect x="-85" y="-45" width="170" height="92" rx="8" fill="#131b29" stroke={selectedAgentId === "zeus" ? "#f59e0b" : "#283548"} strokeWidth={selectedAgentId === "zeus" ? 2 : 1} />
+              <rect x="-88" y="-46" width="176" height="94" rx="16" fill="#131b29" stroke={selectedAgentId === "zeus" ? "#f59e0b" : "#283548"} strokeWidth={selectedAgentId === "zeus" ? 2 : 1} />
 
               {/* Office Chair */}
               <ellipse cx="25" cy="-28" rx="14" ry="5" fill="#1e293b" />
@@ -702,12 +721,12 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               </g>
 
               {/* Wooden L-Shaped Executive Desk */}
-              <rect x="-80" y="-8" width="160" height="38" rx="4" fill="url(#woodDeskTop)" stroke="#475569" strokeWidth="1" />
+              <rect x="-80" y="-8" width="160" height="38" rx="8" fill="url(#woodDeskTop)" stroke="#475569" strokeWidth="1" />
 
               {/* Dual Monitors on Desk */}
               {/* Monitor 1 (Main Orchestrator Graph) */}
-              <rect x="-65" y="-36" width="55" height="32" rx="3" fill="#020617" stroke="#64748b" strokeWidth="1" />
-              <rect x="-62" y="-33" width="49" height="26" fill="#0b0f19" />
+              <rect x="-65" y="-36" width="55" height="32" rx="4" fill="#020617" stroke="#64748b" strokeWidth="1" />
+              <rect x="-62" y="-33" width="49" height="26" rx="2" fill="#0b0f19" />
               {/* Live Multi-Agent Orchestration Nodes */}
               <circle cx="-50" cy="-24" r="3" fill="#f59e0b" />
               <line x1="-47" y1="-24" x2="-35" y2="-28" stroke="#38bdf8" strokeWidth="1" />
@@ -719,22 +738,23 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               <rect x="-40" y="-4" width="6" height="4" fill="#64748b" />
 
               {/* Monitor 2 (Side Telemetry) */}
-              <rect x="-6" y="-32" width="24" height="26" rx="2" fill="#020617" stroke="#475569" strokeWidth="1" />
+              <rect x="-6" y="-32" width="24" height="26" rx="3" fill="#020617" stroke="#475569" strokeWidth="1" />
               <line x1="-3" y1="-26" x2="14" y2="-26" stroke="#f59e0b" strokeWidth="1.5" />
               <line x1="-3" y1="-20" x2="10" y2="-20" stroke="#94a3b8" strokeWidth="1" />
               <line x1="-3" y1="-14" x2="12" y2="-14" stroke="#94a3b8" strokeWidth="1" />
 
               {/* Keyboard & Mousepad */}
-              <rect x="-50" y="2" width="34" height="10" rx="1.5" fill="#0f172a" stroke="#334155" strokeWidth="0.8" />
-              <rect x="-12" y="2" width="10" height="10" rx="1" fill="#1e293b" />
+              <rect x="-50" y="2" width="34" height="10" rx="3" fill="#0f172a" stroke="#334155" strokeWidth="0.8" />
+              <rect x="-12" y="2" width="10" height="10" rx="2" fill="#1e293b" />
 
               {/* Desk Front Nameplate */}
-              <rect x="-70" y="14" width="140" height="14" rx="2" fill="#0f172a" stroke="#334155" strokeWidth="0.8" />
-              <text x="-64" y="24" fill="#f8fafc" fontSize="8.5" fontFamily="sans-serif" fontWeight="700">
+              <rect x="-76" y="12" width="152" height="20" rx="10" fill="#141a26" stroke="#2a354c" strokeWidth="0.8" />
+              <text x="-66" y="25" fill="#f8fafc" fontSize="8" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="600">
                 {zeusSubagent.name}
               </text>
-              <text x="64" y="24" textAnchor="end" fill="#f59e0b" fontSize="7" fontFamily="sans-serif" fontWeight="600">
-                Main System Coordinator
+              <rect x="24" y="15" width="46" height="14" rx="7" fill="rgba(245, 158, 11, 0.16)" />
+              <text x="47" y="25" textAnchor="middle" fill="#f59e0b" fontSize="6.5" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="600">
+                Lead
               </text>
 
               {/* Live Status Indicator */}
@@ -743,9 +763,9 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               {/* Speech Bubble */}
               {zeusBubble && (
                 <g transform="translate(-40, -82)">
-                  <path d="M 20 28 L 30 36 L 36 28 Z" fill="#0f172a" />
-                  <rect x="0" y="0" width="175" height="28" rx="6" fill="#0f172a" stroke="#f59e0b" strokeWidth="1.5" />
-                  <text x="87" y="18" textAnchor="middle" fill="#fef3c7" fontSize="8.5" fontFamily="sans-serif" fontWeight="600">
+                  <path d="M 20 28 L 28 35 L 34 28 Z" fill="#111827" />
+                  <rect x="0" y="0" width="175" height="28" rx="12" fill="#111827" stroke="#f59e0b" strokeWidth="1.2" />
+                  <text x="87" y="18" textAnchor="middle" fill="#fef3c7" fontSize="8.5" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="500">
                     {zeusBubble}
                   </text>
                 </g>
@@ -758,7 +778,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               onClick={() => setSelectedAgentId("athena")}
               style={{ cursor: "pointer" }}
             >
-              <rect x="-85" y="-45" width="170" height="92" rx="8" fill="#131b29" stroke={selectedAgentId === "athena" ? "#38bdf8" : "#283548"} strokeWidth={selectedAgentId === "athena" ? 2 : 1} />
+              <rect x="-88" y="-46" width="176" height="94" rx="16" fill="#131b29" stroke={selectedAgentId === "athena" ? "#38bdf8" : "#283548"} strokeWidth={selectedAgentId === "athena" ? 2 : 1} />
 
               {/* Office Chair */}
               <ellipse cx="25" cy="-28" rx="14" ry="5" fill="#1e293b" />
@@ -816,19 +836,19 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               ) : (
                 // Athena is currently walking across the floor: show "Walking" desk indicator
                 <g transform="translate(10, -18)">
-                  <rect x="-2" y="-6" width="34" height="16" rx="2" fill="#0369a1" stroke="#38bdf8" strokeWidth="1" />
-                  <text x="15" y="5" textAnchor="middle" fill="#e0f2fe" fontSize="7" fontWeight="bold">
+                  <rect x="-2" y="-6" width="34" height="16" rx="4" fill="#0369a1" stroke="#38bdf8" strokeWidth="1" />
+                  <text x="15" y="5" textAnchor="middle" fill="#e0f2fe" fontSize="7" fontWeight="bold" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif">
                     🚶 REPORT
                   </text>
                 </g>
               )}
 
               {/* Wooden Research Desk */}
-              <rect x="-80" y="-8" width="160" height="38" rx="4" fill="url(#woodDeskTop)" stroke="#475569" strokeWidth="1" />
+              <rect x="-80" y="-8" width="160" height="38" rx="8" fill="url(#woodDeskTop)" stroke="#475569" strokeWidth="1" />
 
               {/* Athena Monitor (Code Explorer Tree) */}
-              <rect x="-65" y="-36" width="55" height="32" rx="3" fill="#020617" stroke="#64748b" strokeWidth="1" />
-              <rect x="-62" y="-33" width="49" height="26" fill="#0b0f19" />
+              <rect x="-65" y="-36" width="55" height="32" rx="4" fill="#020617" stroke="#64748b" strokeWidth="1" />
+              <rect x="-62" y="-33" width="49" height="26" rx="2" fill="#0b0f19" />
               {/* Directory Tree Graph */}
               <line x1="-58" y1="-28" x2="-45" y2="-28" stroke="#38bdf8" strokeWidth="1.5" />
               <line x1="-54" y1="-22" x2="-38" y2="-22" stroke="#38bdf8" strokeWidth="1" />
@@ -837,21 +857,22 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               <rect x="-40" y="-4" width="6" height="4" fill="#64748b" />
 
               {/* Reference Documentation & Mini Succulent */}
-              <rect x="-5" y="-18" width="12" height="14" rx="1" fill="#0284c7" />
+              <rect x="-5" y="-18" width="12" height="14" rx="2" fill="#0284c7" />
               <polygon points="12,-4 20,-4 18,-14 14,-14" fill="#15803d" />
               <circle cx="16" cy="-16" r="3" fill="#4ade80" />
 
               {/* Keyboard & Mousepad */}
-              <rect x="-50" y="2" width="34" height="10" rx="1.5" fill="#0f172a" stroke="#334155" strokeWidth="0.8" />
-              <rect x="-12" y="2" width="10" height="10" rx="1" fill="#1e293b" />
+              <rect x="-50" y="2" width="34" height="10" rx="3" fill="#0f172a" stroke="#334155" strokeWidth="0.8" />
+              <rect x="-12" y="2" width="10" height="10" rx="2" fill="#1e293b" />
 
               {/* Nameplate */}
-              <rect x="-70" y="14" width="140" height="14" rx="2" fill="#0f172a" stroke="#334155" strokeWidth="0.8" />
-              <text x="-64" y="24" fill="#f8fafc" fontSize="8.5" fontFamily="sans-serif" fontWeight="700">
-                {`Athena · ${explorerSubagent.name}`}
+              <rect x="-76" y="12" width="152" height="20" rx="10" fill="#141a26" stroke="#2a354c" strokeWidth="0.8" />
+              <text x="-66" y="25" fill="#f8fafc" fontSize="8" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="600">
+                {athenaIsWalking ? "Athena (Walking)" : "Athena · Explorer"}
               </text>
-              <text x="64" y="24" textAnchor="end" fill="#38bdf8" fontSize="7" fontFamily="sans-serif" fontWeight="600">
-                {explorerSubagent.tag}
+              <rect x="22" y="15" width="50" height="14" rx="7" fill="rgba(56, 189, 248, 0.16)" />
+              <text x="47" y="25" textAnchor="middle" fill="#38bdf8" fontSize="6.5" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="600">
+                Explorer
               </text>
 
               <circle cx="68" cy="-34" r="3.5" fill={isWaitingPermission ? "#f59e0b" : isWorking ? "#38bdf8" : "#64748b"} />
@@ -859,9 +880,9 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               {/* Speech Bubble when seated */}
               {!athenaIsWalking && athenaBubble && (
                 <g transform="translate(-40, -82)">
-                  <path d="M 20 28 L 30 36 L 36 28 Z" fill="#0f172a" />
-                  <rect x="0" y="0" width="185" height="28" rx="6" fill="#0f172a" stroke="#38bdf8" strokeWidth="1.5" />
-                  <text x="92" y="18" textAnchor="middle" fill="#e0f2fe" fontSize="8.5" fontFamily="sans-serif" fontWeight="600">
+                  <path d="M 20 28 L 28 35 L 34 28 Z" fill="#111827" />
+                  <rect x="0" y="0" width="185" height="28" rx="12" fill="#111827" stroke="#38bdf8" strokeWidth="1.2" />
+                  <text x="92" y="18" textAnchor="middle" fill="#e0f2fe" fontSize="8.5" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="500">
                     {athenaBubble}
                   </text>
                 </g>
@@ -874,7 +895,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               onClick={() => setSelectedAgentId("hermes")}
               style={{ cursor: "pointer" }}
             >
-              <rect x="-85" y="-45" width="170" height="92" rx="8" fill="#131b29" stroke={selectedAgentId === "hermes" ? "#10b981" : "#283548"} strokeWidth={selectedAgentId === "hermes" ? 2 : 1} />
+              <rect x="-88" y="-46" width="176" height="94" rx="16" fill="#131b29" stroke={selectedAgentId === "hermes" ? "#10b981" : "#283548"} strokeWidth={selectedAgentId === "hermes" ? 2 : 1} />
 
               {/* Office Chair */}
               <ellipse cx="25" cy="-28" rx="14" ry="5" fill="#1e293b" />
@@ -928,11 +949,11 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               </g>
 
               {/* Wooden Dev Desk */}
-              <rect x="-80" y="-8" width="160" height="38" rx="4" fill="url(#woodDeskTop)" stroke="#475569" strokeWidth="1" />
+              <rect x="-80" y="-8" width="160" height="38" rx="8" fill="url(#woodDeskTop)" stroke="#475569" strokeWidth="1" />
 
               {/* Multi-Monitor Setup (Matrix / Code) */}
-              <rect x="-65" y="-36" width="55" height="32" rx="3" fill="#020617" stroke="#64748b" strokeWidth="1" />
-              <rect x="-62" y="-33" width="49" height="26" fill="#052e16" />
+              <rect x="-65" y="-36" width="55" height="32" rx="4" fill="#020617" stroke="#64748b" strokeWidth="1" />
+              <rect x="-62" y="-33" width="49" height="26" rx="2" fill="#052e16" />
               {/* Matrix Code Lines */}
               <line x1="-58" y1="-28" x2="-22" y2="-28" stroke="#4ade80" strokeWidth="1.5" />
               <line x1="-58" y1="-22" x2="-32" y2="-22" stroke="#4ade80" strokeWidth="1.5" />
@@ -941,28 +962,29 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               <rect x="-40" y="-4" width="6" height="4" fill="#64748b" />
 
               {/* Energy Drink Can */}
-              <rect x="2" y="-16" width="6" height="12" rx="1.5" fill="#10b981" stroke="#059669" strokeWidth="0.8" />
+              <rect x="2" y="-16" width="6" height="12" rx="2" fill="#10b981" stroke="#059669" strokeWidth="0.8" />
 
               {/* Mechanical Keyboard with RGB Green Glow */}
-              <rect x="-50" y="2" width="34" height="10" rx="1.5" fill="#0f172a" stroke="#10b981" strokeWidth="0.8" />
-              <rect x="-12" y="2" width="10" height="10" rx="1" fill="#1e293b" />
+              <rect x="-50" y="2" width="34" height="10" rx="3" fill="#0f172a" stroke="#10b981" strokeWidth="0.8" />
+              <rect x="-12" y="2" width="10" height="10" rx="2" fill="#1e293b" />
 
               {/* Nameplate */}
-              <rect x="-70" y="14" width="140" height="14" rx="2" fill="#0f172a" stroke="#334155" strokeWidth="0.8" />
-              <text x="-64" y="24" fill="#f8fafc" fontSize="8.5" fontFamily="sans-serif" fontWeight="700">
-                {`Hermes · ${fixerSubagent.name}`}
+              <rect x="-76" y="12" width="152" height="20" rx="10" fill="#141a26" stroke="#2a354c" strokeWidth="0.8" />
+              <text x="-66" y="25" fill="#f8fafc" fontSize="8" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="600">
+                Hermes · Fixer
               </text>
-              <text x="64" y="24" textAnchor="end" fill="#10b981" fontSize="7" fontFamily="sans-serif" fontWeight="600">
-                {fixerSubagent.tag}
+              <rect x="24" y="15" width="48" height="14" rx="7" fill="rgba(16, 185, 129, 0.16)" />
+              <text x="48" y="25" textAnchor="middle" fill="#10b981" fontSize="6.5" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="600">
+                Fixer
               </text>
 
               <circle cx="68" cy="-34" r="3.5" fill={isWaitingPermission ? "#f59e0b" : isWorking ? "#10b981" : "#64748b"} />
 
               {hermesBubble && (
                 <g transform="translate(-40, -82)">
-                  <path d="M 20 28 L 30 36 L 36 28 Z" fill="#0f172a" />
-                  <rect x="0" y="0" width="175" height="28" rx="6" fill="#0f172a" stroke="#10b981" strokeWidth="1.5" />
-                  <text x="87" y="18" textAnchor="middle" fill="#dcfce7" fontSize="8.5" fontFamily="sans-serif" fontWeight="600">
+                  <path d="M 20 28 L 28 35 L 34 28 Z" fill="#111827" />
+                  <rect x="0" y="0" width="175" height="28" rx="12" fill="#111827" stroke="#10b981" strokeWidth="1.2" />
+                  <text x="87" y="18" textAnchor="middle" fill="#dcfce7" fontSize="8.5" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="500">
                     {hermesBubble}
                   </text>
                 </g>
@@ -975,7 +997,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               onClick={() => setSelectedAgentId("apollo")}
               style={{ cursor: "pointer" }}
             >
-              <rect x="-85" y="-45" width="170" height="92" rx="8" fill="#131b29" stroke={selectedAgentId === "apollo" ? "#ec4899" : "#283548"} strokeWidth={selectedAgentId === "apollo" ? 2 : 1} />
+              <rect x="-88" y="-46" width="176" height="94" rx="16" fill="#131b29" stroke={selectedAgentId === "apollo" ? "#ec4899" : "#283548"} strokeWidth={selectedAgentId === "apollo" ? 2 : 1} />
 
               {/* Office Chair */}
               <ellipse cx="25" cy="-28" rx="14" ry="5" fill="#1e293b" />
@@ -1025,11 +1047,11 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               </g>
 
               {/* Wooden QA Desk */}
-              <rect x="-80" y="-8" width="160" height="38" rx="4" fill="url(#woodDeskTop)" stroke="#475569" strokeWidth="1" />
+              <rect x="-80" y="-8" width="160" height="38" rx="8" fill="url(#woodDeskTop)" stroke="#475569" strokeWidth="1" />
 
               {/* Test Runner Vertical Display */}
-              <rect x="-65" y="-36" width="55" height="32" rx="3" fill="#020617" stroke="#64748b" strokeWidth="1" />
-              <rect x="-62" y="-33" width="49" height="26" fill="#0b0f19" />
+              <rect x="-65" y="-36" width="55" height="32" rx="4" fill="#020617" stroke="#64748b" strokeWidth="1" />
+              <rect x="-62" y="-33" width="49" height="26" rx="2" fill="#0b0f19" />
               {/* Test Status Bars (Green Passes) */}
               <rect x="-58" y="-28" width="35" height="4" rx="1" fill="#10b981" />
               <rect x="-58" y="-21" width="42" height="4" rx="1" fill="#10b981" />
@@ -1039,21 +1061,22 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               <rect x="-40" y="-4" width="6" height="4" fill="#64748b" />
 
               {/* Test Tube Rack & Beaker */}
-              <rect x="5" y="-12" width="15" height="4" fill="#64748b" rx="1" />
+              <rect x="5" y="-12" width="15" height="4" fill="#64748b" rx="2" />
               <line x1="8" y1="-18" x2="8" y2="-8" stroke="#ec4899" strokeWidth="2" strokeLinecap="round" />
               <line x1="15" y1="-18" x2="15" y2="-8" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
 
               {/* Keyboard */}
-              <rect x="-50" y="2" width="34" height="10" rx="1.5" fill="#0f172a" stroke="#334155" strokeWidth="0.8" />
-              <rect x="-12" y="2" width="10" height="10" rx="1" fill="#1e293b" />
+              <rect x="-50" y="2" width="34" height="10" rx="3" fill="#0f172a" stroke="#334155" strokeWidth="0.8" />
+              <rect x="-12" y="2" width="10" height="10" rx="2" fill="#1e293b" />
 
               {/* Nameplate */}
-              <rect x="-70" y="14" width="140" height="14" rx="2" fill="#0f172a" stroke="#334155" strokeWidth="0.8" />
-              <text x="-64" y="24" fill="#f8fafc" fontSize="8.5" fontFamily="sans-serif" fontWeight="700">
-                {`Apollo · ${testRunnerSubagent.name}`}
+              <rect x="-76" y="12" width="152" height="20" rx="10" fill="#141a26" stroke="#2a354c" strokeWidth="0.8" />
+              <text x="-66" y="25" fill="#f8fafc" fontSize="8" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="600">
+                Apollo · Tests
               </text>
-              <text x="64" y="24" textAnchor="end" fill="#ec4899" fontSize="7" fontFamily="sans-serif" fontWeight="600">
-                {testRunnerSubagent.tag}
+              <rect x="24" y="15" width="48" height="14" rx="7" fill="rgba(236, 72, 153, 0.16)" />
+              <text x="48" y="25" textAnchor="middle" fill="#ec4899" fontSize="6.5" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="600">
+                Runner
               </text>
 
               <circle cx="68" cy="-34" r="3.5" fill={isWaitingPermission ? "#f59e0b" : isWorking ? "#ec4899" : "#64748b"} />
@@ -1119,9 +1142,9 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
                   {/* Speech Bubble floating directly above walking Athena */}
                   {athenaBubble && (
                     <g transform="translate(-85, -68)">
-                      <path d="M 85 28 L 92 34 L 97 28 Z" fill="#0f172a" />
-                      <rect x="0" y="0" width="180" height="28" rx="6" fill="#0f172a" stroke="#38bdf8" strokeWidth="1.5" />
-                      <text x="90" y="18" textAnchor="middle" fill="#e0f2fe" fontSize="8.5" fontFamily="sans-serif" fontWeight="600">
+                      <path d="M 85 28 L 92 34 L 97 28 Z" fill="#111827" />
+                      <rect x="0" y="0" width="180" height="28" rx="12" fill="#111827" stroke="#38bdf8" strokeWidth="1.2" />
+                      <text x="90" y="18" textAnchor="middle" fill="#e0f2fe" fontSize="8.5" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="500">
                         {athenaBubble}
                       </text>
                     </g>
@@ -1142,7 +1165,18 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               className="pixel-card-avatar"
               style={{ backgroundColor: activeAgent.accentBg, border: `1px solid ${activeAgent.color}` }}
             >
-              {activeAgent.avatarChar}
+              {activeAgent.id === "zeus" && (
+                <HugeiconsIcon icon={FlashIcon} size={20} color={activeAgent.color} strokeWidth={2} />
+              )}
+              {activeAgent.id === "athena" && (
+                <HugeiconsIcon icon={Search01Icon} size={20} color={activeAgent.color} strokeWidth={2} />
+              )}
+              {activeAgent.id === "hermes" && (
+                <HugeiconsIcon icon={Wrench01Icon} size={20} color={activeAgent.color} strokeWidth={2} />
+              )}
+              {activeAgent.id === "apollo" && (
+                <HugeiconsIcon icon={CheckCheckIcon} size={20} color={activeAgent.color} strokeWidth={2} />
+              )}
             </span>
             <div className="pixel-card-identity">
               <div className="pixel-card-name-row">
