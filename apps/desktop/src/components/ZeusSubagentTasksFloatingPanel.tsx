@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { IconX } from "./icons";
 import { cx } from "./ui";
+import { useSubagentsData } from "../hooks/use-subagents-data";
 
 export interface ZeusSubagentTasksFloatingPanelProps {
   isOpen: boolean;
@@ -23,9 +24,17 @@ export const ZeusSubagentTasksFloatingPanel = memo(
     isSessionRunning,
     activePermission,
   }: ZeusSubagentTasksFloatingPanelProps) {
+    const {
+      fixerSubagent,
+      explorerSubagent,
+      testRunnerSubagent,
+      customSubagents,
+    } = useSubagentsData();
+
     if (!isOpen) return null;
 
     const isWaitingApproval = Boolean(activePermission);
+    const totalAgents = 4 + customSubagents.length;
 
     return (
       <div
@@ -49,7 +58,7 @@ export const ZeusSubagentTasksFloatingPanel = memo(
                 {isWaitingApproval
                   ? "Sistem dijeda: Menunggu izin user"
                   : isSessionRunning
-                    ? "4 Agen aktif menyelesaikan workflow"
+                    ? `${totalAgents} Agen aktif menyelesaikan workflow`
                     : "Seluruh agen dalam mode standby"}
               </span>
             </div>
@@ -108,7 +117,7 @@ export const ZeusSubagentTasksFloatingPanel = memo(
 
         {/* Sub-Agent Roster & Tasks */}
         <div className="subagent-tasks-list" role="list">
-          {/* Agent 1: Zeus */}
+          {/* Agent 1: Zeus (Lead) */}
           <div className="subagent-task-item" role="listitem">
             <div
               className="subagent-item-avatar"
@@ -119,7 +128,7 @@ export const ZeusSubagentTasksFloatingPanel = memo(
             <div className="subagent-item-content">
               <div className="subagent-item-top">
                 <span className="subagent-item-name">Zeus (Lead)</span>
-                <span className="subagent-item-role">Central Orchestrator</span>
+                <span className="subagent-item-role">Main System Coordinator</span>
                 <span
                   className={cx(
                     "subagent-item-tag",
@@ -157,8 +166,8 @@ export const ZeusSubagentTasksFloatingPanel = memo(
             </div>
             <div className="subagent-item-content">
               <div className="subagent-item-top">
-                <span className="subagent-item-name">Hermes · Fixer</span>
-                <span className="subagent-item-role">Task(fixer)</span>
+                <span className="subagent-item-name">Hermes · {fixerSubagent.name}</span>
+                <span className="subagent-item-role">{fixerSubagent.tag}</span>
                 <span
                   className={cx(
                     "subagent-item-tag",
@@ -180,7 +189,7 @@ export const ZeusSubagentTasksFloatingPanel = memo(
                 {isWaitingApproval
                   ? `Eksekusi modifikasi (${activePermission?.toolName || "action"}) ditahan hingga disetujui`
                   : isSessionRunning
-                    ? "Implementasi kode multi-file dari spesifikasi (Task:fixer)"
+                    ? fixerSubagent.description
                     : "Standby siap modifikasi kode"}
               </p>
             </div>
@@ -196,8 +205,8 @@ export const ZeusSubagentTasksFloatingPanel = memo(
             </div>
             <div className="subagent-item-content">
               <div className="subagent-item-top">
-                <span className="subagent-item-name">Athena · Explorer</span>
-                <span className="subagent-item-role">Task(explorer) / Reviewer</span>
+                <span className="subagent-item-name">Athena · {explorerSubagent.name}</span>
+                <span className="subagent-item-role">{explorerSubagent.tag}</span>
                 <span
                   className={cx(
                     "subagent-item-tag",
@@ -219,7 +228,7 @@ export const ZeusSubagentTasksFloatingPanel = memo(
                 {isWaitingApproval
                   ? "Pemeriksaan selesai, workflow lanjutan dijeda sementara"
                   : isSessionRunning
-                    ? "Pencarian codebase cepat & review integritas kontrak (Task:explorer)"
+                    ? explorerSubagent.description
                     : "Standby siap verifikasi codebase"}
               </p>
             </div>
@@ -235,8 +244,8 @@ export const ZeusSubagentTasksFloatingPanel = memo(
             </div>
             <div className="subagent-item-content">
               <div className="subagent-item-top">
-                <span className="subagent-item-name">Apollo · Test runner</span>
-                <span className="subagent-item-role">Task(test-runner)</span>
+                <span className="subagent-item-name">Apollo · {testRunnerSubagent.name}</span>
+                <span className="subagent-item-role">{testRunnerSubagent.tag}</span>
                 <span
                   className={cx(
                     "subagent-item-tag",
@@ -258,11 +267,52 @@ export const ZeusSubagentTasksFloatingPanel = memo(
                 {isWaitingApproval
                   ? "Menunggu perubahan kode disetujui untuk menjalankan validasi"
                   : isSessionRunning
-                    ? "Eksekusi test runner & verifikasi assertion (Task:test-runner)"
+                    ? testRunnerSubagent.description
                     : "Test runner disiapkan & standby"}
               </p>
             </div>
           </div>
+
+          {/* User Custom Subagents from Settings */}
+          {customSubagents.map((subagent) => (
+            <div className="subagent-task-item" role="listitem" key={subagent.id}>
+              <div
+                className="subagent-item-avatar"
+                style={{ background: "rgba(168, 85, 247, 0.15)", borderColor: "#a855f7" }}
+              >
+                ⚙️
+              </div>
+              <div className="subagent-item-content">
+                <div className="subagent-item-top">
+                  <span className="subagent-item-name">{subagent.name}</span>
+                  <span className="subagent-item-role">{subagent.tag}</span>
+                  <span
+                    className={cx(
+                      "subagent-item-tag",
+                      isWaitingApproval
+                        ? "is-tag-paused"
+                        : isSessionRunning
+                          ? "is-tag-live"
+                          : "is-tag-idle",
+                    )}
+                  >
+                    {isWaitingApproval
+                      ? "Paused"
+                      : isSessionRunning
+                        ? "Active"
+                        : "Standby"}
+                  </span>
+                </div>
+                <p className="subagent-item-task">
+                  {isWaitingApproval
+                    ? "Workflow dijeda sementara menunggu izin user"
+                    : isSessionRunning
+                      ? subagent.description
+                      : `Standby (${subagent.tools.join(", ")})`}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Panel Footer */}

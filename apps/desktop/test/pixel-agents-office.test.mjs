@@ -49,3 +49,30 @@ test("Pixel Agents Office and View Office button adhere to repository contracts"
   assert.match(chatShellCss, /\.pixel-action-log-panel/);
   assert.doesNotMatch(chatShellCss, /backdrop-filter:\s*blur/);
 });
+
+test("PixelAgentsOffice and ZeusSubagentTasksFloatingPanel use dynamic settings subagent data", async () => {
+  const [pixelOfficeSrc, floatingPanelSrc, subagentsHookSrc] = await Promise.all([
+    read("../src/features/chat/transcript/PixelAgentsOffice.tsx"),
+    read("../src/components/ZeusSubagentTasksFloatingPanel.tsx"),
+    read("../src/hooks/use-subagents-data.ts"),
+  ]);
+
+  // Hook exports useSubagentsData and handles presets & custom subagents
+  assert.match(subagentsHookSrc, /export function useSubagentsData/);
+  assert.match(subagentsHookSrc, /Task\(fixer\)/);
+  assert.match(subagentsHookSrc, /Task\(explorer\)/);
+  assert.match(subagentsHookSrc, /Task\(test-runner\)/);
+
+  // Both PixelAgentsOffice and floating panel consume useSubagentsData
+  assert.match(pixelOfficeSrc, /useSubagentsData\(\)/);
+  assert.match(floatingPanelSrc, /useSubagentsData\(\)/);
+
+  // Role Zeus as Main System Coordinator
+  assert.match(pixelOfficeSrc, /Main System Coordinator/);
+  assert.match(floatingPanelSrc, /Main System Coordinator/);
+
+  // Dynamic tag references
+  assert.match(floatingPanelSrc, /fixerSubagent\.tag/);
+  assert.match(floatingPanelSrc, /explorerSubagent\.tag/);
+  assert.match(floatingPanelSrc, /testRunnerSubagent\.tag/);
+});

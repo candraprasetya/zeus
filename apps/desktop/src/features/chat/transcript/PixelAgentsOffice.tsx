@@ -1,6 +1,7 @@
-import { useState, useEffect, useId, type CSSProperties, memo } from "react";
+import { useState, useEffect, useId, useMemo, type CSSProperties, memo } from "react";
 import { cx } from "../../../components/ui";
 import { portalToBody } from "../../../lib/portal-visibility";
+import { useSubagentsData } from "../../../hooks/use-subagents-data";
 
 export interface PixelAgentsOfficeProps {
   className?: string;
@@ -177,7 +178,79 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
     }
   }, [cycleTick, soundEnabled, isWorking]);
 
-  const activeAgent = AGENTS.find((a) => a.id === selectedAgentId) || AGENTS[0];
+  const {
+    fixerSubagent,
+    explorerSubagent,
+    testRunnerSubagent,
+    customSubagents,
+  } = useSubagentsData();
+
+  const dynamicAgents: AgentMember[] = useMemo(
+    () => [
+      {
+        id: "zeus",
+        name: "Zeus (Lead)",
+        role: "Main System Coordinator",
+        title: "Lead Orchestrator",
+        color: "#f59e0b",
+        accentBg: "rgba(245, 158, 11, 0.15)",
+        avatarChar: "⚡",
+        station: "Command Center",
+        task: "Mengoordinasikan alur kerja sub-agen & mendistribusikan task",
+        status: "planning",
+        load: 85,
+        stats: "Subagents active",
+      },
+      {
+        id: "athena",
+        name: `Athena · ${explorerSubagent.name}`,
+        role: explorerSubagent.tag,
+        title: explorerSubagent.name,
+        color: "#38bdf8",
+        accentBg: "rgba(56, 189, 248, 0.15)",
+        avatarChar: "🔍",
+        station: "Research Deck",
+        task: explorerSubagent.description,
+        status: "walking",
+        load: 78,
+        stats: explorerSubagent.tools.join(" · "),
+      },
+      {
+        id: "hermes",
+        name: `Hermes · ${fixerSubagent.name}`,
+        role: fixerSubagent.tag,
+        title: fixerSubagent.name,
+        color: "#10b981",
+        accentBg: "rgba(16, 185, 129, 0.15)",
+        avatarChar: "💻",
+        station: "Dev Station Alpha",
+        task: fixerSubagent.description,
+        status: "typing",
+        load: 92,
+        stats: fixerSubagent.tools.join(" · "),
+      },
+      {
+        id: "apollo",
+        name: `Apollo · ${testRunnerSubagent.name}`,
+        role: testRunnerSubagent.tag,
+        title: testRunnerSubagent.name,
+        color: "#ec4899",
+        accentBg: "rgba(236, 72, 153, 0.15)",
+        avatarChar: "🧪",
+        station: "Test Station & Rig",
+        task: testRunnerSubagent.description,
+        status: "testing",
+        load: 65,
+        stats: testRunnerSubagent.tools.join(" · "),
+      },
+    ],
+    [explorerSubagent, fixerSubagent, testRunnerSubagent],
+  );
+
+  const activeAgent =
+    dynamicAgents.find((a) => a.id === selectedAgentId) ||
+    dynamicAgents[0] ||
+    AGENTS[0];
 
   return (
     <div
@@ -399,7 +472,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
                 {isWaitingPermission
                   ? `Menunggu izin: ${pendingPermission?.toolName || "Tool"}`
                   : isWorking
-                    ? "Orchestrating workflow..."
+                    ? "Main System Coordinator"
                     : "Standby for query"}
               </text>
               {/* Live Status Indicator */}
@@ -443,13 +516,13 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               <circle cx="25" cy="-8" r="22" fill="#1e293b" stroke="#38bdf8" strokeWidth="2" />
               <text x="25" y="-1" textAnchor="middle" fontSize="18">🔍</text>
               <text x="-65" y="24" fill="#f8fafc" fontSize="11" fontFamily="sans-serif" fontWeight="700">
-                Athena (Coordinator)
+                {`Athena · ${explorerSubagent.name}`}
               </text>
               <text x="-65" y="37" fill="#94a3b8" fontSize="9" fontFamily="sans-serif">
                 {isWaitingPermission
                   ? "Paused (Menunggu persetujuan)"
                   : isWorking
-                    ? (athenaIsWalking ? "🚶 Walking to sub-agent" : "Querying schema")
+                    ? (athenaIsWalking ? "🚶 Walking to sub-agent" : `${explorerSubagent.tag} · Active`)
                     : "Standby & listening"}
               </text>
               <circle
@@ -494,13 +567,13 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               <circle cx="25" cy="-8" r="22" fill="#1e293b" stroke="#10b981" strokeWidth="2" />
               <text x="25" y="-1" textAnchor="middle" fontSize="18">💻</text>
               <text x="-65" y="24" fill="#f8fafc" fontSize="11" fontFamily="sans-serif" fontWeight="700">
-                Hermes (Builder)
+                {`Hermes · ${fixerSubagent.name}`}
               </text>
               <text x="-65" y="37" fill="#94a3b8" fontSize="9" fontFamily="sans-serif">
                 {isWaitingPermission
                   ? "Paused (Menunggu persetujuan)"
                   : isWorking
-                    ? "Writing components & logic"
+                    ? `${fixerSubagent.tag} · Coding`
                     : "Ready to implement"}
               </text>
               <circle
@@ -542,13 +615,13 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               <circle cx="25" cy="-8" r="22" fill="#1e293b" stroke="#ec4899" strokeWidth="2" />
               <text x="25" y="-1" textAnchor="middle" fontSize="18">🧪</text>
               <text x="-65" y="24" fill="#f8fafc" fontSize="11" fontFamily="sans-serif" fontWeight="700">
-                Apollo (QA Runner)
+                {`Apollo · ${testRunnerSubagent.name}`}
               </text>
               <text x="-65" y="37" fill="#94a3b8" fontSize="9" fontFamily="sans-serif">
                 {isWaitingPermission
                   ? "Paused (Menunggu persetujuan)"
                   : isWorking
-                    ? "All 117 assertions green"
+                    ? `${testRunnerSubagent.tag} · Running`
                     : "Test suites armed"}
               </text>
               <circle
