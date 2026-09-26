@@ -9,6 +9,12 @@ export interface PixelAgentsOfficeProps {
   thoughtText?: string;
   onClose?: () => void;
   isModal?: boolean;
+  pendingPermission?: {
+    toolName?: string;
+    risk?: string;
+    agentName?: string;
+    reason?: string;
+  } | null;
 }
 
 export interface AgentMember {
@@ -113,9 +119,13 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
   thoughtText,
   onClose,
   isModal = false,
+  pendingPermission,
 }: PixelAgentsOfficeProps) {
   const [manualMode, setManualMode] = useState<"auto" | "working" | "idle">("auto");
-  const isWorking = manualMode === "auto" ? Boolean(streaming) : manualMode === "working";
+  const isWaitingPermission = Boolean(pendingPermission);
+  const isWorking = manualMode === "auto"
+    ? (isWaitingPermission ? false : Boolean(streaming))
+    : manualMode === "working";
 
   const [selectedAgentId, setSelectedAgentId] = useState<string>("zeus");
   const [speed, setSpeed] = useState<1 | 2>(1);
@@ -137,21 +147,27 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
 
   // Variables preserved for testing and state reflection
   const athenaIsWalking = isWorking && cycleTick > 30 && cycleTick < 75;
-  const athenaBubble = isWorking
-    ? cycleTick < 40
-      ? "Memeriksa kontrak DTO..."
-      : cycleTick < 70
-        ? "Hermes, ada pembaruan schema?"
-        : "Semua spesifikasi tersinkronisasi!"
-    : "Tim AI standby & siap menerima instruksi";
+  const athenaBubble = isWaitingPermission
+    ? "Eksekusi dijeda: Menunggu user menyetujui izin di chat."
+    : isWorking
+      ? cycleTick < 40
+        ? "Memeriksa kontrak DTO..."
+        : cycleTick < 70
+          ? "Hermes, ada pembaruan schema?"
+          : "Semua spesifikasi tersinkronisasi!"
+      : "Tim AI standby & siap menerima instruksi";
 
-  const hermesBubble = isWorking && cycleTick > 45 && cycleTick < 85
-    ? "Sudah siap di @shared/contracts!"
-    : null;
+  const hermesBubble = isWaitingPermission
+    ? `Menunggu izin untuk ${pendingPermission?.toolName || "tool"}...`
+    : isWorking && cycleTick > 45 && cycleTick < 85
+      ? "Sudah siap di @shared/contracts!"
+      : null;
 
-  const zeusBubble = isWorking && cycleTick > 80 && cycleTick < 110
-    ? "Lanjutkan eksekusi dan validasi!"
-    : null;
+  const zeusBubble = isWaitingPermission
+    ? `⚠️ Butuh izin user untuk "${pendingPermission?.toolName}"!`
+    : isWorking && cycleTick > 80 && cycleTick < 110
+      ? "Lanjutkan eksekusi dan validasi!"
+      : null;
 
   // Sound triggers
   useEffect(() => {
@@ -182,8 +198,18 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
             <span className="pixel-office-title">AI AGENT TEAM · STUDIO</span>
           </div>
           <span className="pixel-office-subtitle">
-            <span className={cx("pixel-live-dot", !isWorking && "is-idle")} />
-            {isWorking ? "ACTIVE WORKFLOW · 4 AGENTS IN SYNC" : "STANDBY · READY FOR INSTRUCTIONS"}
+            <span
+              className={cx(
+                "pixel-live-dot",
+                !isWorking && !isWaitingPermission && "is-idle",
+                isWaitingPermission && "is-warning",
+              )}
+            />
+            {isWaitingPermission
+              ? `PAUSED · MENUNGGU APPROVAL USER (${(pendingPermission?.toolName || "IZIN").toUpperCase()})`
+              : isWorking
+                ? "ACTIVE WORKFLOW · 4 AGENTS IN SYNC"
+                : "STANDBY · READY FOR INSTRUCTIONS"}
           </span>
         </div>
 
@@ -370,10 +396,19 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
                 Zeus (Lead)
               </text>
               <text x="-65" y="37" fill="#94a3b8" fontSize="9" fontFamily="sans-serif">
-                {isWorking ? "Orchestrating workflow..." : "Standby for query"}
+                {isWaitingPermission
+                  ? `Menunggu izin: ${pendingPermission?.toolName || "Tool"}`
+                  : isWorking
+                    ? "Orchestrating workflow..."
+                    : "Standby for query"}
               </text>
               {/* Live Status Indicator */}
-              <circle cx="65" cy="-30" r="4" fill={isWorking ? "#f59e0b" : "#64748b"} />
+              <circle
+                cx="65"
+                cy="-30"
+                r="4"
+                fill={isWaitingPermission ? "#f59e0b" : isWorking ? "#f59e0b" : "#64748b"}
+              />
 
               {/* Speech Bubble */}
               {zeusBubble && (
@@ -411,9 +446,18 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
                 Athena (Coordinator)
               </text>
               <text x="-65" y="37" fill="#94a3b8" fontSize="9" fontFamily="sans-serif">
-                {isWorking ? (athenaIsWalking ? "🚶 Walking to sub-agent" : "Querying schema") : "Standby & listening"}
+                {isWaitingPermission
+                  ? "Paused (Menunggu persetujuan)"
+                  : isWorking
+                    ? (athenaIsWalking ? "🚶 Walking to sub-agent" : "Querying schema")
+                    : "Standby & listening"}
               </text>
-              <circle cx="65" cy="-30" r="4" fill={isWorking ? "#38bdf8" : "#64748b"} />
+              <circle
+                cx="65"
+                cy="-30"
+                r="4"
+                fill={isWaitingPermission ? "#f59e0b" : isWorking ? "#38bdf8" : "#64748b"}
+              />
 
               {/* Dynamic Speech Bubble */}
               {athenaBubble && (
@@ -453,9 +497,18 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
                 Hermes (Builder)
               </text>
               <text x="-65" y="37" fill="#94a3b8" fontSize="9" fontFamily="sans-serif">
-                {isWorking ? "Writing components & logic" : "Ready to implement"}
+                {isWaitingPermission
+                  ? "Paused (Menunggu persetujuan)"
+                  : isWorking
+                    ? "Writing components & logic"
+                    : "Ready to implement"}
               </text>
-              <circle cx="65" cy="-30" r="4" fill={isWorking ? "#10b981" : "#64748b"} />
+              <circle
+                cx="65"
+                cy="-30"
+                r="4"
+                fill={isWaitingPermission ? "#f59e0b" : isWorking ? "#10b981" : "#64748b"}
+              />
 
               {hermesBubble && (
                 <g transform="translate(-40, -78)">
@@ -492,9 +545,18 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
                 Apollo (QA Runner)
               </text>
               <text x="-65" y="37" fill="#94a3b8" fontSize="9" fontFamily="sans-serif">
-                {isWorking ? "All 117 assertions green" : "Test suites armed"}
+                {isWaitingPermission
+                  ? "Paused (Menunggu persetujuan)"
+                  : isWorking
+                    ? "All 117 assertions green"
+                    : "Test suites armed"}
               </text>
-              <circle cx="65" cy="-30" r="4" fill={isWorking ? "#ec4899" : "#64748b"} />
+              <circle
+                cx="65"
+                cy="-30"
+                r="4"
+                fill={isWaitingPermission ? "#f59e0b" : isWorking ? "#ec4899" : "#64748b"}
+              />
             </g>
           </g>
         </svg>
@@ -552,7 +614,11 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
           <div className="pixel-card-task">
             <span className="task-label">CURRENT FOCUS:</span>
             <span className="task-desc">
-              {isWorking ? activeAgent.task : "Standby mode · Siap memproses prompt atau tugas baru dari pengguna."}
+              {isWaitingPermission
+                ? `⚠️ Agen dijeda sementara: Menunggu persetujuan user untuk tool "${pendingPermission?.toolName || "action"}" di chat.`
+                : isWorking
+                  ? activeAgent.task
+                  : "Standby mode · Siap memproses prompt atau tugas baru dari pengguna."}
             </span>
           </div>
 
@@ -568,9 +634,32 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
         <div className="pixel-action-log-panel clean-log-panel">
           <div className="pixel-log-header">
             <span className="pixel-log-title">AI AGENT TEAM TELEMETRY</span>
-            <span className="pixel-log-count">{isWorking ? "ACTIVE" : "STANDBY"}</span>
+            <span className="pixel-log-count">
+              {isWaitingPermission ? "PAUSED (APPROVAL NEEDED)" : isWorking ? "ACTIVE" : "STANDBY"}
+            </span>
           </div>
           <div className="pixel-log-list">
+            {isWaitingPermission && (
+              <div
+                className="pixel-log-row is-warning-row"
+                style={{
+                  background: "rgba(245, 158, 11, 0.12)",
+                  borderLeft: "3px solid #f59e0b",
+                  paddingLeft: 6,
+                }}
+              >
+                <span className="pixel-log-time" style={{ color: "#f59e0b" }}>
+                  LIVE
+                </span>
+                <span className="pixel-log-sender" style={{ color: "#f59e0b" }}>
+                  System:
+                </span>
+                <span className="pixel-log-text" style={{ color: "#fef3c7" }}>
+                  ⚠️ Menunggu persetujuan user untuk &quot;{pendingPermission?.toolName || "action"}&quot; (
+                  {pendingPermission?.risk || "high"} risk). Agen dijeda sementara demi keamanan.
+                </span>
+              </div>
+            )}
             <div className="pixel-log-row">
               <span className="pixel-log-time">15:20</span>
               <span className="pixel-log-sender" style={{ color: "#f59e0b" }}>Zeus:</span>

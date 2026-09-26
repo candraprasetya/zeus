@@ -17,6 +17,7 @@ import { useAppStore } from "../stores/app-store";
 import { headPermission } from "../lib/pending-permissions";
 import { headAsk } from "../lib/pending-asks";
 import { PixelAgentsOfficeModal } from "../features/chat/transcript/PixelAgentsOffice";
+import { ZeusSubagentTasksFloatingPanel } from "./ZeusSubagentTasksFloatingPanel";
 
 const StableComposer = memo(Composer);
 
@@ -99,6 +100,7 @@ export const ChatSurface = memo(function ChatSurface({
   }, []);
 
   const [isOfficeModalOpen, setIsOfficeModalOpen] = useState(false);
+  const [isSubagentsPanelOpen, setIsSubagentsPanelOpen] = useState(false);
 
   // A pending permission or ask is itself transcript content, so the empty
   // state must yield to it. Each pane subscribes to its own queues; the surface
@@ -258,20 +260,37 @@ export const ChatSurface = memo(function ChatSurface({
               />
             ))}
           </div>
+          <ZeusSubagentTasksFloatingPanel
+            isOpen={isSubagentsPanelOpen}
+            onClose={() => setIsSubagentsPanelOpen(false)}
+            onOpenOffice={() => setIsOfficeModalOpen(true)}
+            isSessionRunning={isSessionRunning}
+            activePermission={activePermission}
+          />
+
           <div
             className={cx(
               "zeus-floating-worker",
-              !isSessionRunning && "is-idle",
+              !isSessionRunning && !activePermission && "is-idle",
+              Boolean(activePermission) && "is-waiting",
             )}
             data-testid="zeus-floating-worker"
             aria-live="polite"
           >
             <YoungZeusMascot
-              size={isSessionRunning ? 36 : 28}
-              state={isSessionRunning ? "working" : "waiting"}
+              size={isSessionRunning || activePermission ? 36 : 28}
+              state={activePermission ? "waiting" : isSessionRunning ? "working" : "waiting"}
               interactive={false}
             />
-            {isSessionRunning ? (
+
+            {activePermission ? (
+              <div className="zeus-floating-label is-waiting-approval">
+                <span className="zeus-floating-title is-warning">
+                  <span className="zeus-warning-icon" aria-hidden="true">⚠️</span>
+                  Menunggu Izin: {activePermission.toolName || "Approval"}
+                </span>
+              </div>
+            ) : isSessionRunning ? (
               <div className="zeus-floating-label">
                 <span className="zeus-floating-title">
                   Zeus sedang berpikir & mengetik
@@ -283,21 +302,62 @@ export const ChatSurface = memo(function ChatSurface({
                 </span>
               </div>
             ) : null}
+
+            {/* Floating Sub-Agent Tasks Button */}
             <button
               type="button"
-              className={cx("zeus-view-office-btn", !isSessionRunning && "is-idle")}
+              className={cx(
+                "zeus-subagents-pill-btn",
+                isSubagentsPanelOpen && "is-open",
+                Boolean(activePermission) && "is-warning",
+              )}
+              onClick={() => setIsSubagentsPanelOpen((v) => !v)}
+              title="Klik untuk melihat tugas & status detail sub-agent"
+              aria-label="Sub-Agent Tasks"
+              aria-expanded={isSubagentsPanelOpen}
+            >
+              <span className="subagent-pill-icon" aria-hidden="true">🤖</span>
+              <span className="subagent-pill-label">
+                {activePermission
+                  ? "1 Butuh Izin"
+                  : isSessionRunning
+                    ? "4 Sub-Agents"
+                    : "Sub-Agents"}
+              </span>
+              <span className="subagent-pill-arrow" aria-hidden="true">
+                {isSubagentsPanelOpen ? "▲" : "▼"}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              className={cx(
+                "zeus-view-office-btn",
+                !isSessionRunning && !activePermission && "is-idle",
+                Boolean(activePermission) && "is-waiting",
+              )}
               onClick={() => setIsOfficeModalOpen(true)}
               title={
-                isSessionRunning
-                  ? "Buka AI Agent Office (Sedang Bekerja)"
-                  : "Buka AI Agent Office (Standby / Idle)"
+                activePermission
+                  ? "Buka AI Agent Office (Status: Paused Menunggu Approval)"
+                  : isSessionRunning
+                    ? "Buka AI Agent Office (Sedang Bekerja)"
+                    : "Buka AI Agent Office (Standby / Idle)"
               }
               aria-label="View Office"
             >
               <span className="office-btn-icon" aria-hidden="true">🏢</span>
               <span className="office-btn-text">View Office</span>
-              <span className={isSessionRunning ? "office-btn-live" : "office-btn-idle"}>
-                {isSessionRunning ? "LIVE" : "IDLE"}
+              <span
+                className={
+                  activePermission
+                    ? "office-btn-paused"
+                    : isSessionRunning
+                      ? "office-btn-live"
+                      : "office-btn-idle"
+                }
+              >
+                {activePermission ? "PAUSED" : isSessionRunning ? "LIVE" : "IDLE"}
               </span>
             </button>
           </div>
@@ -368,6 +428,7 @@ export const ChatSurface = memo(function ChatSurface({
         isOpen={isOfficeModalOpen}
         onClose={() => setIsOfficeModalOpen(false)}
         streaming={isSessionRunning}
+        pendingPermission={activePermission}
       />
     </div>
   );
