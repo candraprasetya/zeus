@@ -98,13 +98,18 @@ export function MindmapTab() {
     smoothTimerRef.current = setTimeout(() => setIsSmoothAnimating(false), 380);
   }, []);
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  // tracks previous `loading` value so the pop-in only fires on the loading→done transition
+  const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
   const prevLoadingRef = useRef(true);
-  const containerSizeRef = useRef({ w: 0, h: 0 });
+  const hasAutoCenteredRef = useRef(false);
+
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+  const panRef = useRef(pan);
+  panRef.current = pan;
 
   // Load .knowledge/ data: canvas first, or scan .md files
   const loadKnowledgeData = useCallback(async () => {
+    hasAutoCenteredRef.current = false;
     if (!root) {
       setLoading(false);
       return;
@@ -279,86 +284,71 @@ export function MindmapTab() {
     void loadKnowledgeData();
   }, [loadKnowledgeData]);
 
-  // Track container size via ResizeObserver (used for centering and fit-to-bounds)
+  // Calculate exact zoom and pan to fit all nodes centered in the given container dimensions
+  const fitToBounds = useCallback((w: number, h: number, nodes: MindmapNode[]) => {
+    if (w <= 0 || h <= 0 || nodes.length === 0) return;
+    const pad = 90;
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const n of nodes) {
+      const r = n.radius ?? 28;
+      minX = Math.min(minX, n.x - r);
+      maxX = Math.max(maxX, n.x + r);
+      minY = Math.min(minY, n.y - r);
+      maxY = Math.max(maxY, n.y + r);
+    }
+    const graphW = maxX - minX || 400;
+    const graphH = maxY - minY || 400;
+    const fitZoom = Math.min(
+      (w - pad * 2) / graphW,
+      (h - pad * 2) / graphH,
+      1.1,
+    );
+    const clampedZoom = Math.max(0.2, Math.min(1.8, fitZoom));
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
+    setZoom(clampedZoom);
+    setPan({ x: -cx * clampedZoom, y: -cy * clampedZoom });
+  }, []);
+
+  // Measure container and attach listeners whenever containerEl mounts (reliable callback ref)
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
+    if (!containerEl) return;
+
+    // 1. Initial size measurement & auto-center
     const updateSize = () => {
-      const rect = el.getBoundingClientRect();
+      const rect = containerEl.getBoundingClientRect();
       if (rect.width > 0 && rect.height > 0) {
-        containerSizeRef.current = { w: rect.width, h: rect.height };
         setContainerSize((prev) =>
           prev.w === rect.width && prev.h === rect.height ? prev : { w: rect.width, h: rect.height },
         );
+        if (!hasAutoCenteredRef.current && graph.nodes.length > 0) {
+          hasAutoCenteredRef.current = true;
+          fitToBounds(rect.width, rect.height, graph.nodes);
+        }
       }
     };
     updateSize();
+
+    // 2. ResizeObserver to track layout changes
     const ro = new ResizeObserver(updateSize);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+    ro.observe(containerEl);
 
-  // Fire molecule-core + droplet-detach animation + fit-to-bounds on loading → done transition
-  useEffect(() => {
-    if (prevLoadingRef.current && !loading && graph.nodes.length > 0) {
-      const el = containerRef.current;
-      const w = containerSize.w > 0 ? containerSize.w : (el?.clientWidth ?? 800);
-      const h = containerSize.h > 0 ? containerSize.h : (el?.clientHeight ?? 600);
-
-      const pad = 100;
-      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-      for (const n of graph.nodes) {
-        const r = n.radius ?? 28;
-        minX = Math.min(minX, n.x - r);
-        maxX = Math.max(maxX, n.x + r);
-        minY = Math.min(minY, n.y - r);
-        maxY = Math.max(maxY, n.y + r);
-      }
-      const graphW = maxX - minX || 400;
-      const graphH = maxY - minY || 400;
-      const fitZoom = Math.min(
-        (w - pad * 2) / graphW,
-        (h - pad * 2) / graphH,
-        1.1,
-      );
-      const clampedZoom = Math.max(0.2, fitZoom);
-      const cx = (minX + maxX) / 2;
-      const cy = (minY + maxY) / 2;
-      setZoom(clampedZoom);
-      setPan({ x: -cx * clampedZoom, y: -cy * clampedZoom });
-
-      setIntroAnimating(true);
-      // Node 0 appears first; nodes 1..N detach sequentially at 450ms + (i-1)*160ms
-      const totalMs = 450 + Math.max(0, graph.nodes.length - 1) * 160 + 900;
-      const id = setTimeout(() => setIntroAnimating(false), totalMs);
-      prevLoadingRef.current = false;
-      return () => clearTimeout(id);
-    }
-    prevLoadingRef.current = loading;
-  }, [loading, graph.nodes, containerSize]);
-
-  // Native non-passive wheel: pinch → zoom-to-pointer; two-finger scroll → pan
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
+    // 3. Wheel listener for touchpad pinch-to-zoom and two-finger pan
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-
-      // Disable any active CSS smooth transition during wheel / trackpad gestures
       setIsSmoothAnimating(false);
 
-      // macOS trackpad pinch or Cmd/Ctrl + scroll
       if (e.ctrlKey || e.metaKey) {
-        const rect = el.getBoundingClientRect();
-        // Cursor position relative to center of the container
+        // Pinch-to-zoom (trackpad pinch on macOS or Cmd/Ctrl + scroll)
+        const rect = containerEl.getBoundingClientRect();
         const mouseX = e.clientX - rect.left - rect.width / 2;
         const mouseY = e.clientY - rect.top - rect.height / 2;
 
-        const raw = -e.deltaY;
-        const factor = raw > 0
-          ? 1 + Math.min(raw * 0.012, 0.12)
-          : 1 / (1 + Math.min(-raw * 0.012, 0.12));
+        let dy = e.deltaY;
+        if (e.deltaMode === 1) dy *= 20;
+        if (e.deltaMode === 2) dy *= 500;
+
+        const factor = Math.exp(-dy * 0.01);
 
         setZoom((prevZoom) => {
           const nextZoom = Math.min(3, Math.max(0.15, prevZoom * factor));
@@ -370,7 +360,7 @@ export function MindmapTab() {
           return nextZoom;
         });
       } else {
-        // Two-finger trackpad scroll / pan (natural 2D canvas navigation)
+        // Two-finger trackpad scroll -> pan (natural 2D canvas navigation)
         setPan((prev) => ({
           x: prev.x - e.deltaX,
           y: prev.y - e.deltaY,
@@ -378,9 +368,67 @@ export function MindmapTab() {
       }
     };
 
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, []);
+    containerEl.addEventListener("wheel", onWheel, { passive: false });
+
+    // 4. WebKit gesture events for Safari/Electron native macOS pinch
+    let gestureStartZoom = 1;
+    let gestureStartPan = { x: 0, y: 0 };
+    let gestureCenter = { x: 0, y: 0 };
+
+    const onGestureStart = (e: any) => {
+      e.preventDefault();
+      setIsSmoothAnimating(false);
+      gestureStartZoom = zoomRef.current;
+      gestureStartPan = panRef.current;
+      const rect = containerEl.getBoundingClientRect();
+      gestureCenter = {
+        x: (e.clientX || rect.width / 2) - rect.left - rect.width / 2,
+        y: (e.clientY || rect.height / 2) - rect.top - rect.height / 2,
+      };
+    };
+
+    const onGestureChange = (e: any) => {
+      e.preventDefault();
+      if (typeof e.scale === "number") {
+        const nextZoom = Math.min(3, Math.max(0.15, gestureStartZoom * e.scale));
+        const scale = nextZoom / gestureStartZoom;
+        setZoom(nextZoom);
+        setPan({
+          x: gestureCenter.x - (gestureCenter.x - gestureStartPan.x) * scale,
+          y: gestureCenter.y - (gestureCenter.y - gestureStartPan.y) * scale,
+        });
+      }
+    };
+
+    const onGestureEnd = (e: any) => {
+      e.preventDefault();
+    };
+
+    containerEl.addEventListener("gesturestart", onGestureStart, { passive: false });
+    containerEl.addEventListener("gesturechange", onGestureChange, { passive: false });
+    containerEl.addEventListener("gestureend", onGestureEnd, { passive: false });
+
+    return () => {
+      ro.disconnect();
+      containerEl.removeEventListener("wheel", onWheel);
+      containerEl.removeEventListener("gesturestart", onGestureStart);
+      containerEl.removeEventListener("gesturechange", onGestureChange);
+      containerEl.removeEventListener("gestureend", onGestureEnd);
+    };
+  }, [containerEl, graph.nodes, fitToBounds]);
+
+  // Fire molecule-core + droplet-detach animation on loading → done transition
+  useEffect(() => {
+    if (prevLoadingRef.current && !loading && graph.nodes.length > 0) {
+      setIntroAnimating(true);
+      // Node 0 appears first; nodes 1..N detach sequentially at 450ms + (i-1)*160ms
+      const totalMs = 450 + Math.max(0, graph.nodes.length - 1) * 160 + 900;
+      const id = setTimeout(() => setIntroAnimating(false), totalMs);
+      prevLoadingRef.current = false;
+      return () => clearTimeout(id);
+    }
+    prevLoadingRef.current = loading;
+  }, [loading, graph.nodes]);
 
   // Pan handling: allow panning everywhere EXCEPT on node clicks or HUD controls
   const handlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -477,38 +525,44 @@ export function MindmapTab() {
     return Math.min(130 / w, 90 / h);
   }, [bounds]);
 
+  const boundsCenterX = (bounds.minX + bounds.maxX) / 2;
+  const boundsCenterY = (bounds.minY + bounds.maxY) / 2;
+
+  // Minimap interactive pointer navigation (click or drag on minimap centers view)
+  const handleMinimapPointer = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
+    const svgRect = e.currentTarget.getBoundingClientRect();
+    if (svgRect.width <= 0 || svgRect.height <= 0) return;
+    const clickX = ((e.clientX - svgRect.left) / svgRect.width) * 140;
+    const clickY = ((e.clientY - svgRect.top) / svgRect.height) * 100;
+
+    const targetGraphX = (clickX - 70) / minimapScale + boundsCenterX;
+    const targetGraphY = (clickY - 50) / minimapScale + boundsCenterY;
+
+    triggerSmooth();
+    setPan({
+      x: -targetGraphX * zoom,
+      y: -targetGraphY * zoom,
+    });
+  }, [boundsCenterX, boundsCenterY, minimapScale, zoom, triggerSmooth]);
+
+  // Minimap viewport box indicator (shows current camera position & zoom)
+  const vpWInGraph = (containerSize.w || 800) / zoom;
+  const vpHInGraph = (containerSize.h || 600) / zoom;
+  const curCenterGraphX = -pan.x / zoom;
+  const curCenterGraphY = -pan.y / zoom;
+  const vpRectW = Math.max(16, Math.min(140, vpWInGraph * minimapScale));
+  const vpRectH = Math.max(12, Math.min(100, vpHInGraph * minimapScale));
+  const vpRectX = Math.max(0, Math.min(140 - vpRectW, 70 + (curCenterGraphX - boundsCenterX) * minimapScale - vpRectW / 2));
+  const vpRectY = Math.max(0, Math.min(100 - vpRectH, 50 + (curCenterGraphY - boundsCenterY) * minimapScale - vpRectH / 2));
+
   // Fit all nodes into view, centered in the container with smooth glide
   const handleResetView = useCallback(() => {
-    const el = containerRef.current;
-    const w = containerSize.w > 0 ? containerSize.w : (el?.clientWidth ?? 800);
-    const h = containerSize.h > 0 ? containerSize.h : (el?.clientHeight ?? 600);
-    if (graph.nodes.length === 0) {
-      triggerSmooth();
-      setZoom(1);
-      setPan({ x: 0, y: 0 });
-      return;
-    }
-    const pad = 100;
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    for (const n of graph.nodes) {
-      const r = n.radius ?? 28;
-      minX = Math.min(minX, n.x - r);
-      maxX = Math.max(maxX, n.x + r);
-      minY = Math.min(minY, n.y - r);
-      maxY = Math.max(maxY, n.y + r);
-    }
-    const fitZoom = Math.min(
-      (w - pad * 2) / (maxX - minX || 400),
-      (h - pad * 2) / (maxY - minY || 400),
-      1.1,
-    );
-    const z = Math.max(0.2, fitZoom);
-    const cx = (minX + maxX) / 2;
-    const cy = (minY + maxY) / 2;
+    const el = containerEl;
+    const w = el?.clientWidth || containerSize.w;
+    const h = el?.clientHeight || containerSize.h;
     triggerSmooth();
-    setZoom(z);
-    setPan({ x: -cx * z, y: -cy * z });
-  }, [graph.nodes, containerSize, triggerSmooth]);
+    fitToBounds(w, h, graph.nodes);
+  }, [containerEl, containerSize, graph.nodes, fitToBounds, triggerSmooth]);
 
   const handleCenterOnNode = useCallback((node: MindmapNode) => {
     setSelectedNode(node);
@@ -545,12 +599,12 @@ export function MindmapTab() {
     );
   }
 
-    const centerX = containerSize.w > 0 ? containerSize.w / 2 : (containerRef.current?.clientWidth ?? 800) / 2;
-    const centerY = containerSize.h > 0 ? containerSize.h / 2 : (containerRef.current?.clientHeight ?? 600) / 2;
+  const centerX = (containerSize.w || containerEl?.clientWidth || 800) / 2;
+  const centerY = (containerSize.h || containerEl?.clientHeight || 600) / 2;
 
-    return (
+  return (
     <div
-      ref={containerRef}
+      ref={setContainerEl}
       className={`mindmap-container ${dragging ? "is-dragging" : ""}`}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -830,22 +884,29 @@ export function MindmapTab() {
         </div>
       </div>
 
-      {/* Mini-map Interactive Overview */}
-      <div className="mindmap-minimap no-drag" title="Interactive Minimap">
-        <svg viewBox="0 0 140 100" className="mindmap-minimap-svg">
+      {/* Mini-map Interactive Overview with Camera Viewport */}
+      <div className="mindmap-minimap no-drag" title="Klik atau drag untuk navigasi peta">
+        <svg
+          viewBox="0 0 140 100"
+          className="mindmap-minimap-svg"
+          onPointerDown={handleMinimapPointer}
+        >
+          {/* Edges */}
           {graph.edges.map((e) => {
             const from = nodeMap.get(e.from);
             const to = nodeMap.get(e.to);
             if (!from || !to) return null;
-            const x1 = 70 + (from.x - (bounds.minX + bounds.maxX) / 2) * minimapScale;
-            const y1 = 50 + (from.y - (bounds.minY + bounds.maxY) / 2) * minimapScale;
-            const x2 = 70 + (to.x - (bounds.minX + bounds.maxX) / 2) * minimapScale;
-            const y2 = 50 + (to.y - (bounds.minY + bounds.maxY) / 2) * minimapScale;
-            return <line key={e.id} x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" opacity={0.2} />;
+            const x1 = 70 + (from.x - boundsCenterX) * minimapScale;
+            const y1 = 50 + (from.y - boundsCenterY) * minimapScale;
+            const x2 = 70 + (to.x - boundsCenterX) * minimapScale;
+            const y2 = 50 + (to.y - boundsCenterY) * minimapScale;
+            return <line key={e.id} x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" opacity={0.25} strokeWidth={1} />;
           })}
+
+          {/* Nodes */}
           {graph.nodes.map((n) => {
-            const cx = 70 + (n.x - (bounds.minX + bounds.maxX) / 2) * minimapScale;
-            const cy = 50 + (n.y - (bounds.minY + bounds.maxY) / 2) * minimapScale;
+            const cx = 70 + (n.x - boundsCenterX) * minimapScale;
+            const cy = 50 + (n.y - boundsCenterY) * minimapScale;
             const colorMeta = COLOR_MAP[n.color ?? "default"] ?? COLOR_MAP.default;
             const isSelected = selectedNode?.id === n.id;
             return (
@@ -853,16 +914,34 @@ export function MindmapTab() {
                 key={n.id}
                 cx={cx}
                 cy={cy}
-                r={isSelected ? 4.5 : 2.5}
+                r={isSelected ? 5 : 3}
                 fill={colorMeta.bg}
-                opacity={isSelected ? 1 : 0.75}
+                opacity={isSelected ? 1 : 0.8}
                 stroke={isSelected ? "#fff" : "transparent"}
                 strokeWidth={1}
                 className="mindmap-minimap-node"
-                onClick={() => handleCenterOnNode(n)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCenterOnNode(n);
+                }}
               />
             );
           })}
+
+          {/* Camera Viewport Indicator Box */}
+          <rect
+            x={vpRectX}
+            y={vpRectY}
+            width={vpRectW}
+            height={vpRectH}
+            fill="var(--ds-accent)"
+            fillOpacity={0.16}
+            stroke="var(--ds-accent)"
+            strokeWidth={1.5}
+            rx={2}
+            className="mindmap-minimap-viewport"
+            pointerEvents="none"
+          />
         </svg>
       </div>
 
