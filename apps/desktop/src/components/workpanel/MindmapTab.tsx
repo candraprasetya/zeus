@@ -434,27 +434,54 @@ export function MindmapTab() {
         return;
       }
 
-      // Start with 1 circle first (Node 0)
+      // Start with Node 0 (Molecule core)
       setIntroAnimating(true);
       setRevealedCount(1);
 
-      let current = 1;
-      const stepInterval = 440; // ms per node
+      if (graph.nodes.length <= 1) {
+        const singleTimer = setTimeout(() => {
+          setIntroAnimating(false);
+          if (root) playedIntroProjects.add(root);
+        }, 400);
+        return () => clearTimeout(singleTimer);
+      }
 
-      const timer = setInterval(() => {
+      let current = 1;
+      let timer: ReturnType<typeof setInterval> | null = null;
+      let finalTimeout: ReturnType<typeof setTimeout> | null = null;
+
+      // Snappy cadence: 180ms initial pop, then 115ms per child droplet for rapid fluid cascade
+      const initialTimeout = setTimeout(() => {
         current++;
         setRevealedCount(current);
 
         if (current >= graph.nodes.length) {
-          clearInterval(timer);
-          setTimeout(() => {
+          finalTimeout = setTimeout(() => {
             setIntroAnimating(false);
             if (root) playedIntroProjects.add(root);
-          }, 450);
+          }, 460);
+          return;
         }
-      }, stepInterval);
 
-      return () => clearInterval(timer);
+        timer = setInterval(() => {
+          current++;
+          setRevealedCount(current);
+
+          if (current >= graph.nodes.length) {
+            if (timer) clearInterval(timer);
+            finalTimeout = setTimeout(() => {
+              setIntroAnimating(false);
+              if (root) playedIntroProjects.add(root);
+            }, 460);
+          }
+        }, 115);
+      }, 180);
+
+      return () => {
+        clearTimeout(initialTimeout);
+        if (timer) clearInterval(timer);
+        if (finalTimeout) clearTimeout(finalTimeout);
+      };
     }
     prevLoadingRef.current = loading;
   }, [loading, graph.nodes, root]);
@@ -698,8 +725,7 @@ export function MindmapTab() {
               const isEdgeHighlighted =
                 activeFocusId && (edge.from === activeFocusId || edge.to === activeFocusId);
               const isEdgeDimmed = activeFocusId && !isEdgeHighlighted;
-              const isTraveling =
-                introAnimating && (toIdx === revealedCount - 1 || fromIdx === revealedCount - 1);
+              const isTraveling = introAnimating;
 
               return (
                 <g
@@ -754,9 +780,7 @@ export function MindmapTab() {
               const isSearchDimmed = searchMatchingIds !== null && !isSearchMatch;
 
               const isMoleculeCore = index === 0;
-              const isNewest = introAnimating && index === revealedCount - 1;
-
-              const animClass = isNewest
+              const animClass = introAnimating
                 ? isMoleculeCore
                   ? "mindmap-node-core-spawn"
                   : "mindmap-node-travel"
@@ -765,6 +789,7 @@ export function MindmapTab() {
               const node0 = graph.nodes[0];
               const fromX = (node0?.x ?? 0) - node.x;
               const fromY = (node0?.y ?? 0) - node.y;
+              const travelAngle = Math.round(Math.atan2(-fromY, -fromX) * (180 / Math.PI));
 
               return (
                 <g
@@ -785,10 +810,12 @@ export function MindmapTab() {
                   <g
                     className={animClass}
                     style={
-                      animClass
+                      animClass && !isMoleculeCore
                         ? ({
                             "--from-x": `${fromX}px`,
                             "--from-y": `${fromY}px`,
+                            "--travel-angle": `${travelAngle}deg`,
+                            "--travel-angle-neg": `${-travelAngle}deg`,
                           } as React.CSSProperties)
                         : undefined
                     }

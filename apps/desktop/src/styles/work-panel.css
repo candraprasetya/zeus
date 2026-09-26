@@ -1048,16 +1048,16 @@
     transform: scale(0);
     filter: drop-shadow(0 0 0px transparent);
   }
-  38% {
+  42% {
     opacity: 1;
-    transform: scale(1.35);
-    filter: drop-shadow(0 0 26px var(--ds-accent));
+    transform: scale(1.3);
+    filter: drop-shadow(0 0 28px var(--ds-accent));
   }
-  65% {
+  68% {
     transform: scale(0.92);
   }
-  82% {
-    transform: scale(1.06);
+  86% {
+    transform: scale(1.05);
   }
   100% {
     opacity: 1;
@@ -1067,40 +1067,44 @@
 }
 
 .mindmap-node-core-spawn {
-  animation: mindmapCoreSpawn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: mindmapCoreSpawn 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
   transform-box: fill-box;
   transform-origin: center center;
 }
 
-/* Liquid droplet travel from molecule core (0, 0) to its target position */
+/* Liquid droplet travel from molecule core (0, 0) to its target position with directional stretch */
 @keyframes mindmapLiquidTravel {
   0% {
     opacity: 0;
-    transform: translate(var(--from-x, 0px), var(--from-y, 0px)) scale(0.12);
-    filter: blur(4px) brightness(1.3);
+    transform: translate(var(--from-x, 0px), var(--from-y, 0px)) rotate(var(--travel-angle, 0deg)) scale(0.1, 0.1) rotate(var(--travel-angle-neg, 0deg));
+    filter: blur(3.5px) brightness(1.4);
   }
-  18% {
+  16% {
     opacity: 0.95;
-    /* initial ballooning at start point */
-    transform: translate(var(--from-x, 0px), var(--from-y, 0px)) scale(1.35, 0.7);
-    filter: blur(1px) brightness(1.2);
+    /* Ejection from core: droplet stretches along travel vector */
+    transform: translate(calc(var(--from-x, 0px) * 0.9), calc(var(--from-y, 0px) * 0.9)) rotate(var(--travel-angle, 0deg)) scale(1.45, 0.68) rotate(var(--travel-angle-neg, 0deg));
+    filter: blur(1.5px) brightness(1.25);
   }
   48% {
     opacity: 1;
-    /* stretching along travel path like a drop of liquid glass */
-    transform: translate(calc(var(--from-x, 0px) * 0.42), calc(var(--from-y, 0px) * 0.42)) scale(1.42, 0.68);
-    filter: brightness(1.1);
+    /* High-speed mid-flight glide: aerodynamic liquid glass elongation */
+    transform: translate(calc(var(--from-x, 0px) * 0.26), calc(var(--from-y, 0px) * 0.26)) rotate(var(--travel-angle, 0deg)) scale(1.5, 0.62) rotate(var(--travel-angle-neg, 0deg));
+    filter: blur(0.5px) brightness(1.15);
   }
-  72% {
+  74% {
     opacity: 1;
-    /* impact overshoot at target */
-    transform: translate(0px, 0px) scale(0.85, 1.22);
+    /* Landing impact: slight overshoot and liquid squash */
+    transform: translate(calc(var(--from-x, 0px) * -0.05), calc(var(--from-y, 0px) * -0.05)) rotate(var(--travel-angle, 0deg)) scale(0.76, 1.28) rotate(var(--travel-angle-neg, 0deg));
+    filter: blur(0) brightness(1.05);
   }
-  86% {
-    transform: translate(0px, 0px) scale(1.1, 0.94);
+  88% {
+    opacity: 1;
+    /* Elastic rebound */
+    transform: translate(0px, 0px) rotate(var(--travel-angle, 0deg)) scale(1.1, 0.92) rotate(var(--travel-angle-neg, 0deg));
   }
-  94% {
-    transform: translate(0px, 0px) scale(0.98, 1.02);
+  95% {
+    opacity: 1;
+    transform: translate(0px, 0px) rotate(var(--travel-angle, 0deg)) scale(0.98, 1.02) rotate(var(--travel-angle-neg, 0deg));
   }
   100% {
     opacity: 1;
@@ -1110,9 +1114,22 @@
 }
 
 .mindmap-node-travel {
-  animation: mindmapLiquidTravel 0.45s cubic-bezier(0.18, 1, 0.32, 1) both;
+  animation: mindmapLiquidTravel 0.44s cubic-bezier(0.18, 0.98, 0.32, 1) both;
   transform-box: fill-box;
   transform-origin: center center;
+}
+
+.mindmap-node-travel .mindmap-node-label {
+  animation: mindmapLabelFadeIn 0.44s ease-out both;
+}
+
+@keyframes mindmapLabelFadeIn {
+  0%, 55% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 /* Edge liquid shoot animation */
@@ -1120,6 +1137,9 @@
   0% {
     opacity: 0;
     stroke-dashoffset: 800;
+  }
+  25% {
+    opacity: 0.85;
   }
   100% {
     opacity: 0.45;
@@ -1129,7 +1149,7 @@
 
 .mindmap-edge-travel .mindmap-edge-line {
   stroke-dasharray: 800;
-  animation: mindmapEdgeShoot 0.42s ease-out both;
+  animation: mindmapEdgeShoot 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .mindmap-node-glow {
