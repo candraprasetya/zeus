@@ -817,9 +817,10 @@
   display: flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
+  gap: 8px;
+  padding: 8px 16px;
   background: var(--ds-bg-dock-raised);
+  border-bottom: 1px solid var(--ds-border-subtle);
 }
 
 .file-viewer-path {
@@ -849,9 +850,20 @@
   flex-direction: column;
 }
 
+.file-viewer-body > .file-tree-note {
+  padding: 16px 20px;
+}
+
+.file-viewer-markdown {
+  box-sizing: border-box;
+  flex: 1;
+  padding: 16px 20px 32px;
+  max-width: 100%;
+}
+
 .file-viewer-code {
   margin: 0;
-  padding: 10px 12px 20px;
+  padding: 16px 20px 32px;
   font-family: var(--font-mono);
   font-size: var(--text-xs-plus);
   line-height: var(--leading-relaxed);
@@ -901,7 +913,7 @@
   perspective: 1000px;
 }
 
-.mindmap-container:active {
+.mindmap-container.is-dragging {
   cursor: grabbing;
 }
 
@@ -909,8 +921,25 @@
   width: 100%;
   height: 100%;
   overflow: visible;
-  transition: transform var(--motion-duration-fast) cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform;
+}
+
+/* While dragging, disable transition for instantaneous 60fps tracking */
+.mindmap-container.is-dragging .mindmap-canvas {
+  transition: none !important;
+}
+
+.mindmap-bg-underlay {
+  cursor: grab;
+}
+
+.mindmap-container.is-dragging .mindmap-bg-underlay {
+  cursor: grabbing;
+}
+
+.mindmap-ambient-ring {
+  pointer-events: none;
 }
 
 .mindmap-loading {
@@ -1000,6 +1029,7 @@
 
 .mindmap-search-halo {
   animation: mindmapPulse 2s ease-in-out infinite;
+  pointer-events: none;
 }
 
 @keyframes mindmapPulse {
@@ -1019,21 +1049,31 @@
 }
 
 .mindmap-node-circle {
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), stroke-width 0.2s ease;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), stroke-width 0.2s ease, filter 0.2s ease;
 }
 
 .mindmap-node-group:hover .mindmap-node-circle {
-  transform: scale(1.1);
+  transform: scale(1.15);
+  stroke-width: 2.5px;
+}
+
+.mindmap-node-group.selected .mindmap-node-circle {
+  transform: scale(1.12);
   stroke-width: 2.5px;
 }
 
 .mindmap-node-core {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   pointer-events: none;
 }
 
 .mindmap-node-group:hover .mindmap-node-core {
   opacity: 1;
+  transform: scale(1.1);
 }
 
 .mindmap-node-label {

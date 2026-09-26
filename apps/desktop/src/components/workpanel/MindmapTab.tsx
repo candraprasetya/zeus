@@ -239,18 +239,44 @@ export function MindmapTab() {
     void loadKnowledgeData();
   }, [loadKnowledgeData]);
 
-  // Pan handling
+  // Native non-passive wheel listener for smooth zoom without browser event suppression
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onWheel = (e: WheelEvent) => {
+      // Prevent browser default back/forward or outer scroll
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
+      setZoom((prev) => Math.min(2.5, Math.max(0.2, Number((prev * zoomFactor).toFixed(3)))));
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+    };
+  }, []);
+
+  // Pan handling: allow panning everywhere EXCEPT on node clicks or HUD controls
   const handlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement | SVGElement | null;
+    if (!target) return;
+
+    // Do not initiate background drag if clicking on interactive controls or nodes
     if (
-      e.target !== containerRef.current &&
-      !(e.target as HTMLElement).classList.contains("mindmap-canvas") &&
-      !(e.target as HTMLElement).classList.contains("mindmap-bg-underlay")
+      target.closest(".no-drag") ||
+      target.closest(".mindmap-node-group")
     ) {
       return;
     }
+
     setDragging(true);
     setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
-    e.currentTarget.setPointerCapture(e.pointerId);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // ignore pointer capture errors
+    }
   };
 
   const handlePointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -270,12 +296,6 @@ export function MindmapTab() {
         // pointer capture release
       }
     }
-  };
-
-  const handleWheel = (e: ReactWheelEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
-    setZoom((prev) => Math.min(2.5, Math.max(0.2, prev * zoomFactor)));
   };
 
   // Node position map
@@ -374,11 +394,10 @@ export function MindmapTab() {
   return (
     <div
       ref={containerRef}
-      className="mindmap-container"
+      className={`mindmap-container ${dragging ? "is-dragging" : ""}`}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
-      onWheel={handleWheel}
     >
       {/* Background canvas & SVG graph */}
       <svg
@@ -399,10 +418,20 @@ export function MindmapTab() {
           </filter>
         </defs>
 
+        {/* Full-coverage transparent underlay rect so empty SVG canvas areas receive drag */}
+        <rect
+          x="-10000"
+          y="-10000"
+          width="20000"
+          height="20000"
+          fill="transparent"
+          className="mindmap-bg-underlay"
+        />
+
         {/* Ambient harmonic rings */}
-        <circle cx={0} cy={0} r={360} fill="url(#mindmapCenterGlow)" />
-        <circle cx={0} cy={0} r={180} fill="none" stroke="var(--ds-border-subtle)" strokeDasharray="3 5" opacity={0.25} />
-        <circle cx={0} cy={0} r={340} fill="none" stroke="var(--ds-border-subtle)" strokeDasharray="5 7" opacity={0.15} />
+        <circle cx={0} cy={0} r={360} fill="url(#mindmapCenterGlow)" className="mindmap-ambient-ring" />
+        <circle cx={0} cy={0} r={180} fill="none" stroke="var(--ds-border-subtle)" strokeDasharray="3 5" opacity={0.25} className="mindmap-ambient-ring" />
+        <circle cx={0} cy={0} r={340} fill="none" stroke="var(--ds-border-subtle)" strokeDasharray="5 7" opacity={0.15} className="mindmap-ambient-ring" />
 
         {/* Edges */}
         <g className="mindmap-edges-layer">
