@@ -57,12 +57,21 @@ export function switchWorkPanelContextState(
   const nextContexts = currentSessionId
     ? { ...contexts, [currentSessionId]: retainedCurrent }
     : contexts;
-  return {
-    contexts: nextContexts,
-    visible: nextSessionId
-      ? sanitizeContext(nextContexts[nextSessionId] ?? emptyWorkPanelContext())
-      : emptyWorkPanelContext(),
-  };
+
+  const rawNextVisible = nextSessionId
+    ? sanitizeContext(nextContexts[nextSessionId] ?? emptyWorkPanelContext())
+    : emptyWorkPanelContext();
+
+  // Mindmap is a project-level singleton: carry it from the outgoing session
+  // into the incoming session if the incoming session doesn't already have it.
+  const mindmapTab = retainedCurrent.tabs.find((t) => t.kind === "mindmap");
+  const nextHasMindmap = rawNextVisible.tabs.some((t) => t.kind === "mindmap");
+  const visible =
+    mindmapTab && !nextHasMindmap
+      ? { ...rawNextVisible, tabs: [...rawNextVisible.tabs, mindmapTab] }
+      : rawNextVisible;
+
+  return { contexts: nextContexts, visible };
 }
 
 export function toolWorkPanelTab(

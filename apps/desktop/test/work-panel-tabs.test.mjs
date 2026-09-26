@@ -340,3 +340,60 @@ test("repeated subagent labels gain a strip-order suffix, singletons stay bare",
   );
   assert.deepEqual(subagentTabDisplayLabels(["explorer"]), ["explorer"]);
 });
+
+test("mindmap tab carries over to next session (project-level singleton)", () => {
+  const mindmap = toolWorkPanelTab("mindmap");
+  const sessionWithMindmap = {
+    open: true,
+    tabs: [mindmap, browserPluginTab()],
+    activeTabId: "mindmap",
+    fileRequest: null,
+  };
+  const sessionWithoutMindmap = {
+    open: true,
+    tabs: [browserPluginTab()],
+    activeTabId: browserPluginTab().id,
+    fileRequest: null,
+  };
+
+  const result = switchWorkPanelContextState(
+    { "session-b": sessionWithoutMindmap },
+    "session-a",
+    sessionWithMindmap,
+    "session-b",
+  );
+
+  // Mindmap must appear in the incoming session's visible tabs
+  assert.ok(result.visible.tabs.some((t) => t.kind === "mindmap"), "mindmap tab missing after switch");
+  // Focus must NOT jump to mindmap — incoming session's activeTabId is preserved
+  assert.equal(result.visible.activeTabId, browserPluginTab().id);
+});
+
+test("mindmap tab is not duplicated when next session already has one", () => {
+  const mindmap = toolWorkPanelTab("mindmap");
+  const sessionA = {
+    open: true,
+    tabs: [mindmap],
+    activeTabId: "mindmap",
+    fileRequest: null,
+  };
+  const sessionB = {
+    open: true,
+    tabs: [mindmap],
+    activeTabId: "mindmap",
+    fileRequest: null,
+  };
+
+  const result = switchWorkPanelContextState(
+    { "session-b": sessionB },
+    "session-a",
+    sessionA,
+    "session-b",
+  );
+
+  assert.equal(
+    result.visible.tabs.filter((t) => t.kind === "mindmap").length,
+    1,
+    "mindmap tab must not be duplicated",
+  );
+});

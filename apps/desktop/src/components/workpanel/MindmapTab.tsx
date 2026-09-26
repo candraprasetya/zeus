@@ -5,7 +5,6 @@ import {
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
-  type WheelEvent as ReactWheelEvent,
 } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
@@ -85,8 +84,12 @@ export function MindmapTab() {
   const [selectedNode, setSelectedNode] = useState<MindmapNode | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  // true while the initial pop-in entry animation is still running
+  const [introAnimating, setIntroAnimating] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  // tracks previous `loading` value so the pop-in only fires on the loading→done transition
+  const prevLoadingRef = useRef(true);
 
   // Load .knowledge/ data: canvas first, or scan .md files
   const loadKnowledgeData = useCallback(async () => {
@@ -238,6 +241,18 @@ export function MindmapTab() {
   useEffect(() => {
     void loadKnowledgeData();
   }, [loadKnowledgeData]);
+
+  // Fire pop-in entry animation only on the loading → done transition
+  useEffect(() => {
+    if (prevLoadingRef.current && !loading && graph.nodes.length > 0) {
+      setIntroAnimating(true);
+      const totalMs = graph.nodes.length * 60 + 500;
+      const id = setTimeout(() => setIntroAnimating(false), totalMs);
+      prevLoadingRef.current = false;
+      return () => clearTimeout(id);
+    }
+    prevLoadingRef.current = loading;
+  }, [loading, graph.nodes.length]);
 
   // Native non-passive wheel listener for smooth zoom without browser event suppression
   useEffect(() => {
@@ -434,7 +449,8 @@ export function MindmapTab() {
         <circle cx={0} cy={0} r={340} fill="none" stroke="var(--ds-border-subtle)" strokeDasharray="5 7" opacity={0.15} className="mindmap-ambient-ring" />
 
         {/* Edges */}
-        <g className="mindmap-edges-layer">
+        <g className={`mindmap-edges-layer${introAnimating ? " mindmap-edges-layer--animate-in" : ""}`}
+           style={introAnimating ? { animationDelay: `${graph.nodes.length * 60}ms` } : undefined}>
           {graph.edges.map((edge) => {
             const from = nodeMap.get(edge.from);
             const to = nodeMap.get(edge.to);
@@ -482,7 +498,7 @@ export function MindmapTab() {
 
         {/* Nodes */}
         <g className="mindmap-nodes-layer">
-          {graph.nodes.map((node) => {
+          {graph.nodes.map((node, index) => {
             const colorMeta = COLOR_MAP[node.color ?? "default"] ?? COLOR_MAP.default;
             const isSelected = selectedNode?.id === node.id;
             const isHovered = hoveredNodeId === node.id;
@@ -494,7 +510,8 @@ export function MindmapTab() {
             return (
               <g
                 key={node.id}
-                className={`mindmap-node-group ${isSelected ? "selected" : ""} ${isHovered ? "hovered" : ""} ${isDimmed || isSearchDimmed ? "dimmed" : ""} ${isSearchMatch ? "search-match" : ""}`}
+                className={`mindmap-node-group ${isSelected ? "selected" : ""} ${isHovered ? "hovered" : ""} ${isDimmed || isSearchDimmed ? "dimmed" : ""} ${isSearchMatch ? "search-match" : ""} ${introAnimating ? "mindmap-node-group--pop-in" : ""}`}
+                style={introAnimating ? { animationDelay: `${index * 60}ms` } : undefined}
                 transform={`translate(${node.x}, ${node.y})`}
                 onPointerEnter={() => setHoveredNodeId(node.id)}
                 onPointerLeave={() => setHoveredNodeId((curr) => (curr === node.id ? null : curr))}

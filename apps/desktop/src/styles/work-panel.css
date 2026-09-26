@@ -1038,6 +1038,29 @@
   100% { transform: scale(0.96); opacity: 0.7; }
 }
 
+/* Entry animation: nodes pop in one-by-one */
+@keyframes mindmapNodePopIn {
+  0%   { opacity: 0; transform: scale(0); }
+  60%  { opacity: 1; transform: scale(1.18); }
+  80%  { transform: scale(0.94); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.mindmap-node-group--pop-in {
+  animation: mindmapNodePopIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  /* animation-delay provided per node via inline style */
+}
+
+/* Edges fade in after nodes complete */
+@keyframes mindmapEdgeFadeIn {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.mindmap-edges-layer--animate-in {
+  animation: mindmapEdgeFadeIn 0.35s ease both;
+}
+
 .mindmap-node-glow {
   transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s ease;
   pointer-events: none;
@@ -1100,9 +1123,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background: color-mix(in oklab, var(--ds-bg-elevated) 88%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--ds-bg-elevated);
   border: 1px solid var(--ds-border-default);
   border-radius: var(--radius-xl);
   padding: 5px 10px;
@@ -1219,9 +1240,7 @@
   right: 16px;
   width: 140px;
   height: 100px;
-  background: color-mix(in oklab, var(--ds-bg-elevated) 85%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--ds-bg-elevated);
   border: 1px solid var(--ds-border-default);
   border-radius: var(--radius-xl);
   overflow: hidden;
@@ -1261,9 +1280,7 @@
   right: 16px;
   width: 300px;
   max-width: calc(100% - 32px);
-  background: color-mix(in oklab, var(--ds-bg-elevated) 92%, transparent);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: var(--ds-bg-elevated);
   border: 1px solid var(--ds-border-default);
   border-radius: var(--radius-xl);
   padding: 14px;
