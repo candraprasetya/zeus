@@ -791,6 +791,27 @@ export function MindmapTab() {
               const fromY = (node0?.y ?? 0) - node.y;
               const travelAngle = Math.round(Math.atan2(-fromY, -fromX) * (180 / Math.PI));
 
+              // Deterministic pseudo-random celestial orbit variables based on node index
+              const driftX = (Math.sin(index * 2.13) * 6.5).toFixed(2);
+              const driftY = (Math.cos(index * 1.77) * 5.5).toFixed(2);
+              const driftRot = (Math.sin(index * 3.41) * 2.8).toFixed(1);
+              const orbitDur = (6.0 + (index % 5) * 1.1).toFixed(1);
+              const orbitDelay = (-1 * ((index * 1.93) % 6)).toFixed(1);
+
+              const celestialClass = introAnimating
+                ? ""
+                : isMoleculeCore
+                  ? "mindmap-node-celestial-core"
+                  : "mindmap-node-celestial-orbit";
+
+              const celestialStyle = {
+                "--drift-x": `${driftX}px`,
+                "--drift-y": `${driftY}px`,
+                "--drift-rot": `${driftRot}deg`,
+                "--orbit-dur": `${orbitDur}s`,
+                "--orbit-delay": `${orbitDelay}s`,
+              } as React.CSSProperties;
+
               return (
                 <g
                   key={node.id}
@@ -820,61 +841,75 @@ export function MindmapTab() {
                         : undefined
                     }
                   >
-                    {/* Search Match Halo */}
-                    {isSearchMatch && (
+                    {/* Celestial planetary idle floating container */}
+                    <g className={celestialClass} style={celestialStyle}>
+                      {/* Search Match Halo */}
+                      {isSearchMatch && (
+                        <circle
+                          r={node.radius + 12}
+                          fill="none"
+                          stroke="var(--ds-accent)"
+                          strokeWidth={2}
+                          strokeDasharray="4 3"
+                          className="mindmap-search-halo"
+                        />
+                      )}
+
+                      {/* Planetary Atmosphere Ring */}
                       <circle
-                        r={node.radius + 12}
+                        r={node.radius + 5}
                         fill="none"
-                        stroke="var(--ds-accent)"
-                        strokeWidth={2}
-                        strokeDasharray="4 3"
-                        className="mindmap-search-halo"
+                        stroke={colorMeta.border}
+                        strokeWidth={1}
+                        strokeDasharray={isMoleculeCore ? "none" : "2 3"}
+                        className="mindmap-node-atmosphere"
+                        opacity={isMoleculeCore ? 0.4 : 0.22}
                       />
-                    )}
 
-                    {/* Outer Glow Halo on hover, active, or connection */}
-                    <circle
-                      r={node.radius + 8}
-                      fill={colorMeta.glow}
-                      filter="url(#nodeGlowFilter)"
-                      className="mindmap-node-glow"
-                      opacity={isSelected ? 0.9 : isHovered ? 0.75 : isConnected && activeFocusId ? 0.5 : 0}
-                    />
+                      {/* Outer Glow Halo on hover, active, or connection */}
+                      <circle
+                        r={node.radius + 8}
+                        fill={colorMeta.glow}
+                        filter="url(#nodeGlowFilter)"
+                        className="mindmap-node-glow"
+                        opacity={isSelected ? 0.9 : isHovered ? 0.75 : isConnected && activeFocusId ? 0.5 : 0}
+                      />
 
-                    {/* Node Outer Ring */}
-                    <circle
-                      r={node.radius + 3}
-                      fill="none"
-                      stroke={isSelected || isHovered ? colorMeta.border : "transparent"}
-                      strokeWidth={1.5}
-                      className="mindmap-node-ring"
-                    />
+                      {/* Node Outer Ring */}
+                      <circle
+                        r={node.radius + 3}
+                        fill="none"
+                        stroke={isSelected || isHovered ? colorMeta.border : "transparent"}
+                        strokeWidth={1.5}
+                        className="mindmap-node-ring"
+                      />
 
-                    {/* Node Main Disk */}
-                    <circle
-                      r={node.radius}
-                      fill={colorMeta.bg}
-                      stroke={colorMeta.border}
-                      strokeWidth={2}
-                      className="mindmap-node-circle"
-                    />
+                      {/* Node Main Disk */}
+                      <circle
+                        r={node.radius}
+                        fill={colorMeta.bg}
+                        stroke={colorMeta.border}
+                        strokeWidth={2}
+                        className="mindmap-node-circle"
+                      />
 
-                    {/* Inner Ambient Accent Pulse */}
-                    <circle
-                      r={node.radius * 0.45}
-                      fill="#ffffff"
-                      opacity={isSelected || isHovered ? 0.95 : 0.8}
-                      className="mindmap-node-core"
-                    />
+                      {/* Inner Ambient Accent Pulse */}
+                      <circle
+                        r={node.radius * 0.45}
+                        fill="#ffffff"
+                        opacity={isSelected || isHovered ? 0.95 : 0.8}
+                        className="mindmap-node-core"
+                      />
 
-                    {/* Node Label Pill Background */}
-                    <text
-                      y={node.radius + 18}
-                      className="mindmap-node-label"
-                      textAnchor="middle"
-                    >
-                      {node.label}
-                    </text>
+                      {/* Node Label Pill Background */}
+                      <text
+                        y={node.radius + 18}
+                        className="mindmap-node-label"
+                        textAnchor="middle"
+                      >
+                        {node.label}
+                      </text>
+                    </g>
                   </g>
                 </g>
               );

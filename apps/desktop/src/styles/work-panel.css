@@ -1152,6 +1152,90 @@
   animation: mindmapEdgeShoot 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* =========================================================================
+   Celestial Planetary Idle Animations (Planets & Galactic Core Float)
+   ========================================================================= */
+
+/* Galactic Core (Node 0 / Central Star) Idle Solar Breathing */
+@keyframes mindmapCelestialCorePulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 12px rgba(var(--ds-accent-rgb, 59, 130, 246), 0.3));
+  }
+  50% {
+    transform: scale(1.04);
+    filter: drop-shadow(0 0 24px rgba(var(--ds-accent-rgb, 59, 130, 246), 0.65));
+  }
+}
+
+.mindmap-node-celestial-core {
+  animation: mindmapCelestialCorePulse 5.2s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center center;
+}
+
+/* Celestial Planets (Nodes 1, 2, 3...) Orbital Idle Micro-Drift in Lissajous Curve */
+@keyframes mindmapCelestialOrbitIdle {
+  0% {
+    transform: translate(0px, 0px) rotate(0deg) scale(1);
+  }
+  25% {
+    transform: translate(var(--drift-x, 5px), calc(var(--drift-y, -4px) * 0.45)) rotate(var(--drift-rot, 2deg)) scale(1.018);
+  }
+  50% {
+    transform: translate(calc(var(--drift-x, 5px) * 0.22), var(--drift-y, -4px)) rotate(calc(var(--drift-rot, 2deg) * 0.4)) scale(0.985);
+  }
+  75% {
+    transform: translate(calc(var(--drift-x, 5px) * -0.75), calc(var(--drift-y, -4px) * 0.58)) rotate(calc(var(--drift-rot, 2deg) * -0.6)) scale(1.012);
+  }
+  100% {
+    transform: translate(0px, 0px) rotate(0deg) scale(1);
+  }
+}
+
+.mindmap-node-celestial-orbit {
+  animation: mindmapCelestialOrbitIdle var(--orbit-dur, 7s) ease-in-out infinite;
+  animation-delay: var(--orbit-delay, 0s);
+  transform-box: fill-box;
+  transform-origin: center center;
+  transition: transform 0.35s ease-out;
+}
+
+/* Subtle atmosphere shimmer / corona on celestial planetary nodes */
+@keyframes mindmapAtmosphereShimmer {
+  0%, 100% {
+    opacity: 0.22;
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    opacity: 0.44;
+    transform: rotate(180deg) scale(1.05);
+  }
+}
+
+.mindmap-node-atmosphere {
+  transform-box: fill-box;
+  transform-origin: center center;
+  animation: mindmapAtmosphereShimmer 14s linear infinite;
+  pointer-events: none;
+  transition: opacity 0.25s ease, stroke-width 0.25s ease;
+}
+
+.mindmap-node-group:hover .mindmap-node-atmosphere,
+.mindmap-node-group.selected .mindmap-node-atmosphere {
+  opacity: 0.85 !important;
+  stroke-width: 1.5px;
+  stroke: var(--ds-accent) !important;
+}
+
+/* Usability & Precision: Pause planetary drift on hover/selection for zero-jitter interaction */
+.mindmap-node-group:hover .mindmap-node-celestial-orbit,
+.mindmap-node-group.selected .mindmap-node-celestial-orbit,
+.mindmap-node-group:hover .mindmap-node-celestial-core,
+.mindmap-node-group.selected .mindmap-node-celestial-core {
+  animation-play-state: paused;
+}
+
 .mindmap-node-glow {
   transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s ease;
   pointer-events: none;
