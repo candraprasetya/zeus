@@ -86,11 +86,21 @@ export function MindmapTab() {
   const [searchQuery, setSearchQuery] = useState("");
   // true while the initial pop-in entry animation is still running
   const [introAnimating, setIntroAnimating] = useState(false);
+  // measured container dimensions in pixels
+  const [containerSize, setContainerSize] = useState({ w: 0, h: 0 });
+  // temporary flag to apply smooth CSS glide on button actions (Reset View / Center on Node)
+  const [isSmoothAnimating, setIsSmoothAnimating] = useState(false);
+  const smoothTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerSmooth = useCallback(() => {
+    setIsSmoothAnimating(true);
+    if (smoothTimerRef.current) clearTimeout(smoothTimerRef.current);
+    smoothTimerRef.current = setTimeout(() => setIsSmoothAnimating(false), 380);
+  }, []);
 
   const containerRef = useRef<HTMLDivElement>(null);
   // tracks previous `loading` value so the pop-in only fires on the loading→done transition
   const prevLoadingRef = useRef(true);
-  // container pixel size — updated by ResizeObserver for accurate fit-to-bounds
   const containerSizeRef = useRef({ w: 0, h: 0 });
 
   // Load .knowledge/ data: canvas first, or scan .md files
@@ -186,11 +196,17 @@ export function MindmapTab() {
               nameToId.set(nameWithoutExt, id);
               nameToId.set(entry.name, id);
 
-              // Organic radial layout with gentle variation
-              const r = 90 + Math.sqrt(i) * 110;
-              const theta = i * goldenAngle;
-              const x = r * Math.cos(theta);
-              const y = r * Math.sin(theta);
+              // Node 0 is the root core molecule at (0, 0); child nodes radiate outward
+              let x = 0;
+              let y = 0;
+              let radius = 28;
+              if (i > 0) {
+                const r = 130 + Math.sqrt(i) * 75;
+                const theta = (i - 1) * goldenAngle;
+                x = r * Math.cos(theta);
+                y = r * Math.sin(theta);
+                radius = 24;
+              }
 
               nodes.push({
                 id,
@@ -199,7 +215,7 @@ export function MindmapTab() {
                 color: String((i % 6) + 1),
                 x,
                 y,
-                radius: 24,
+                radius,
               });
             }
 
@@ -227,6 +243,25 @@ export function MindmapTab() {
               }
             }
 
+            // Ensure isolated nodes connect back to core molecule (node-0)
+            if (count > 1) {
+              const connected = new Set<string>();
+              for (const e of edges) {
+                connected.add(e.from);
+                connected.add(e.to);
+              }
+              for (let i = 1; i < count; i++) {
+                const childId = `node-${i}`;
+                if (!connected.has(childId)) {
+                  edges.push({
+                    id: `edge-core-${childId}`,
+                    from: "node-0",
+                    to: childId,
+                  });
+                }
+              }
+            }
+
             setGraph({ nodes, edges });
           } else {
             setGraph({ nodes: [], edges: [] });
@@ -244,60 +279,63 @@ export function MindmapTab() {
     void loadKnowledgeData();
   }, [loadKnowledgeData]);
 
-  // Fire pop-in entry animation + fit-to-bounds on the loading → done transition
+  // Track container size via ResizeObserver (used for centering and fit-to-bounds)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const updateSize = () => {
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        containerSizeRef.current = { w: rect.width, h: rect.height };
+        setContainerSize((prev) =>
+          prev.w === rect.width && prev.h === rect.height ? prev : { w: rect.width, h: rect.height },
+        );
+      }
+    };
+    updateSize();
+    const ro = new ResizeObserver(updateSize);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Fire molecule-core + droplet-detach animation + fit-to-bounds on loading → done transition
   useEffect(() => {
     if (prevLoadingRef.current && !loading && graph.nodes.length > 0) {
-      // Fit all nodes into view centered in the container
-      const { w, h } = containerSizeRef.current;
-      if (w > 0 && h > 0) {
-        const padX = 80;
-        const padY = 80;
-        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-        for (const n of graph.nodes) {
-          const r = n.radius ?? 24;
-          minX = Math.min(minX, n.x - r);
-          maxX = Math.max(maxX, n.x + r);
-          minY = Math.min(minY, n.y - r);
-          maxY = Math.max(maxY, n.y + r);
-        }
-        const graphW = maxX - minX || 1;
-        const graphH = maxY - minY || 1;
-        const fitZoom = Math.min(
-          (w - padX * 2) / graphW,
-          (h - padY * 2) / graphH,
-          1.2,  // never start more zoomed-in than 1.2×
-        );
-        const clampedZoom = Math.max(0.15, fitZoom);
-        const cx = (minX + maxX) / 2;
-        const cy = (minY + maxY) / 2;
-        setZoom(clampedZoom);
-        setPan({ x: -cx * clampedZoom, y: -cy * clampedZoom });
+      const el = containerRef.current;
+      const w = containerSize.w > 0 ? containerSize.w : (el?.clientWidth ?? 800);
+      const h = containerSize.h > 0 ? containerSize.h : (el?.clientHeight ?? 600);
+
+      const pad = 100;
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (const n of graph.nodes) {
+        const r = n.radius ?? 28;
+        minX = Math.min(minX, n.x - r);
+        maxX = Math.max(maxX, n.x + r);
+        minY = Math.min(minY, n.y - r);
+        maxY = Math.max(maxY, n.y + r);
       }
+      const graphW = maxX - minX || 400;
+      const graphH = maxY - minY || 400;
+      const fitZoom = Math.min(
+        (w - pad * 2) / graphW,
+        (h - pad * 2) / graphH,
+        1.1,
+      );
+      const clampedZoom = Math.max(0.2, fitZoom);
+      const cx = (minX + maxX) / 2;
+      const cy = (minY + maxY) / 2;
+      setZoom(clampedZoom);
+      setPan({ x: -cx * clampedZoom, y: -cy * clampedZoom });
 
       setIntroAnimating(true);
-      // last node delay = (n-1)*60ms, animation duration = 700ms → total ≈ n*60 + 700
-      const totalMs = graph.nodes.length * 60 + 700;
+      // Node 0 appears first; nodes 1..N detach sequentially at 450ms + (i-1)*160ms
+      const totalMs = 450 + Math.max(0, graph.nodes.length - 1) * 160 + 900;
       const id = setTimeout(() => setIntroAnimating(false), totalMs);
       prevLoadingRef.current = false;
       return () => clearTimeout(id);
     }
     prevLoadingRef.current = loading;
-  }, [loading, graph.nodes]);
-
-  // Track container size via ResizeObserver (used for fit-to-bounds)
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      const rect = entries[0]?.contentRect;
-      if (rect) containerSizeRef.current = { w: rect.width, h: rect.height };
-    });
-    ro.observe(el);
-    // Capture initial size immediately
-    const rect = el.getBoundingClientRect();
-    containerSizeRef.current = { w: rect.width, h: rect.height };
-    return () => ro.disconnect();
-  }, []);
+  }, [loading, graph.nodes, containerSize]);
 
   // Native non-passive wheel: pinch → zoom-to-pointer; two-finger scroll → pan
   useEffect(() => {
@@ -307,19 +345,23 @@ export function MindmapTab() {
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
 
-      // macOS/Electron sets ctrlKey=true for pinch gestures
-      if (e.ctrlKey) {
-        // Zoom toward cursor position
+      // Disable any active CSS smooth transition during wheel / trackpad gestures
+      setIsSmoothAnimating(false);
+
+      // macOS trackpad pinch or Cmd/Ctrl + scroll
+      if (e.ctrlKey || e.metaKey) {
         const rect = el.getBoundingClientRect();
+        // Cursor position relative to center of the container
         const mouseX = e.clientX - rect.left - rect.width / 2;
         const mouseY = e.clientY - rect.top - rect.height / 2;
 
-        // Pinch delta is typically small; clamp aggressively
         const raw = -e.deltaY;
-        const factor = raw > 0 ? 1 + Math.min(raw * 0.015, 0.12) : 1 / (1 + Math.min(-raw * 0.015, 0.12));
+        const factor = raw > 0
+          ? 1 + Math.min(raw * 0.012, 0.12)
+          : 1 / (1 + Math.min(-raw * 0.012, 0.12));
 
         setZoom((prevZoom) => {
-          const nextZoom = Math.min(3, Math.max(0.1, prevZoom * factor));
+          const nextZoom = Math.min(3, Math.max(0.15, prevZoom * factor));
           const scale = nextZoom / prevZoom;
           setPan((prevPan) => ({
             x: mouseX - (mouseX - prevPan.x) * scale,
@@ -328,7 +370,7 @@ export function MindmapTab() {
           return nextZoom;
         });
       } else {
-        // Two-finger scroll → pan (natural direction)
+        // Two-finger trackpad scroll / pan (natural 2D canvas navigation)
         setPan((prev) => ({
           x: prev.x - e.deltaX,
           y: prev.y - e.deltaY,
@@ -353,6 +395,7 @@ export function MindmapTab() {
       return;
     }
 
+    setIsSmoothAnimating(false);
     setDragging(true);
     setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
     try {
@@ -434,39 +477,44 @@ export function MindmapTab() {
     return Math.min(130 / w, 90 / h);
   }, [bounds]);
 
-  // Fit all nodes into view, centered in the container
+  // Fit all nodes into view, centered in the container with smooth glide
   const handleResetView = useCallback(() => {
-    const { w, h } = containerSizeRef.current;
-    if (w === 0 || h === 0 || graph.nodes.length === 0) {
+    const el = containerRef.current;
+    const w = containerSize.w > 0 ? containerSize.w : (el?.clientWidth ?? 800);
+    const h = containerSize.h > 0 ? containerSize.h : (el?.clientHeight ?? 600);
+    if (graph.nodes.length === 0) {
+      triggerSmooth();
       setZoom(1);
       setPan({ x: 0, y: 0 });
       return;
     }
-    const pad = 80;
+    const pad = 100;
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (const n of graph.nodes) {
-      const r = n.radius ?? 24;
+      const r = n.radius ?? 28;
       minX = Math.min(minX, n.x - r);
       maxX = Math.max(maxX, n.x + r);
       minY = Math.min(minY, n.y - r);
       maxY = Math.max(maxY, n.y + r);
     }
     const fitZoom = Math.min(
-      (w - pad * 2) / (maxX - minX || 1),
-      (h - pad * 2) / (maxY - minY || 1),
-      1.2,
+      (w - pad * 2) / (maxX - minX || 400),
+      (h - pad * 2) / (maxY - minY || 400),
+      1.1,
     );
-    const z = Math.max(0.15, fitZoom);
+    const z = Math.max(0.2, fitZoom);
     const cx = (minX + maxX) / 2;
     const cy = (minY + maxY) / 2;
+    triggerSmooth();
     setZoom(z);
     setPan({ x: -cx * z, y: -cy * z });
-  }, [graph.nodes]);
+  }, [graph.nodes, containerSize, triggerSmooth]);
 
   const handleCenterOnNode = useCallback((node: MindmapNode) => {
     setSelectedNode(node);
+    triggerSmooth();
     setPan({ x: -node.x * zoom, y: -node.y * zoom });
-  }, [zoom]);
+  }, [zoom, triggerSmooth]);
 
   if (!root) {
     return (
@@ -497,7 +545,10 @@ export function MindmapTab() {
     );
   }
 
-  return (
+    const centerX = containerSize.w > 0 ? containerSize.w / 2 : (containerRef.current?.clientWidth ?? 800) / 2;
+    const centerY = containerSize.h > 0 ? containerSize.h / 2 : (containerRef.current?.clientHeight ?? 600) / 2;
+
+    return (
     <div
       ref={containerRef}
       className={`mindmap-container ${dragging ? "is-dragging" : ""}`}
@@ -506,17 +557,11 @@ export function MindmapTab() {
       onPointerUp={handlePointerUp}
     >
       {/* Background canvas & SVG graph */}
-      <svg
-        className="mindmap-canvas"
-        style={{
-          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-          transformOrigin: "center center",
-        }}
-      >
+      <svg className="mindmap-canvas">
         <defs>
           <radialGradient id="mindmapCenterGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="var(--ds-accent)" stopOpacity="0.1" />
-            <stop offset="60%" stopColor="var(--ds-accent)" stopOpacity="0.03" />
+            <stop offset="0%" stopColor="var(--ds-accent)" stopOpacity="0.14" />
+            <stop offset="50%" stopColor="var(--ds-accent)" stopOpacity="0.04" />
             <stop offset="100%" stopColor="transparent" stopOpacity="0" />
           </radialGradient>
           <filter id="nodeGlowFilter" x="-50%" y="-50%" width="200%" height="200%">
@@ -524,154 +569,177 @@ export function MindmapTab() {
           </filter>
         </defs>
 
-        {/* Full-coverage transparent underlay rect so empty SVG canvas areas receive drag */}
-        <rect
-          x="-10000"
-          y="-10000"
-          width="20000"
-          height="20000"
-          fill="transparent"
-          className="mindmap-bg-underlay"
-        />
+        {/* Viewport group placed at exact dead center of container */}
+        <g
+          className={`mindmap-viewport ${isSmoothAnimating ? "is-smooth-animating" : ""}`}
+          transform={`translate(${centerX + pan.x}, ${centerY + pan.y}) scale(${zoom})`}
+        >
+          {/* Full-coverage transparent underlay rect so empty SVG canvas areas receive drag */}
+          <rect
+            x="-20000"
+            y="-20000"
+            width="40000"
+            height="40000"
+            fill="transparent"
+            className="mindmap-bg-underlay"
+          />
 
-        {/* Ambient harmonic rings */}
-        <circle cx={0} cy={0} r={360} fill="url(#mindmapCenterGlow)" className="mindmap-ambient-ring" />
-        <circle cx={0} cy={0} r={180} fill="none" stroke="var(--ds-border-subtle)" strokeDasharray="3 5" opacity={0.25} className="mindmap-ambient-ring" />
-        <circle cx={0} cy={0} r={340} fill="none" stroke="var(--ds-border-subtle)" strokeDasharray="5 7" opacity={0.15} className="mindmap-ambient-ring" />
+          {/* Ambient harmonic rings centered at (0, 0) */}
+          <circle cx={0} cy={0} r={420} fill="url(#mindmapCenterGlow)" className="mindmap-ambient-ring" />
+          <circle cx={0} cy={0} r={180} fill="none" stroke="var(--ds-border-subtle)" strokeDasharray="3 5" opacity={0.25} className="mindmap-ambient-ring" />
+          <circle cx={0} cy={0} r={340} fill="none" stroke="var(--ds-border-subtle)" strokeDasharray="5 7" opacity={0.15} className="mindmap-ambient-ring" />
 
-        {/* Edges */}
-        <g className={`mindmap-edges-layer${introAnimating ? " mindmap-edges-layer--animate-in" : ""}`}
-           style={introAnimating ? { animationDelay: `${graph.nodes.length * 60}ms` } : undefined}>
-          {graph.edges.map((edge) => {
-            const from = nodeMap.get(edge.from);
-            const to = nodeMap.get(edge.to);
-            if (!from || !to) return null;
+          {/* Edges */}
+          <g className="mindmap-edges-layer">
+            {graph.edges.map((edge) => {
+              const from = nodeMap.get(edge.from);
+              const to = nodeMap.get(edge.to);
+              if (!from || !to) return null;
 
-            const isEdgeHighlighted =
-              activeFocusId && (edge.from === activeFocusId || edge.to === activeFocusId);
-            const isEdgeDimmed = activeFocusId && !isEdgeHighlighted;
+              const isEdgeHighlighted =
+                activeFocusId && (edge.from === activeFocusId || edge.to === activeFocusId);
+              const isEdgeDimmed = activeFocusId && !isEdgeHighlighted;
+              const toIdx = graph.nodes.findIndex((n) => n.id === edge.to);
+              const edgeDelay = introAnimating && toIdx > 0
+                ? `${450 + (toIdx - 1) * 160 + 80}ms`
+                : undefined;
 
-            return (
-              <g
-                key={edge.id}
-                className={`mindmap-edge-group ${isEdgeHighlighted ? "highlighted" : ""} ${isEdgeDimmed ? "dimmed" : ""}`}
-              >
-                {/* Invisible thicker hit-line for hover precision */}
-                <line
-                  x1={from.x}
-                  y1={from.y}
-                  x2={to.x}
-                  y2={to.y}
-                  stroke="transparent"
-                  strokeWidth={12}
-                />
-                <line
-                  x1={from.x}
-                  y1={from.y}
-                  x2={to.x}
-                  y2={to.y}
-                  className="mindmap-edge-line"
-                />
-                {edge.label && (
+              return (
+                <g
+                  key={edge.id}
+                  className={`mindmap-edge-group ${introAnimating && toIdx > 0 ? "mindmap-edge-group--animate-in" : ""} ${isEdgeHighlighted ? "highlighted" : ""} ${isEdgeDimmed ? "dimmed" : ""}`}
+                  style={edgeDelay ? { animationDelay: edgeDelay } : undefined}
+                >
+                  {/* Invisible thicker hit-line for hover precision */}
+                  <line
+                    x1={from.x}
+                    y1={from.y}
+                    x2={to.x}
+                    y2={to.y}
+                    stroke="transparent"
+                    strokeWidth={12}
+                  />
+                  <line
+                    x1={from.x}
+                    y1={from.y}
+                    x2={to.x}
+                    y2={to.y}
+                    className="mindmap-edge-line"
+                  />
+                  {edge.label && (
+                    <text
+                      x={(from.x + to.x) / 2}
+                      y={(from.y + to.y) / 2 - 5}
+                      className="mindmap-edge-label"
+                      textAnchor="middle"
+                    >
+                      {edge.label}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+          </g>
+
+          {/* Nodes */}
+          <g className="mindmap-nodes-layer">
+            {graph.nodes.map((node, index) => {
+              const colorMeta = COLOR_MAP[node.color ?? "default"] ?? COLOR_MAP.default;
+              const isSelected = selectedNode?.id === node.id;
+              const isHovered = hoveredNodeId === node.id;
+              const isConnected = connectedNodeIds.has(node.id);
+              const isDimmed = activeFocusId && !isConnected;
+              const isSearchMatch = searchMatchingIds ? searchMatchingIds.has(node.id) : null;
+              const isSearchDimmed = searchMatchingIds !== null && !isSearchMatch;
+
+              // Node 0 is the root molecule core (appears first). Nodes 1..N detach one by one.
+              const isMoleculeCore = index === 0;
+              const animClass = introAnimating
+                ? isMoleculeCore
+                  ? "mindmap-node-group--molecule-core"
+                  : "mindmap-node-group--liquid-droplet"
+                : "";
+              const animDelay = introAnimating
+                ? isMoleculeCore
+                  ? "0ms"
+                  : `${450 + (index - 1) * 160}ms`
+                : undefined;
+
+              return (
+                <g
+                  key={node.id}
+                  className={`mindmap-node-group ${isSelected ? "selected" : ""} ${isHovered ? "hovered" : ""} ${isDimmed || isSearchDimmed ? "dimmed" : ""} ${isSearchMatch ? "search-match" : ""} ${animClass}`}
+                  style={animDelay ? { animationDelay: animDelay } : undefined}
+                  transform={`translate(${node.x}, ${node.y})`}
+                  onPointerEnter={() => setHoveredNodeId(node.id)}
+                  onPointerLeave={() => setHoveredNodeId((curr) => (curr === node.id ? null : curr))}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedNode(node);
+                    if (node.file) {
+                      openFile(node.file);
+                    }
+                  }}
+                >
+                  {/* Search Match Halo */}
+                  {isSearchMatch && (
+                    <circle
+                      r={node.radius + 12}
+                      fill="none"
+                      stroke="var(--ds-accent)"
+                      strokeWidth={2}
+                      strokeDasharray="4 3"
+                      className="mindmap-search-halo"
+                    />
+                  )}
+
+                  {/* Outer Glow Halo on hover, active, or connection */}
+                  <circle
+                    r={node.radius + 8}
+                    fill={colorMeta.glow}
+                    filter="url(#nodeGlowFilter)"
+                    className="mindmap-node-glow"
+                    opacity={isSelected ? 0.9 : isHovered ? 0.75 : isConnected && activeFocusId ? 0.5 : 0}
+                  />
+
+                  {/* Node Outer Ring */}
+                  <circle
+                    r={node.radius + 3}
+                    fill="none"
+                    stroke={isSelected || isHovered ? colorMeta.border : "transparent"}
+                    strokeWidth={1.5}
+                    className="mindmap-node-ring"
+                  />
+
+                  {/* Node Main Disk */}
+                  <circle
+                    r={node.radius}
+                    fill={colorMeta.bg}
+                    stroke={colorMeta.border}
+                    strokeWidth={2}
+                    className="mindmap-node-circle"
+                  />
+
+                  {/* Inner Ambient Accent Pulse */}
+                  <circle
+                    r={node.radius * 0.45}
+                    fill="#ffffff"
+                    opacity={isSelected || isHovered ? 0.95 : 0.8}
+                    className="mindmap-node-core"
+                  />
+
+                  {/* Node Label Pill Background */}
                   <text
-                    x={(from.x + to.x) / 2}
-                    y={(from.y + to.y) / 2 - 5}
-                    className="mindmap-edge-label"
+                    y={node.radius + 18}
+                    className="mindmap-node-label"
                     textAnchor="middle"
                   >
-                    {edge.label}
+                    {node.label}
                   </text>
-                )}
-              </g>
-            );
-          })}
-        </g>
-
-        {/* Nodes */}
-        <g className="mindmap-nodes-layer">
-          {graph.nodes.map((node, index) => {
-            const colorMeta = COLOR_MAP[node.color ?? "default"] ?? COLOR_MAP.default;
-            const isSelected = selectedNode?.id === node.id;
-            const isHovered = hoveredNodeId === node.id;
-            const isConnected = connectedNodeIds.has(node.id);
-            const isDimmed = activeFocusId && !isConnected;
-            const isSearchMatch = searchMatchingIds ? searchMatchingIds.has(node.id) : null;
-            const isSearchDimmed = searchMatchingIds !== null && !isSearchMatch;
-
-            return (
-              <g
-                key={node.id}
-                className={`mindmap-node-group ${isSelected ? "selected" : ""} ${isHovered ? "hovered" : ""} ${isDimmed || isSearchDimmed ? "dimmed" : ""} ${isSearchMatch ? "search-match" : ""} ${introAnimating ? "mindmap-node-group--pop-in" : ""}`}
-                style={introAnimating ? { animationDelay: `${index * 60}ms` } : undefined}
-                transform={`translate(${node.x}, ${node.y})`}
-                onPointerEnter={() => setHoveredNodeId(node.id)}
-                onPointerLeave={() => setHoveredNodeId((curr) => (curr === node.id ? null : curr))}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedNode(node);
-                  if (node.file) {
-                    openFile(node.file);
-                  }
-                }}
-              >
-                {/* Search Match Halo */}
-                {isSearchMatch && (
-                  <circle
-                    r={node.radius + 12}
-                    fill="none"
-                    stroke="var(--ds-accent)"
-                    strokeWidth={2}
-                    strokeDasharray="4 3"
-                    className="mindmap-search-halo"
-                  />
-                )}
-
-                {/* Outer Glow Halo on hover, active, or connection */}
-                <circle
-                  r={node.radius + 8}
-                  fill={colorMeta.glow}
-                  filter="url(#nodeGlowFilter)"
-                  className="mindmap-node-glow"
-                  opacity={isSelected ? 0.9 : isHovered ? 0.75 : isConnected && activeFocusId ? 0.5 : 0}
-                />
-
-                {/* Node Outer Ring */}
-                <circle
-                  r={node.radius + 3}
-                  fill="none"
-                  stroke={isSelected || isHovered ? colorMeta.border : "transparent"}
-                  strokeWidth={1.5}
-                  className="mindmap-node-ring"
-                />
-
-                {/* Node Main Disk */}
-                <circle
-                  r={node.radius}
-                  fill={colorMeta.bg}
-                  stroke={colorMeta.border}
-                  strokeWidth={2}
-                  className="mindmap-node-circle"
-                />
-
-                {/* Inner Ambient Accent Pulse */}
-                <circle
-                  r={node.radius * 0.45}
-                  fill="#ffffff"
-                  opacity={isSelected || isHovered ? 0.95 : 0.8}
-                  className="mindmap-node-core"
-                />
-
-                {/* Node Label Pill Background */}
-                <text
-                  y={node.radius + 18}
-                  className="mindmap-node-label"
-                  textAnchor="middle"
-                >
-                  {node.label}
-                </text>
-              </g>
-            );
-          })}
+                </g>
+              );
+            })}
+          </g>
         </g>
       </svg>
 
@@ -710,7 +778,10 @@ export function MindmapTab() {
             className="icon-btn icon-btn-square"
             tooltip={t("panel.mindmap.zoomIn")}
             ariaLabel={t("panel.mindmap.zoomIn")}
-            onClick={() => setZoom((z) => Math.min(2.5, z + 0.15))}
+            onClick={() => {
+              triggerSmooth();
+              setZoom((z) => Math.min(3, Number((z + 0.2).toFixed(2))));
+            }}
           >
             <IconPlus size={14} />
           </TooltipButton>
@@ -729,7 +800,10 @@ export function MindmapTab() {
             className="icon-btn icon-btn-square"
             tooltip={t("panel.mindmap.zoomOut")}
             ariaLabel={t("panel.mindmap.zoomOut")}
-            onClick={() => setZoom((z) => Math.max(0.2, z - 0.15))}
+            onClick={() => {
+              triggerSmooth();
+              setZoom((z) => Math.max(0.15, Number((z - 0.2).toFixed(2))));
+            }}
           >
             <IconMinus size={14} />
           </TooltipButton>
