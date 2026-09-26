@@ -147,7 +147,7 @@ export const ZeusSubagentTasksFloatingPanel = memo(
             </div>
           </div>
 
-          {/* Agent 2: Hermes */}
+          {/* Agent 2: Hermes (Fixer) */}
           <div className="subagent-task-item" role="listitem">
             <div
               className="subagent-item-avatar"
@@ -157,8 +157,8 @@ export const ZeusSubagentTasksFloatingPanel = memo(
             </div>
             <div className="subagent-item-content">
               <div className="subagent-item-top">
-                <span className="subagent-item-name">Hermes (Builder)</span>
-                <span className="subagent-item-role">Code Implementation</span>
+                <span className="subagent-item-name">Hermes · Fixer</span>
+                <span className="subagent-item-role">Task(fixer)</span>
                 <span
                   className={cx(
                     "subagent-item-tag",
@@ -180,13 +180,13 @@ export const ZeusSubagentTasksFloatingPanel = memo(
                 {isWaitingApproval
                   ? `Eksekusi modifikasi (${activePermission?.toolName || "action"}) ditahan hingga disetujui`
                   : isSessionRunning
-                    ? "Menulis komponen, logika arsitektur & modifikasi kode"
-                    : "Standby siap implementasi"}
+                    ? "Implementasi kode multi-file dari spesifikasi (Task:fixer)"
+                    : "Standby siap modifikasi kode"}
               </p>
             </div>
           </div>
 
-          {/* Agent 3: Athena */}
+          {/* Agent 3: Athena (Explorer) */}
           <div className="subagent-task-item" role="listitem">
             <div
               className="subagent-item-avatar"
@@ -196,8 +196,8 @@ export const ZeusSubagentTasksFloatingPanel = memo(
             </div>
             <div className="subagent-item-content">
               <div className="subagent-item-top">
-                <span className="subagent-item-name">Athena (Coordinator)</span>
-                <span className="subagent-item-role">Architecture &amp; Schema</span>
+                <span className="subagent-item-name">Athena · Explorer</span>
+                <span className="subagent-item-role">Task(explorer) / Reviewer</span>
                 <span
                   className={cx(
                     "subagent-item-tag",
@@ -211,7 +211,7 @@ export const ZeusSubagentTasksFloatingPanel = memo(
                   {isWaitingApproval
                     ? "Paused"
                     : isSessionRunning
-                      ? "Sync Specs"
+                      ? "Searching Specs"
                       : "Standby"}
                 </span>
               </div>
@@ -219,13 +219,13 @@ export const ZeusSubagentTasksFloatingPanel = memo(
                 {isWaitingApproval
                   ? "Pemeriksaan selesai, workflow lanjutan dijeda sementara"
                   : isSessionRunning
-                    ? "Sinkronisasi spesifikasi & validasi schema DTO"
-                    : "Standby siap verifikasi kontrak"}
+                    ? "Pencarian codebase cepat & review integritas kontrak (Task:explorer)"
+                    : "Standby siap verifikasi codebase"}
               </p>
             </div>
           </div>
 
-          {/* Agent 4: Apollo */}
+          {/* Agent 4: Apollo (Test runner) */}
           <div className="subagent-task-item" role="listitem">
             <div
               className="subagent-item-avatar"
@@ -235,8 +235,8 @@ export const ZeusSubagentTasksFloatingPanel = memo(
             </div>
             <div className="subagent-item-content">
               <div className="subagent-item-top">
-                <span className="subagent-item-name">Apollo (QA Runner)</span>
-                <span className="subagent-item-role">Testing &amp; Security</span>
+                <span className="subagent-item-name">Apollo · Test runner</span>
+                <span className="subagent-item-role">Task(test-runner)</span>
                 <span
                   className={cx(
                     "subagent-item-tag",
@@ -250,7 +250,7 @@ export const ZeusSubagentTasksFloatingPanel = memo(
                   {isWaitingApproval
                     ? "Paused"
                     : isSessionRunning
-                      ? "Validating"
+                      ? "Testing"
                       : "Standby"}
                 </span>
               </div>
@@ -258,7 +258,7 @@ export const ZeusSubagentTasksFloatingPanel = memo(
                 {isWaitingApproval
                   ? "Menunggu perubahan kode disetujui untuk menjalankan validasi"
                   : isSessionRunning
-                    ? "Menjalankan assertions, lint check & integritas sistem"
+                    ? "Eksekusi test runner & verifikasi assertion (Task:test-runner)"
                     : "Test runner disiapkan & standby"}
               </p>
             </div>
