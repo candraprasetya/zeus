@@ -33,6 +33,11 @@ import {
   type BuiltinSubagentRow,
 } from "./subagent-settings";
 import {
+  getSubagentProfile,
+  saveSubagentProfile,
+  type CharacterArchetypeId,
+} from "./subagent-character-profiles";
+import {
   IconBot,
   IconCopy,
   IconFolderOpen,
@@ -40,7 +45,11 @@ import {
   IconPlus,
   IconTrash,
 } from "../icons";
+import { BUILTIN_TASK_FLOWS, type TaskFlowDefinition } from "@pi-desktop/shared";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { WorkflowSquare01Icon, CheckCheckIcon } from "@hugeicons/core-free-icons";
 import { TooltipButton } from "../ui";
+
 const GLOBAL_SUBAGENTS_PATH = "~/.agents/subagents";
 
 type SubagentEditorState = {
@@ -176,6 +185,13 @@ export function AgentSubagentsPage() {
   const save = async () => {
     if (!editor) return;
     const { draft, editing } = editor;
+    const targetId = editing ? editing.id : (draft.id || draft.name.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "-"));
+    saveSubagentProfile({
+      id: targetId,
+      archetype: draft.archetype || "hermes",
+      customName: draft.name.trim(),
+      customRole: draft.role?.trim() || "Specialist",
+    });
     const payload = {
       ...(draft.id ? { id: draft.id } : {}),
       name: draft.name.trim(),
@@ -244,13 +260,16 @@ export function AgentSubagentsPage() {
   const zeusMatchesSearch = matchesCapabilitySearch(search, zeusName, "zeus", zeusDesc);
 
   const openEditZeus = async () => {
+    const profile = getSubagentProfile("zeus");
     if (zeusOwned) {
       await openEdit(zeusOwned);
     } else {
       setEditor({
         draft: {
           id: "zeus",
-          name: DEFAULT_ZEUS_NAME,
+          name: profile.customName || DEFAULT_ZEUS_NAME,
+          role: profile.customRole || "Main Orchestrator",
+          archetype: profile.archetype || "zeus",
           description: DEFAULT_ZEUS_DESC,
           tools: [...DEFAULT_ZEUS_TOOLS],
           inheritTools: false,
@@ -608,6 +627,55 @@ export function AgentSubagentsPage() {
                 )}
               </>
             ) : null}
+
+            {/* CrewAI Inspired Multi-Agent Task Flow Pipelines */}
+            <CapabilityGroupHeader
+              label="Multi-Agent Task Flow Pipelines (CrewAI & Buzz)"
+              count={BUILTIN_TASK_FLOWS.length}
+            />
+            {BUILTIN_TASK_FLOWS.map((flow) => (
+              <CapabilityRow
+                key={flow.id}
+                glyph={
+                  <div style={{ color: "#f59e0b" }}>
+                    <HugeiconsIcon icon={WorkflowSquare01Icon} size={16} />
+                  </div>
+                }
+                name={flow.name}
+                description={flow.description}
+                badges={
+                  <span
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "10px",
+                      padding: "2px 8px",
+                      borderRadius: "9999px",
+                      background: "rgba(245, 158, 11, 0.15)",
+                      color: "#f59e0b",
+                      border: "1px solid rgba(245, 158, 11, 0.3)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {flow.steps.length} Steps Pipeline
+                  </span>
+                }
+                actions={
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      fontSize: "11px",
+                      color: "#10b981",
+                      fontWeight: 600,
+                    }}
+                  >
+                    <HugeiconsIcon icon={CheckCheckIcon} size={14} />
+                    <span>Active Workflow</span>
+                  </div>
+                }
+              />
+            ))}
           </>
         )}
       </CapabilityPanel>

@@ -93,86 +93,38 @@ const GROUP_ICONS: Record<SettingsNavGroupId | "extensions", ReactNode> = {
   extensions: <IconPlug size={13} />,
 };
 
-function getTabSubtitle(
-  tab: SettingsTab,
-  t: (key: string, options?: { defaultValue?: string }) => string,
-): string {
+function getTabSubtitle(tab: SettingsTab): string {
   switch (tab) {
     case "general":
-      return t("settings.generalSubtitle", {
-        defaultValue:
-          "Personalize your experience with themes, appearance, and system settings",
-      });
+      return "Personalize your experience with themes, appearance, and system settings";
     case "ai":
-      return t("settings.aiSubtitle", {
-        defaultValue:
-          "Configure default AI models, agent execution modes, and permissions",
-      });
+      return "Configure default AI models, agent execution modes, and permissions";
     case "shortcuts":
-      return t("settings.shortcutsSubtitle", {
-        defaultValue:
-          "View and customize keyboard shortcuts across the application",
-      });
+      return "View and customize keyboard shortcuts across the application";
     case "instructions":
-      return t("settings.instructionsSubtitle", {
-        defaultValue:
-          "Manage project guidelines, agent instructions, and system prompts",
-      });
+      return "Manage project guidelines, agent instructions, and system prompts";
     case "agent":
-      return t("settings.agentSubtitle", {
-        defaultValue:
-          "Configure agent behavior, tool execution limits, and permissions",
-      });
+      return "Configure agent behavior, tool execution limits, and permissions";
     case "skills":
-      return t("settings.skillsSubtitle", {
-        defaultValue:
-          "Discover and configure installed agent skills and capabilities",
-      });
+      return "Discover and configure installed agent skills and capabilities";
     case "mcp":
-      return t("settings.mcpSubtitle", {
-        defaultValue:
-          "Connect and manage Model Context Protocol servers and tool integrations",
-      });
+      return "Connect and manage Model Context Protocol servers and tool integrations";
     case "subagents":
-      return t("settings.subagentsSubtitle", {
-        defaultValue:
-          "Define specialized autonomous subagents and specialist roles",
-      });
+      return "Define specialized autonomous subagents and specialist roles";
     case "import":
-      return t("settings.importSubtitle", {
-        defaultValue:
-          "Import sessions, workspace configs, and migration archives",
-      });
+      return "Import sessions, workspace configs, and migration archives";
     case "projects":
-      return t("settings.projectsSubtitle", {
-        defaultValue:
-          "Manage workspaces, active projects, and repository links",
-      });
+      return "Manage workspaces, active projects, and repository links";
     case "sync":
-      return t("settings.syncSubtitle", {
-        defaultValue:
-          "Cloud synchronization and remote settings backup",
-      });
+      return "Cloud synchronization and remote settings backup";
     case "remoteHosts":
-      return t("settings.remoteHostsSubtitle", {
-        defaultValue:
-          "Configure remote development hosts and SSH gateways",
-      });
+      return "Configure remote development hosts and SSH gateways";
     case "voice":
-      return t("settings.voiceSubtitle", {
-        defaultValue:
-          "Speech to text, voice input, and audio feedback configuration",
-      });
+      return "Speech to text, voice input, and audio feedback configuration";
     case "about":
-      return t("settings.aboutSubtitle", {
-        defaultValue:
-          "Application version, release updates, and diagnostics",
-      });
+      return "Application version, release updates, and diagnostics";
     default:
-      return t("settings.generalSubtitle", {
-        defaultValue:
-          "Personalize your experience with themes, appearance, and system settings",
-      });
+      return "Personalize your experience with themes, appearance, and system settings";
   }
 }
 
@@ -584,7 +536,7 @@ export function SettingsPage() {
                     ) : null}
                   </h1>
                   <p className="settings-hero-subtitle">
-                    {activeExtension ? activeExtension.description : getTabSubtitle(tab, t)}
+                    {activeExtension ? activeExtension.description : getTabSubtitle(tab)}
                   </p>
                 </div>
               </div>

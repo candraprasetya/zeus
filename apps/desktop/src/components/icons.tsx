@@ -22,6 +22,7 @@ import {
   ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ChevronUpIcon,
   CircleCheckIcon,
   ClipboardPasteIcon,
   Clock01Icon,
@@ -203,6 +204,7 @@ export const IconBot = icon(BotIcon);
 export const IconCheckCheck = icon(CheckCheckIcon);
 export const IconShield = icon(Shield01Icon);
 export const IconChevronDown = icon(ChevronDownIcon);
+export const IconChevronUp = icon(ChevronUpIcon);
 export const IconClose = icon(Cancel01Icon);
 /* Frameless window chrome (WindowControls): minimize / maximize / restore. */
 export const IconMinus = icon(MinusSignIcon);

@@ -18,6 +18,15 @@ import { headPermission } from "../lib/pending-permissions";
 import { headAsk } from "../lib/pending-asks";
 import { PixelAgentsOfficeModal } from "../features/chat/transcript/PixelAgentsOffice";
 import { ZeusSubagentTasksFloatingPanel } from "./ZeusSubagentTasksFloatingPanel";
+import { useSubagentsData } from "../hooks/use-subagents-data";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  Building03Icon,
+  BotIcon,
+  Alert02Icon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+} from "@hugeicons/core-free-icons";
 
 const StableComposer = memo(Composer);
 
@@ -101,6 +110,8 @@ export const ChatSurface = memo(function ChatSurface({
 
   const [isOfficeModalOpen, setIsOfficeModalOpen] = useState(false);
   const [isSubagentsPanelOpen, setIsSubagentsPanelOpen] = useState(false);
+  const { officeSubagents } = useSubagentsData();
+  const workerCount = Math.max(1, officeSubagents.filter((a) => a.id !== "zeus").length);
 
   // A pending permission or ask is itself transcript content, so the empty
   // state must yield to it. Each pane subscribes to its own queues; the surface
@@ -236,7 +247,7 @@ export const ChatSurface = memo(function ChatSurface({
                     title="Buka AI Agent Office (Standby / Idle)"
                     style={{ marginTop: "8px" }}
                   >
-                    <span className="office-btn-icon" aria-hidden="true">🏢</span>
+                    <HugeiconsIcon icon={Building03Icon} size={14} className="office-btn-icon" />
                     <span className="office-btn-text">View AI Agent Office</span>
                     <span className="office-btn-idle">IDLE</span>
                   </button>
@@ -278,7 +289,7 @@ export const ChatSurface = memo(function ChatSurface({
             aria-live="polite"
           >
             <YoungZeusMascot
-              size={isSessionRunning || activePermission ? 36 : 28}
+              size={isSessionRunning || activePermission ? 26 : 22}
               state={activePermission ? "waiting" : isSessionRunning ? "working" : "waiting"}
               interactive={false}
             />
@@ -286,14 +297,14 @@ export const ChatSurface = memo(function ChatSurface({
             {activePermission ? (
               <div className="zeus-floating-label is-waiting-approval">
                 <span className="zeus-floating-title is-warning">
-                  <span className="zeus-warning-icon" aria-hidden="true">⚠️</span>
-                  Menunggu Izin: {activePermission.toolName || "Approval"}
+                  <HugeiconsIcon icon={Alert02Icon} size={13} className="zeus-warning-icon" />
+                  Menunggu izin: {activePermission.toolName || "Approval"}
                 </span>
               </div>
             ) : isSessionRunning ? (
               <div className="zeus-floating-label">
                 <span className="zeus-floating-title">
-                  Zeus sedang berpikir & mengetik
+                  Zeus sedang berpikir
                   <span className="zeus-floating-dots" aria-hidden="true">
                     <span className="zeus-floating-dot" />
                     <span className="zeus-floating-dot" />
@@ -302,6 +313,10 @@ export const ChatSurface = memo(function ChatSurface({
                 </span>
               </div>
             ) : null}
+
+            {(isSessionRunning || Boolean(activePermission)) && (
+              <span className="zeus-floating-divider" aria-hidden="true" />
+            )}
 
             {/* Floating Sub-Agent Tasks Button */}
             <button
@@ -316,17 +331,17 @@ export const ChatSurface = memo(function ChatSurface({
               aria-label="Sub-Agent Tasks"
               aria-expanded={isSubagentsPanelOpen}
             >
-              <span className="subagent-pill-icon" aria-hidden="true">🤖</span>
+              <HugeiconsIcon icon={BotIcon} size={13} className="subagent-pill-icon" />
               <span className="subagent-pill-label">
                 {activePermission
                   ? "1 Butuh Izin"
-                  : isSessionRunning
-                    ? "4 Sub-Agents"
-                    : "Sub-Agents"}
+                  : `${workerCount} Sub-Agent`}
               </span>
-              <span className="subagent-pill-arrow" aria-hidden="true">
-                {isSubagentsPanelOpen ? "▲" : "▼"}
-              </span>
+              <HugeiconsIcon
+                icon={isSubagentsPanelOpen ? ChevronUpIcon : ChevronDownIcon}
+                size={11}
+                className="subagent-pill-arrow"
+              />
             </button>
 
             <button
@@ -346,7 +361,7 @@ export const ChatSurface = memo(function ChatSurface({
               }
               aria-label="View Office"
             >
-              <span className="office-btn-icon" aria-hidden="true">🏢</span>
+              <HugeiconsIcon icon={Building03Icon} size={13} className="office-btn-icon" />
               <span className="office-btn-text">View Office</span>
               <span
                 className={

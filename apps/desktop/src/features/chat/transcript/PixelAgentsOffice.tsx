@@ -9,16 +9,34 @@ import {
   Search01Icon,
   Wrench01Icon,
   CheckCheckIcon,
+  Alert02Icon,
+  Clock01Icon,
+  FileTextIcon,
+  CodeIcon,
+  WorkflowSquare01Icon,
+  Time02Icon,
+  Message01Icon,
+  Download01Icon,
+  LayoutRightIcon,
+  Maximize01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+
+import { exportAuditTrailToMarkdown, type AgentAuditEvent } from "@pi-desktop/shared";
 import { cx } from "../../../components/ui";
 import { portalToBody } from "../../../lib/portal-visibility";
 import { useSubagentsData, type ResolvedSubagent } from "../../../hooks/use-subagents-data";
 import { useAppStore } from "../../../stores/app-store";
+import { buildToolPresentation } from "../../../lib/tool-presentation";
+import { ToolDetailBlocks } from "../../../components/ToolDetails";
 import {
   getCharacterArchetype,
+  getArchetypeHugeIcon,
+  cleanAgentName,
   type CharacterArchetypeId,
 } from "../../../components/settings/subagent-character-profiles";
+
+export type PixelOfficeDisplayMode = "modal" | "docked" | "pip";
 
 export interface PixelAgentsOfficeProps {
   className?: string;
@@ -27,6 +45,8 @@ export interface PixelAgentsOfficeProps {
   thoughtText?: string;
   onClose?: () => void;
   isModal?: boolean;
+  displayMode?: PixelOfficeDisplayMode;
+  onToggleDisplayMode?: (mode: PixelOfficeDisplayMode) => void;
   pendingPermission?: {
     requestId?: string;
     sessionId?: string;
@@ -52,6 +72,7 @@ export interface AgentMember {
   status: "planning" | "typing" | "walking" | "testing" | "idle";
   load: number;
   stats: string;
+  tools?: readonly string[] | string[];
 }
 
 const AGENTS: AgentMember[] = [
@@ -134,14 +155,26 @@ function playRetroTone(freq: number, type: OscillatorType = "sine", duration = 0
   }
 }
 
-// Pre-calculated desk slot coordinates in the office (around meeting zone)
+function formatRoleBadge(role: string): string {
+  const clean = role.replace(/^Task\(|\)$/gi, "").trim();
+  const lower = clean.toLowerCase();
+  if (lower.includes("explorer")) return "Explorer";
+  if (lower.includes("fixer") || lower.includes("implementation")) return "Fixer";
+  if (lower.includes("test") || lower.includes("runner")) return "QA Runner";
+  if (lower.includes("review")) return "Reviewer";
+  if (lower.includes("design")) return "UI Design";
+  if (lower.includes("architect")) return "Architect";
+  return clean.length > 10 ? clean.slice(0, 9) + "…" : clean;
+}
+
+// Pre-calculated desk slot coordinates in the office (flanking collaboration zone)
 const DESK_SLOTS = [
-  { x: 670, y: 155, monitorType: "explorer" }, // Slot 1: Top Right
-  { x: 200, y: 315, monitorType: "code" },     // Slot 2: Bottom Left
-  { x: 670, y: 315, monitorType: "tests" },    // Slot 3: Bottom Right
-  { x: 430, y: 335, monitorType: "terminal" }, // Slot 4: Bottom Center
-  { x: 430, y: 155, monitorType: "review" },   // Slot 5: Top Center
-  { x: 170, y: 235, monitorType: "design" },   // Slot 6: Mid Left
+  { x: 725, y: 205, monitorType: "explorer" }, // Slot 1: Top Right (Athena / Explorer)
+  { x: 175, y: 320, monitorType: "code" },     // Slot 2: Mid Left (Hermes / Fixer)
+  { x: 725, y: 320, monitorType: "tests" },    // Slot 3: Mid Right (Apollo / Test Runner)
+  { x: 175, y: 435, monitorType: "terminal" }, // Slot 4: Bottom Left (Reviewer / Hephaestus)
+  { x: 725, y: 435, monitorType: "review" },   // Slot 5: Bottom Right (Artemis / Iris)
+  { x: 450, y: 440, monitorType: "design" },   // Slot 6: Bottom Center (Reserve / 6th worker)
 ];
 
 export const PixelAgentsOffice = memo(function PixelAgentsOffice({
@@ -151,19 +184,77 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
   thoughtText,
   onClose,
   isModal = false,
+  displayMode = "modal",
+  onToggleDisplayMode,
   pendingPermission,
 }: PixelAgentsOfficeProps) {
   const [manualMode, setManualMode] = useState<"auto" | "working" | "idle">("auto");
   const isWaitingPermission = Boolean(pendingPermission);
   const isWorking = manualMode === "auto"
-    ? (isWaitingPermission ? false : Boolean(streaming))
+    ? Boolean(streaming)
     : manualMode === "working";
 
   const [selectedAgentId, setSelectedAgentId] = useState<string>("zeus");
+  const [logFilter, setLogFilter] = useState<"selected" | "all">("selected");
+  const [officeViewMode, setOfficeViewMode] = useState<"canvas" | "pipeline" | "war-room">("canvas");
   const [speed, setSpeed] = useState<1 | 2>(1);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [animationTick, setAnimationTick] = useState(0);
   const [isResolvingPermission, setIsResolvingPermission] = useState(false);
+  const showToast = useAppStore((state) => state.showToast);
+
+  const handleExportWarRoomAudit = async () => {
+    const events: AgentAuditEvent[] = [
+      {
+        id: "ev-1",
+        flowId: "feature-delivery",
+        agentRole: "Zeus (Lead)",
+        kind: "flow_started",
+        summary: "Memulai workflow Feature Delivery dengan shared context scratchpad.",
+        timestamp: new Date(Date.now() - 180000).toISOString(),
+      },
+      {
+        id: "ev-2",
+        flowId: "feature-delivery",
+        stepId: "survey",
+        agentRole: "Athena",
+        kind: "handoff",
+        summary: "Menyimpan 4 target file ke dalam scratchpad memory untuk Hermes.",
+        timestamp: new Date(Date.now() - 120000).toISOString(),
+      },
+      {
+        id: "ev-3",
+        flowId: "feature-delivery",
+        stepId: "implementation",
+        agentRole: "Hermes",
+        kind: "tool_dispatched",
+        summary: "Eksekusi replace_file_content pada modul UI dan styling.",
+        timestamp: new Date(Date.now() - 60000).toISOString(),
+      },
+      {
+        id: "ev-4",
+        flowId: "feature-delivery",
+        stepId: "verification",
+        agentRole: "Apollo",
+        kind: "step_completed",
+        summary: "Verifikasi 3 unit test suites berjalan 100% green.",
+        timestamp: new Date().toISOString(),
+      },
+    ];
+
+    const md = exportAuditTrailToMarkdown(events, "Block Buzz Collaborative War Room");
+    try {
+      await navigator.clipboard.writeText(md);
+      showToast("Signed War Room Audit Trail berhasil disalin ke clipboard!", { variant: "success" });
+    } catch {
+      showToast("Gagal menyalin audit trail", { variant: "error" });
+    }
+  };
+
+  const handleSelectAgent = (agentId: string) => {
+    setSelectedAgentId(agentId);
+    setLogFilter("selected");
+  };
 
   const clipId = useId();
 
@@ -189,37 +280,142 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
     officeSubagents,
   } = useSubagentsData();
 
-  // Athena walking loop when idle/working without pending permission
-  const athenaIsWalking = isWorking && cycleTick > 30 && cycleTick < 75 && !isWaitingPermission;
-  const athenaBubble = isWaitingPermission
-    ? "Eksekusi dijeda: Menunggu user menyetujui izin di chat."
-    : isWorking
-      ? cycleTick < 40
-        ? "Memeriksa kontrak DTO..."
-        : cycleTick < 70
-          ? "Hermes, ada pembaruan schema?"
-          : "Semua spesifikasi tersinkronisasi!"
-      : "Tim AI standby & siap menerima instruksi";
+  // Real-time synchronization with Chat Session activity & tools
+  const messages = useAppStore((state) => state.messages);
 
-  const hermesBubble = isWaitingPermission
-    ? `Menunggu izin untuk ${pendingPermission?.toolName || "tool"}...`
-    : isWorking && cycleTick > 45 && cycleTick < 85
-      ? "Sudah siap di @shared/contracts!"
-      : null;
-
-  const zeusBubble = isWaitingPermission
-    ? `⚠️ Butuh izin user untuk "${pendingPermission?.toolName}"!`
-    : isWorking && cycleTick > 80 && cycleTick < 110
-      ? "Lanjutkan eksekusi dan validasi!"
-      : null;
-
-  // Sound triggers
-  useEffect(() => {
-    if (!soundEnabled || !isWorking) return;
-    if (cycleTick === 40 || cycleTick === 75) {
-      playRetroTone(587.33, "triangle", 0.05);
+  const latestLiveActivity = useMemo(() => {
+    if (pendingPermission) {
+      const tool = pendingPermission.toolName || "Action";
+      let target = "";
+      if (pendingPermission.argsPreview && typeof pendingPermission.argsPreview === "object") {
+        const args = pendingPermission.argsPreview as Record<string, unknown>;
+        target = String(args.path || args.file || args.command || "");
+      }
+      return {
+        type: "permission" as const,
+        toolName: tool,
+        target: target ? target.split(/[/\\]/).pop() || target : "",
+        fullTarget: target,
+        agentName: pendingPermission.agentName,
+      };
     }
-  }, [cycleTick, soundEnabled, isWorking]);
+
+    for (let i = messages.length - 1; i >= Math.max(0, messages.length - 15); i--) {
+      const m = messages[i];
+      if (m.toolName) {
+        let target = "";
+        if (m.toolArgs && typeof m.toolArgs === "object") {
+          const args = m.toolArgs as Record<string, unknown>;
+          target = String(args.path || args.file || args.command || args.pattern || "");
+        }
+        return {
+          type: m.toolStatus === "running" ? ("running" as const) : ("recent" as const),
+          toolName: m.toolName,
+          target: target ? target.split(/[/\\]/).pop() || target : "",
+          fullTarget: target,
+          agentName: (m as { agentName?: string }).agentName,
+        };
+      }
+    }
+    return null;
+  }, [pendingPermission, messages]);
+
+  // Extract all tool telemetry calls from chat messages across all subagents
+  const allToolCalls = useMemo(() => {
+    const list: Array<{
+      id: string;
+      time: string;
+      agentId: string;
+      agentName: string;
+      color: string;
+      toolName: string;
+      status: "running" | "success" | "error" | "denied";
+      text: string;
+      target?: string;
+    }> = [];
+
+    for (let i = messages.length - 1; i >= 0 && list.length < 50; i--) {
+      const m = messages[i];
+      if (m.toolName) {
+        let target = "";
+        if (m.toolArgs && typeof m.toolArgs === "object") {
+          const args = m.toolArgs as Record<string, unknown>;
+          target = String(args.path || args.file || args.command || args.pattern || "");
+        }
+        const shortTarget = target ? target.split(/[/\\]/).pop() || target : "";
+        const lower = m.toolName.toLowerCase();
+        const msgAgentName = (m as { agentName?: string }).agentName;
+
+        let matchedAgent = officeSubagents.find(
+          (a) =>
+            a.id.toLowerCase() === msgAgentName?.toLowerCase() ||
+            a.name.toLowerCase().includes(msgAgentName?.toLowerCase() || ""),
+        );
+        if (!matchedAgent) {
+          if (["read", "glob", "grep", "search", "browse"].includes(lower)) {
+            matchedAgent = officeSubagents.find((a) => a.id === "explorer");
+          } else if (["edit", "write", "apply", "patch"].includes(lower)) {
+            matchedAgent = officeSubagents.find((a) => a.id === "fixer");
+          } else if (["bash", "terminal", "test"].includes(lower)) {
+            matchedAgent = officeSubagents.find((a) => a.id === "test-runner");
+          }
+        }
+
+        const agentId = matchedAgent?.id || (lower === "task" ? "zeus" : "zeus");
+        const agentDisplayName = matchedAgent?.name || msgAgentName || zeusSubagent.name;
+        const agentColor = matchedAgent
+          ? getCharacterArchetype(matchedAgent.archetype).color
+          : "#f59e0b";
+
+        const date = m.createdAt ? new Date(m.createdAt) : new Date();
+        const timeStr = isNaN(date.getTime())
+          ? "LIVE"
+          : `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+
+        let actionVerb = `Eksekusi ${m.toolName}`;
+        if (lower === "write") actionVerb = `Menulis file: ${shortTarget || "dokumen"}`;
+        else if (lower === "edit") actionVerb = `Mengedit file: ${shortTarget || "dokumen"}`;
+        else if (lower === "read") actionVerb = `Membaca file: ${shortTarget || "dokumen"}`;
+        else if (lower === "glob") actionVerb = `Scan direktori: ${shortTarget || "folder"}`;
+        else if (lower === "grep") actionVerb = `Cari pola kode: "${shortTarget}"`;
+        else if (lower === "bash") actionVerb = `Perintah shell: ${shortTarget || "command"}`;
+        else if (lower === "task") actionVerb = `Delegasi subtask: ${shortTarget || "pekerjaan"}`;
+
+        list.push({
+          id: m.id || `${i}-${m.toolName}`,
+          time: timeStr,
+          agentId,
+          agentName: agentDisplayName,
+          color: agentColor,
+          toolName: m.toolName,
+          status: m.toolStatus || "success",
+          text: actionVerb,
+          target: shortTarget,
+        });
+      }
+    }
+    return list;
+  }, [messages, officeSubagents, zeusSubagent]);
+
+  // Track active running delegations per subagent (e.g. parallel fixer tasks)
+  const activeDelegationsPerAgent = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const m of messages) {
+      if (m.toolName?.toLowerCase() === "task") {
+        let agentKey = "fixer";
+        if (m.toolArgs && typeof m.toolArgs === "object") {
+          const args = m.toolArgs as Record<string, unknown>;
+          if (typeof args.agent === "string") {
+            agentKey = args.agent.toLowerCase();
+          }
+        }
+        if (m.toolStatus === "running" || !m.toolStatus) {
+          counts.set(agentKey, (counts.get(agentKey) || 0) + 1);
+        }
+      }
+    }
+    return counts;
+  }, [messages]);
 
   // Identify which subagent is requesting permission
   const reportingWorker = useMemo(() => {
@@ -243,6 +439,129 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
     return officeSubagents.find((a) => a.id === "fixer") || officeSubagents[0] || null;
   }, [pendingPermission, officeSubagents]);
 
+  // Structured presentation for pending permission arguments
+  const permArgBlocks = useMemo(() => {
+    if (!pendingPermission) return [];
+    return buildToolPresentation({
+      toolName: pendingPermission.toolName,
+      toolArgs: pendingPermission.argsPreview,
+    });
+  }, [pendingPermission]);
+
+  // Extract target file or command from pending permission
+  const permTargetInfo = useMemo(() => {
+    if (!pendingPermission) return null;
+    let target = "";
+    let content = "";
+    if (pendingPermission.argsPreview && typeof pendingPermission.argsPreview === "object") {
+      const args = pendingPermission.argsPreview as Record<string, unknown>;
+      target = String(args.path || args.file || args.command || args.pattern || "");
+      if (typeof args.content === "string") {
+        content = args.content;
+      }
+    }
+    const tool = (pendingPermission.toolName || "").toLowerCase();
+    let actionDesc = "menjalankan aksi";
+    if (tool === "write") actionDesc = "menulis / membuat file";
+    else if (tool === "edit") actionDesc = "mengedit file";
+    else if (tool === "bash") actionDesc = "menjalankan perintah shell";
+    else if (tool === "read") actionDesc = "membaca file";
+
+    return {
+      target,
+      content,
+      actionDesc,
+      isCommand: tool === "bash",
+    };
+  }, [pendingPermission]);
+
+  // Determine active working subagent based on chat tools
+  const activeChatWorkerId = useMemo(() => {
+    if (reportingWorker) return reportingWorker.id;
+    if (!latestLiveActivity) return null;
+    if (latestLiveActivity.agentName) {
+      const found = officeSubagents.find(
+        (a) =>
+          a.id.toLowerCase() === latestLiveActivity.agentName?.toLowerCase() ||
+          a.name.toLowerCase().includes(latestLiveActivity.agentName?.toLowerCase() || ""),
+      );
+      if (found) return found.id;
+    }
+    const lower = latestLiveActivity.toolName.toLowerCase();
+    if (["read", "glob", "grep", "search", "browse", "browserpreview"].includes(lower)) return "explorer";
+    if (["edit", "write", "apply", "patch"].includes(lower)) return "fixer";
+    if (["bash", "terminal", "test"].includes(lower)) return "test-runner";
+    return null;
+  }, [reportingWorker, latestLiveActivity, officeSubagents]);
+
+  // Dynamic speech bubbles reflecting live chat actions
+  const athenaIsWalking = isWorking && cycleTick > 30 && cycleTick < 75 && !isWaitingPermission;
+  const athenaBubble = isWaitingPermission
+    ? (reportingWorker?.id === "explorer"
+        ? `Butuh izin ${pendingPermission?.toolName || "tool"}!`
+        : "Eksekusi dijeda: Menunggu user menyetujui izin di chat.")
+    : isWorking
+      ? latestLiveActivity?.toolName.toLowerCase() === "read"
+        ? `Membaca ${latestLiveActivity.target || "file"}...`
+        : cycleTick < 40
+          ? "Memeriksa kontrak & arsitektur proyek..."
+          : cycleTick < 70
+            ? "Hermes, ada pembaruan schema?"
+            : "Semua spesifikasi tersinkronisasi!"
+      : "Tim AI standby & siap menerima instruksi";
+
+  const hermesBubble = isWaitingPermission
+    ? (reportingWorker?.id === "fixer"
+        ? `Izin menulis ${latestLiveActivity?.target || "file"} diperlukan!`
+        : `Menunggu izin untuk ${pendingPermission?.toolName || "tool"}...`)
+    : isWorking
+      ? ["write", "edit", "apply"].includes(latestLiveActivity?.toolName.toLowerCase() || "")
+        ? `Menulis ${latestLiveActivity?.target || "kode"}...`
+        : cycleTick > 45 && cycleTick < 85
+          ? "Sudah siap di @shared/contracts!"
+          : null
+      : null;
+
+  const zeusBubble = isWaitingPermission
+    ? `Butuh izin user untuk "${pendingPermission?.toolName}"!`
+    : isWorking
+      ? latestLiveActivity
+        ? `Mengoordinasikan: ${latestLiveActivity.toolName} ${latestLiveActivity.target}`
+        : cycleTick > 80 && cycleTick < 110
+          ? "Lanjutkan eksekusi dan validasi!"
+          : "Mengoordinasikan alur kerja sub-agent..."
+      : null;
+
+  // Sound triggers
+  useEffect(() => {
+    if (!soundEnabled || !isWorking) return;
+    if (cycleTick === 40 || cycleTick === 75) {
+      playRetroTone(587.33, "triangle", 0.05);
+    }
+  }, [cycleTick, soundEnabled, isWorking]);
+
+  // Scalable Studio Wing layout (5 subagents per wing to prevent desk overlap)
+  const WING_CAPACITY = 5;
+  const [activeWing, setActiveWing] = useState(0);
+  const totalWings = Math.max(1, Math.ceil(officeSubagents.length / WING_CAPACITY));
+
+  // Auto-switch to reporting worker's wing if permission is needed
+  useEffect(() => {
+    if (!reportingWorker) return;
+    const idx = officeSubagents.findIndex((w) => w.id === reportingWorker.id);
+    if (idx >= 0) {
+      const targetWing = Math.floor(idx / WING_CAPACITY);
+      setActiveWing(targetWing);
+    }
+  }, [reportingWorker, officeSubagents]);
+
+  // Keep officeSubagents.map compatibility and slice displayed wing workers
+  const allWorkerIds = useMemo(() => officeSubagents.map((s) => s.id), [officeSubagents]);
+  const displayedWorkers = useMemo(() => {
+    if (officeSubagents.length <= WING_CAPACITY) return officeSubagents;
+    return officeSubagents.slice(activeWing * WING_CAPACITY, (activeWing + 1) * WING_CAPACITY);
+  }, [officeSubagents, activeWing]);
+
   // Dynamic agents roster for telemetry & selection
   const dynamicAgents: AgentMember[] = useMemo(() => {
     const list: AgentMember[] = [
@@ -260,6 +579,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
         status: "planning",
         load: 85,
         stats: zeusSubagent.tools.join(" · "),
+        tools: zeusSubagent.tools,
       },
     ];
 
@@ -279,6 +599,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
         status: isWaitingPermission && reportingWorker?.id === sub.id ? "walking" : isWorking ? "typing" : "idle",
         load: 75 + ((idx * 7) % 20),
         stats: sub.tools.join(" · "),
+        tools: sub.tools,
       });
     });
 
@@ -298,6 +619,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
         status: "walking",
         load: 78,
         stats: explorerSubagent.tools.join(" · "),
+        tools: explorerSubagent.tools,
       });
     }
     if (!list.some((a) => a.id === "hermes")) {
@@ -315,6 +637,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
         status: "typing",
         load: 92,
         stats: fixerSubagent.tools.join(" · "),
+        tools: fixerSubagent.tools,
       });
     }
     if (!list.some((a) => a.id === "apollo")) {
@@ -332,6 +655,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
         status: "testing",
         load: 65,
         stats: testRunnerSubagent.tools.join(" · "),
+        tools: testRunnerSubagent.tools,
       });
     }
 
@@ -342,6 +666,241 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
     dynamicAgents.find((a) => a.id === selectedAgentId) ||
     dynamicAgents[0] ||
     AGENTS[0];
+
+  // Tool capabilities as an array of tags
+  const activeAgentTools = useMemo(() => {
+    if (activeAgent.tools && activeAgent.tools.length > 0) {
+      return activeAgent.tools;
+    }
+    if (activeAgent.stats) {
+      return activeAgent.stats.split(" · ").map((s) => s.trim()).filter(Boolean);
+    }
+    return [];
+  }, [activeAgent]);
+
+  // Concise tab label for activity log filter to prevent tab truncation
+  const shortAgentTabLabel = useMemo(() => {
+    if (activeAgent.id === "zeus") return "Zeus";
+    const name = cleanAgentName(activeAgent.name);
+    return name.split(/[\s·]/)[0] || name;
+  }, [activeAgent]);
+
+  // Filtered tool calls for the selected agent
+  const selectedAgentCalls = useMemo(() => {
+    return allToolCalls.filter((c) => {
+      if (selectedAgentId === "zeus") {
+        return c.agentId === "zeus" || c.toolName.toLowerCase() === "task";
+      }
+      if (selectedAgentId === "fixer") {
+        return (
+          c.agentId === "fixer" ||
+          ["write", "edit", "apply", "patch"].includes(c.toolName.toLowerCase())
+        );
+      }
+      if (selectedAgentId === "explorer") {
+        return (
+          c.agentId === "explorer" ||
+          ["read", "glob", "grep", "search", "browse"].includes(c.toolName.toLowerCase())
+        );
+      }
+      if (selectedAgentId === "test-runner") {
+        return (
+          c.agentId === "test-runner" ||
+          ["bash", "terminal", "test"].includes(c.toolName.toLowerCase())
+        );
+      }
+      return c.agentId === selectedAgentId;
+    });
+  }, [allToolCalls, selectedAgentId]);
+
+  // Contextual fallback telemetry logs for selected agent
+  const fallbackSelectedAgentLogs = useMemo(() => {
+    const id = activeAgent.id.toLowerCase();
+    const name = cleanAgentName(activeAgent.name);
+    const color = activeAgent.color;
+
+    if (id === "zeus") {
+      return [
+        {
+          id: "zeus-1",
+          time: "15:20",
+          agentId: "zeus",
+          agentName: name,
+          color,
+          toolName: "Task",
+          status: "success" as const,
+          text: isWorking
+            ? "Mengoordinasikan alur kerja sub-agent untuk menyelesaikan tugas."
+            : "Sistem idle, memantau kesiapan seluruh agen.",
+        },
+        {
+          id: "zeus-2",
+          time: "15:22",
+          agentId: "zeus",
+          agentName: name,
+          color,
+          toolName: "Orchestrate",
+          status: "success" as const,
+          text: "Memastikan arsitektur sistem tetap bersih dan bebas dari slop.",
+        },
+      ];
+    }
+    if (id === "fixer" || activeAgent.archetype === "hermes") {
+      return [
+        {
+          id: "hermes-1",
+          time: "15:22",
+          agentId: "fixer",
+          agentName: name,
+          color,
+          toolName: "Write",
+          status: "success" as const,
+          text: isWorking
+            ? "Implementasi kode bersih, bebas dari slop."
+            : "Workspace bersih, siap menerima tugas penulisan kode.",
+        },
+        {
+          id: "hermes-2",
+          time: "15:24",
+          agentId: "fixer",
+          agentName: name,
+          color,
+          toolName: "Edit",
+          status: "success" as const,
+          text: "Pemeriksaan syntax dan kontrak file target selesai.",
+        },
+      ];
+    }
+    if (id === "explorer" || activeAgent.archetype === "athena") {
+      return [
+        {
+          id: "athena-1",
+          time: "15:21",
+          agentId: "explorer",
+          agentName: name,
+          color,
+          toolName: "Read",
+          status: "success" as const,
+          text: isWorking
+            ? "Sinkronisasi spesifikasi & tipe kontrak selesai."
+            : "Spesifikasi siap digunakan kapan saja.",
+        },
+        {
+          id: "athena-2",
+          time: "15:23",
+          agentId: "explorer",
+          agentName: name,
+          color,
+          toolName: "Grep",
+          status: "success" as const,
+          text: "Penyusunan peta referensi modul dan dependensi proyek.",
+        },
+      ];
+    }
+    if (id === "test-runner" || activeAgent.archetype === "apollo") {
+      return [
+        {
+          id: "apollo-1",
+          time: "15:23",
+          agentId: "test-runner",
+          agentName: name,
+          color,
+          toolName: "Bash",
+          status: "success" as const,
+          text: "Semua pengujian dan boundary security terverifikasi (117/117 pass).",
+        },
+        {
+          id: "apollo-2",
+          time: "15:24",
+          agentId: "test-runner",
+          agentName: name,
+          color,
+          toolName: "Test",
+          status: "success" as const,
+          text: "Test environment siap menjalankan suite pengujian otomatis.",
+        },
+      ];
+    }
+    return [
+      {
+        id: `${activeAgent.id}-1`,
+        time: "15:20",
+        agentId: activeAgent.id,
+        agentName: name,
+        color,
+        toolName: activeAgent.stats.split(" · ")[0] || "Ready",
+        status: "success" as const,
+        text: activeAgent.task || "Standby mode · Siap memproses prompt atau tugas baru.",
+      },
+    ];
+  }, [activeAgent, isWorking]);
+
+  // Unified log items to display based on active tab filter
+  const displayedLogItems = useMemo(() => {
+    if (logFilter === "selected") {
+      return selectedAgentCalls.length > 0 ? selectedAgentCalls : fallbackSelectedAgentLogs;
+    }
+    return allToolCalls.length > 0
+      ? allToolCalls
+      : [
+          {
+            id: "all-1",
+            time: "15:20",
+            agentId: "zeus",
+            agentName: zeusSubagent.name,
+            color: "#f59e0b",
+            toolName: "Task",
+            status: "success" as const,
+            text: isWorking
+              ? "Mengkoordinasikan sub-agen untuk menyelesaikan tugas."
+              : "Sistem idle, seluruh agen standby.",
+          },
+          {
+            id: "all-2",
+            time: "15:21",
+            agentId: "explorer",
+            agentName: explorerSubagent.name,
+            color: "#38bdf8",
+            toolName: "Read",
+            status: "success" as const,
+            text: isWorking
+              ? "Sinkronisasi spesifikasi & tipe kontrak selesai."
+              : "Spesifikasi siap digunakan kapan saja.",
+          },
+          {
+            id: "all-3",
+            time: "15:22",
+            agentId: "fixer",
+            agentName: fixerSubagent.name,
+            color: "#10b981",
+            toolName: "Write",
+            status: "success" as const,
+            text: isWorking
+              ? "Implementasi kode bersih, bebas dari slop."
+              : "Workspace bersih, siap menerima tugas.",
+          },
+          {
+            id: "all-4",
+            time: "15:23",
+            agentId: "test-runner",
+            agentName: testRunnerSubagent.name,
+            color: "#ec4899",
+            toolName: "Bash",
+            status: "success" as const,
+            text: "Semua pengujian dan boundary security terverifikasi (117/117 pass).",
+          },
+        ];
+  }, [
+    logFilter,
+    selectedAgentCalls,
+    fallbackSelectedAgentLogs,
+    allToolCalls,
+    isWorking,
+    zeusSubagent,
+    explorerSubagent,
+    fixerSubagent,
+    testRunnerSubagent,
+  ]);
 
   // Resolve permission directly from Office
   const handleResolvePermission = async (decision: "allow-once" | "allow-session" | "deny") => {
@@ -586,6 +1145,199 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
     );
   };
 
+  // Render Junior Assistant / Mini Chibi Helper ("Anak Buah" / Sub-Squad Minion)
+  const renderMiniHelperSprite = (
+    archetype: CharacterArchetypeId,
+    working: boolean,
+  ) => {
+    const arch = getCharacterArchetype(archetype);
+    const bounce = working
+      ? Math.sin((cycleTick + 5) * 0.45) * 2.5
+      : Math.sin(cycleTick * 0.15) * 0.8;
+    const isBlinking = cycleTick % 26 < 2;
+
+    return (
+      <g
+        className="mini-helper-sprite"
+        transform={`scale(0.58) translate(0, ${bounce})`}
+      >
+        {/* Helper Shadow */}
+        <ellipse cx="0" cy="8" rx="8" ry="3" fill="#000000" opacity="0.35" />
+
+        {/* Small Body & Outfit matching Lead Archetype */}
+        <rect
+          x="-7"
+          y="-3"
+          width="14"
+          height="11"
+          rx="3"
+          fill={arch.color}
+          stroke="#0f172a"
+          strokeWidth="0.8"
+        />
+        {/* Team Apron / Inner Vest */}
+        <rect
+          x="-3"
+          y="-3"
+          width="6"
+          height="8"
+          fill={arch.accentBg}
+          opacity="0.9"
+        />
+
+        {/* Tiny Round Head */}
+        <circle
+          cx="0"
+          cy="-11"
+          r="9"
+          fill="#fed7aa"
+          stroke="#fbcfe8"
+          strokeWidth="0.5"
+        />
+
+        {/* Rosy Cheeks */}
+        <ellipse cx="-5" cy="-8" rx="2" ry="1.2" fill="#fb7185" opacity="0.65" />
+        <ellipse cx="5" cy="-8" rx="2" ry="1.2" fill="#fb7185" opacity="0.65" />
+
+        {/* Anime Eyes */}
+        {isBlinking ? (
+          <>
+            <path
+              d="M -6 -11 Q -4 -13 -2 -11"
+              fill="none"
+              stroke="#1e293b"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+            />
+            <path
+              d="M 2 -11 Q 4 -13 6 -11"
+              fill="none"
+              stroke="#1e293b"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+            />
+          </>
+        ) : (
+          <>
+            <circle cx="-4" cy="-11" r="2" fill="#1e293b" />
+            <circle cx="4" cy="-11" r="2" fill="#1e293b" />
+            <circle cx="-4" cy="-11" r="1.1" fill={arch.color} />
+            <circle cx="4" cy="-11" r="1.1" fill={arch.color} />
+            <circle cx="-4.6" cy="-11.8" r="0.6" fill="#ffffff" />
+            <circle cx="3.4" cy="-11.8" r="0.6" fill="#ffffff" />
+          </>
+        )}
+
+        {/* Cute Ahoge / Mini Cap / Hair */}
+        <path
+          d="M -10 -13 Q -5 -21 0 -21 Q 5 -21 10 -13 Q 8 -9 9 -5 Q 5 -10 0 -11 Q -5 -10 -9 -5 Q -8 -9 -10 -13 Z"
+          fill={arch.color}
+        />
+        {/* Animated Sprightly Ahoge Cowlick */}
+        <path
+          d="M 0 -21 Q 4 -28 7 -26 Q 3 -24 0 -20"
+          fill="none"
+          stroke={arch.color}
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          transform={`rotate(${Math.sin((cycleTick + 3) * 0.3) * 10} 0 -21)`}
+        />
+
+        {/* Hands & Specialty Tool/Tablet */}
+        {working ? (
+          <>
+            {/* Actively Holding & Tapping Mini Tablet / Device */}
+            <rect
+              x="-6"
+              y="1"
+              width="12"
+              height="8"
+              rx="1.5"
+              fill="#0f172a"
+              stroke={arch.color}
+              strokeWidth="0.8"
+            />
+            {/* Live Data / Code Screen */}
+            <rect
+              x="-4.5"
+              y="2.5"
+              width="9"
+              height="5"
+              rx="1"
+              fill="#020617"
+            />
+            <line
+              x1="-3"
+              y1="4"
+              x2={1 + (cycleTick % 4)}
+              y2="4"
+              stroke={arch.color}
+              strokeWidth="0.9"
+            />
+            <line
+              x1="-3"
+              y1="6"
+              x2="2"
+              y2="6"
+              stroke="#38bdf8"
+              strokeWidth="0.7"
+            />
+
+            {/* Little Hands Tapping */}
+            <circle cx="-5" cy={4 + (cycleTick % 4 < 2 ? 0 : 1)} r="1.6" fill="#fed7aa" />
+            <circle cx="5" cy={4 + (cycleTick % 4 < 2 ? 1 : 0)} r="1.6" fill="#fed7aa" />
+
+            {/* Floating Spark / Activity Bubble above Head */}
+            <g
+              transform={`translate(0, ${-25 - (cycleTick % 8) * 0.8})`}
+              opacity={Math.max(0.2, 1 - (cycleTick % 8) * 0.1)}
+            >
+              <circle cx="0" cy="0" r="4.5" fill="#1e293b" stroke={arch.color} strokeWidth="0.8" />
+              {archetype === "hermes" ? (
+                // Mini gear / code bracket
+                <text x="0" y="2.5" textAnchor="middle" fill="#10b981" fontSize="5.5" fontWeight="bold">
+                  ⚙
+                </text>
+              ) : archetype === "athena" ? (
+                // Mini scan / doc
+                <text x="0" y="2.5" textAnchor="middle" fill="#38bdf8" fontSize="5.5" fontWeight="bold">
+                  📄
+                </text>
+              ) : archetype === "apollo" ? (
+                // Mini checkmark
+                <text x="0" y="2.5" textAnchor="middle" fill="#ec4899" fontSize="5.5" fontWeight="bold">
+                  ✓
+                </text>
+              ) : (
+                <text x="0" y="2.5" textAnchor="middle" fill={arch.color} fontSize="5" fontWeight="bold">
+                  ⚡
+                </text>
+              )}
+            </g>
+          </>
+        ) : (
+          <>
+            {/* Resting / Holding Clipboard */}
+            <rect
+              x="1"
+              y="0"
+              width="7"
+              height="8"
+              rx="1.2"
+              fill="#1e293b"
+              stroke="#64748b"
+              strokeWidth="0.6"
+            />
+            <line x1="2.5" y1="2.5" x2="6.5" y2="2.5" stroke="#94a3b8" strokeWidth="0.6" />
+            <line x1="2.5" y1="4.5" x2="5.5" y2="4.5" stroke="#94a3b8" strokeWidth="0.6" />
+            <circle cx="-3" cy="3" r="1.5" fill="#fed7aa" />
+            <circle cx="2" cy="4" r="1.5" fill="#fed7aa" />
+          </>
+        )}
+      </g>
+    );
+  };
+
   // Check if a worker subagent is currently walking to report permission
   const isWorkerReporting = (worker: ResolvedSubagent) => {
     return isWaitingPermission && reportingWorker?.id === worker.id;
@@ -597,6 +1349,8 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
         "pixel-office-container",
         "clean-office-theme",
         isModal && "pixel-office-modal-mode",
+        displayMode === "docked" && "is-docked",
+        displayMode === "pip" && "is-pip",
         className,
       )}
       style={style}
@@ -631,9 +1385,56 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
           <span className="pixel-office-subagent-badge">
             {officeSubagents.length} Sub-Agents Active
           </span>
+          {totalWings > 1 && (
+            <div className="pixel-office-wing-switcher" role="tablist" aria-label="Office Wings">
+              {Array.from({ length: totalWings }, (_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeWing === i}
+                  className={cx("wing-btn", activeWing === i && "is-active")}
+                  onClick={() => setActiveWing(i)}
+                  title={`Tampilkan Sub-Agent di Wing ${String.fromCharCode(65 + i)}`}
+                >
+                  Wing {String.fromCharCode(65 + i)} ({i * WING_CAPACITY + 1}-{Math.min((i + 1) * WING_CAPACITY, officeSubagents.length)})
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="pixel-office-controls">
+          {/* Studio View Mode Switcher: Studio Canvas vs CrewAI Pipeline vs Buzz War Room */}
+          <div className="pixel-mode-segmented-control" role="group" aria-label="Office View Mode">
+            <button
+              type="button"
+              className={cx("mode-btn", officeViewMode === "canvas" && "is-active")}
+              onClick={() => setOfficeViewMode("canvas")}
+              title="Studio Canvas View"
+            >
+              Studio
+            </button>
+            <button
+              type="button"
+              className={cx("mode-btn", officeViewMode === "pipeline" && "is-active")}
+              onClick={() => setOfficeViewMode("pipeline")}
+              title="CrewAI Task Flow Pipeline"
+            >
+              <HugeiconsIcon icon={WorkflowSquare01Icon} size={12} className="btn-icon" />
+              Pipeline
+            </button>
+            <button
+              type="button"
+              className={cx("mode-btn", officeViewMode === "war-room" && "is-active")}
+              onClick={() => setOfficeViewMode("war-room")}
+              title="Block Buzz War Room & Audit Trail"
+            >
+              <HugeiconsIcon icon={Message01Icon} size={12} className="btn-icon" />
+              War Room
+            </button>
+          </div>
+
           <div className="pixel-mode-segmented-control" role="group" aria-label="Mode Operasi">
             <button
               type="button"
@@ -685,6 +1486,29 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
             {speed}x
           </button>
 
+          {isModal && onToggleDisplayMode && (
+            <div className="pixel-dock-mode-toggles" role="group" aria-label="Layout Tampilan">
+              <button
+                type="button"
+                className={cx("pixel-icon-btn", displayMode === "modal" && "is-active")}
+                onClick={() => onToggleDisplayMode("modal")}
+                title="Mode Dialog Layar Penuh (Center Modal)"
+                aria-label="Mode Dialog Penuh"
+              >
+                <HugeiconsIcon icon={Maximize01Icon} size={13} />
+              </button>
+              <button
+                type="button"
+                className={cx("pixel-icon-btn", displayMode === "docked" && "is-active")}
+                onClick={() => onToggleDisplayMode("docked")}
+                title="Dock ke Sisi Kanan (Split View dengan Chat - Bebas Ngetik & Baca)"
+                aria-label="Dock ke Sisi Kanan"
+              >
+                <HugeiconsIcon icon={LayoutRightIcon} size={13} />
+              </button>
+            </div>
+          )}
+
           {onClose && (
             <button
               type="button"
@@ -705,7 +1529,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
           <div className="hud-header">
             <span className="hud-badge-warning">
               <HugeiconsIcon icon={FlashIcon} size={14} />
-              PERSETUJUAN DI PERLUKAN DI VIRTUAL OFFICE
+              PERSETUJUAN DIPERLUKAN DI VIRTUAL OFFICE
             </span>
             <span className="hud-risk-tag">
               {(pendingPermission.risk || "HIGH").toUpperCase()} RISK
@@ -716,18 +1540,49 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               <span className="hud-agent-name">
                 {reportingWorker?.name || pendingPermission.agentName || "Sub-Agent"}
               </span>
-              <span className="hud-action-text">berjalan ke Zeus & meminta izin eksekusi tool:</span>
+              <span className="hud-action-text">
+                berjalan ke Zeus & meminta izin {permTargetInfo?.actionDesc || "eksekusi tool"}:
+              </span>
               <code className="hud-tool-tag">{pendingPermission.toolName || "Action"}</code>
             </div>
+
+            {/* Prominent Target File / Resource Badge */}
+            {permTargetInfo?.target && (
+              <div className="hud-target-row">
+                <HugeiconsIcon
+                  icon={permTargetInfo.isCommand ? CodeIcon : FileTextIcon}
+                  size={14}
+                  className="hud-target-icon"
+                />
+                <span className="hud-target-label">
+                  {permTargetInfo.isCommand ? "Perintah Shell:" : "Target File:"}
+                </span>
+                <code className="hud-target-path" title={permTargetInfo.target}>
+                  {permTargetInfo.target}
+                </code>
+              </div>
+            )}
+
+            {/* Structured / Syntax-Highlighted Preview Box */}
             {(pendingPermission.argsPreview !== undefined || pendingPermission.reason) && (
               <div className="hud-preview-box">
-                <code>
-                  {typeof pendingPermission.argsPreview === "string"
-                    ? pendingPermission.argsPreview
-                    : pendingPermission.argsPreview
-                      ? JSON.stringify(pendingPermission.argsPreview, null, 2)
-                      : pendingPermission.reason}
-                </code>
+                {permArgBlocks.length > 0 ? (
+                  <ToolDetailBlocks blocks={permArgBlocks} />
+                ) : permTargetInfo?.content ? (
+                  <pre className="hud-formatted-code">
+                    <code>{permTargetInfo.content}</code>
+                  </pre>
+                ) : (
+                  <pre className="hud-formatted-code">
+                    <code>
+                      {typeof pendingPermission.argsPreview === "string"
+                        ? pendingPermission.argsPreview
+                        : pendingPermission.argsPreview
+                          ? JSON.stringify(pendingPermission.argsPreview, null, 2)
+                          : pendingPermission.reason}
+                    </code>
+                  </pre>
+                )}
               </div>
             )}
           </div>
@@ -747,6 +1602,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               disabled={isResolvingPermission}
               onClick={() => void handleResolvePermission("allow-session")}
             >
+              <HugeiconsIcon icon={Clock01Icon} size={14} />
               Izinkan untuk Sesi Ini
             </button>
             <button
@@ -763,9 +1619,11 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
       )}
 
       {/* ── 3. High-Definition Isometric Anime Studio Canvas ── */}
-      <div className="pixel-office-canvas-wrap">
+      {officeViewMode === "canvas" && (
+        <div className="pixel-office-canvas-wrap">
+
         <svg
-          viewBox="0 0 860 410"
+          viewBox="0 0 900 510"
           className="pixel-office-svg"
           preserveAspectRatio="xMidYMid meet"
           role="img"
@@ -773,7 +1631,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
         >
           <defs>
             <clipPath id={`${clipId}-frame`}>
-              <rect x="0" y="0" width="860" height="410" rx="20" />
+              <rect x="0" y="0" width="900" height="510" rx="20" />
             </clipPath>
 
             <pattern id="parquetFloor" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -807,31 +1665,31 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
 
           <g clipPath={`url(#${clipId}-frame)`}>
             {/* ── A. Tokyo Twilight Panorama & Window Bay ── */}
-            <rect x="0" y="0" width="860" height="125" fill="#0f172a" />
-            <rect x="140" y="10" width="580" height="98" rx="8" fill="#182234" stroke="#334155" strokeWidth="2" />
-            <rect x="144" y="14" width="572" height="90" rx="6" fill="url(#twilightSky)" />
+            <rect x="0" y="0" width="900" height="130" fill="#0f172a" />
+            <rect x="150" y="10" width="600" height="104" rx="8" fill="#182234" stroke="#334155" strokeWidth="2" />
+            <rect x="154" y="14" width="592" height="96" rx="6" fill="url(#twilightSky)" />
 
             {/* Skyline Buildings */}
             <g fill="#0b1120">
-              <rect x="155" y="48" width="22" height="56" rx="1" />
-              <rect x="182" y="38" width="30" height="66" rx="1" />
-              <rect x="218" y="55" width="25" height="49" rx="1" />
-              <rect x="250" y="30" width="35" height="74" rx="1" />
-              <rect x="290" y="45" width="28" height="59" rx="1" />
-              <polygon points="360,20 364,20 367,104 357,104" fill="#e11d48" opacity="0.9" />
-              <line x1="362" y1="12" x2="362" y2="20" stroke="#f8fafc" strokeWidth="1" />
-              <rect x="420" y="40" width="34" height="64" rx="1" />
-              <rect x="460" y="28" width="40" height="76" rx="1" />
-              <rect x="506" y="50" width="26" height="54" rx="1" />
-              <rect x="538" y="36" width="32" height="68" rx="1" />
-              <rect x="576" y="44" width="28" height="60" rx="1" />
-              <rect x="610" y="34" width="36" height="70" rx="1" />
-              <rect x="652" y="52" width="25" height="52" rx="1" />
-              <rect x="682" y="42" width="28" height="62" rx="1" />
+              <rect x="165" y="48" width="24" height="62" rx="1" />
+              <rect x="195" y="38" width="32" height="72" rx="1" />
+              <rect x="235" y="55" width="28" height="55" rx="1" />
+              <rect x="270" y="30" width="38" height="80" rx="1" />
+              <rect x="315" y="45" width="30" height="65" rx="1" />
+              <polygon points="380,20 384,20 387,110 377,110" fill="#e11d48" opacity="0.9" />
+              <line x1="382" y1="12" x2="382" y2="20" stroke="#f8fafc" strokeWidth="1" />
+              <rect x="435" y="40" width="36" height="70" rx="1" />
+              <rect x="480" y="28" width="42" height="82" rx="1" />
+              <rect x="530" y="50" width="28" height="60" rx="1" />
+              <rect x="565" y="36" width="34" height="74" rx="1" />
+              <rect x="608" y="44" width="30" height="66" rx="1" />
+              <rect x="645" y="34" width="38" height="76" rx="1" />
+              <rect x="690" y="52" width="28" height="58" rx="1" />
+              <rect x="722" y="42" width="20" height="68" rx="1" />
             </g>
 
             {/* Wall Clock (Center) */}
-            <g transform="translate(430, 36)">
+            <g transform="translate(450, 38)">
               <circle cx="0" cy="0" r="14" fill="#1e293b" stroke="#475569" strokeWidth="1.5" />
               <circle cx="0" cy="0" r="12" fill="#0f172a" />
               <line x1="0" y1="-10" x2="0" y2="-8" stroke="#94a3b8" strokeWidth="1" />
@@ -852,34 +1710,40 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
             </g>
 
             {/* Baseboard Trim */}
-            <rect x="0" y="122" width="860" height="6" fill="#293548" />
+            <rect x="0" y="130" width="900" height="6" fill="#293548" />
 
             {/* ── B. Office Parquet Floor ── */}
-            <rect x="0" y="128" width="860" height="282" fill="url(#parquetFloor)" />
+            <rect x="0" y="136" width="900" height="374" fill="url(#parquetFloor)" />
             <g stroke="#1b2538" strokeWidth="0.8" opacity="0.6">
-              {[165, 205, 245, 285, 325, 365].map((y) => (
-                <line key={`floor-h-${y}`} x1="0" y1={y} x2="860" y2={y} />
+              {[185, 235, 285, 335, 385, 435, 485].map((y) => (
+                <line key={`floor-h-${y}`} x1="0" y1={y} x2="900" y2={y} />
               ))}
               {[80, 200, 320, 440, 560, 680, 800].map((x) => (
-                <line key={`floor-v1-${x}`} x1={x} y1="128" x2={x} y2="205" strokeDasharray="2 12" />
+                <line key={`floor-v1-${x}`} x1={x} y1="136" x2={x} y2="235" strokeDasharray="2 12" />
               ))}
-              {[140, 260, 380, 500, 620, 740].map((x) => (
-                <line key={`floor-v2-${x}`} x1={x} y1="205" x2={x} y2="285" strokeDasharray="2 12" />
+              {[140, 260, 380, 500, 620, 740, 860].map((x) => (
+                <line key={`floor-v2-${x}`} x1={x} y1="235" x2={x} y2="335" strokeDasharray="2 12" />
+              ))}
+              {[80, 200, 320, 440, 560, 680, 800].map((x) => (
+                <line key={`floor-v3-${x}`} x1={x} y1="335" x2={x} y2="435" strokeDasharray="2 12" />
+              ))}
+              {[140, 260, 380, 500, 620, 740, 860].map((x) => (
+                <line key={`floor-v4-${x}`} x1={x} y1="435" x2={x} y2="510" strokeDasharray="2 12" />
               ))}
             </g>
 
             {/* ── C. Central Collaboration Zone (AI AGENT TEAM) ── */}
-            <g transform="translate(430, 235)">
-              <circle cx="0" cy="0" r="78" fill="#161f30" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="5 5" opacity="0.8" />
-              <circle cx="0" cy="0" r="72" fill="#111827" />
-              <circle cx="0" cy="0" r="65" fill="url(#hubCenterGlow)" />
-              <circle cx="0" cy="0" r="50" fill="#1e293b" stroke="#475569" strokeWidth="2" />
-              <circle cx="0" cy="0" r="46" fill="#0f172a" />
+            <g transform="translate(450, 325)">
+              <circle cx="0" cy="0" r="70" fill="#161f30" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="5 5" opacity="0.8" />
+              <circle cx="0" cy="0" r="64" fill="#111827" />
+              <circle cx="0" cy="0" r="56" fill="url(#hubCenterGlow)" />
+              <circle cx="0" cy="0" r="44" fill="#1e293b" stroke="#475569" strokeWidth="2" />
+              <circle cx="0" cy="0" r="40" fill="#0f172a" />
 
               <circle
                 cx="0"
                 cy="0"
-                r={isWorking ? 38 + (animationTick % 8) * 0.4 : 38}
+                r={isWorking ? 34 + (animationTick % 8) * 0.4 : 34}
                 fill="none"
                 stroke="#0284c7"
                 strokeWidth="1.5"
@@ -889,7 +1753,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
 
               <text
                 x="0"
-                y="-10"
+                y="-8"
                 textAnchor="middle"
                 fill="#38bdf8"
                 fontSize="8"
@@ -901,7 +1765,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               </text>
               <text
                 x="0"
-                y="6"
+                y="7"
                 textAnchor="middle"
                 fill="#94a3b8"
                 fontSize="7"
@@ -919,8 +1783,8 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
 
             {/* ═══════════ POD 1: ZEUS (Lead Orchestrator - Top Left) ═══════════ */}
             <g
-              transform="translate(200, 155)"
-              onClick={() => setSelectedAgentId("zeus")}
+              transform="translate(175, 205)"
+              onClick={() => handleSelectAgent("zeus")}
               style={{ cursor: "pointer" }}
             >
               <rect
@@ -942,6 +1806,38 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               <g transform="translate(25, -16)">
                 {renderChibiSprite("zeus", isWorking)}
               </g>
+
+              {/* Zeus Junior Dispatch Helper ("Anak Buah" Zeus) */}
+              <g transform="translate(62, -14)">
+                {renderMiniHelperSprite("zeus", isWorking)}
+              </g>
+
+              {/* Zeus Squad Pill Badge */}
+              {isWorking && (
+                <g transform="translate(44, -36)">
+                  <rect
+                    x="-2"
+                    y="-1"
+                    width="36"
+                    height="11"
+                    rx="5.5"
+                    fill="rgba(245, 158, 11, 0.2)"
+                    stroke="#f59e0b"
+                    strokeWidth="0.8"
+                  />
+                  <text
+                    x="16"
+                    y="7"
+                    textAnchor="middle"
+                    fill="#fde68a"
+                    fontSize="5.5"
+                    fontWeight="700"
+                    fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif"
+                  >
+                    DISPATCH
+                  </text>
+                </g>
+              )}
 
               {/* Executive Wooden Desk */}
               <rect x="-80" y="-8" width="160" height="38" rx="8" fill="url(#woodDeskTop)" stroke="#475569" strokeWidth="1" />
@@ -968,7 +1864,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               {/* Desk Front Nameplate */}
               <rect x="-76" y="12" width="152" height="20" rx="10" fill="#141a26" stroke="#2a354c" strokeWidth="0.8" />
               <text x="-66" y="25" fill="#f8fafc" fontSize="8" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="600">
-                {zeusSubagent.name}
+                {cleanAgentName(zeusSubagent.name)}
               </text>
               <rect x="24" y="15" width="46" height="14" rx="7" fill="rgba(245, 158, 11, 0.16)" />
               <text x="47" y="25" textAnchor="middle" fill="#f59e0b" fontSize="6.5" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="600">
@@ -991,7 +1887,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
             </g>
 
             {/* ═══════════ DYNAMIC WORKER SUBAGENT DESK PODS ═══════════ */}
-            {officeSubagents.map((worker, index) => {
+            {displayedWorkers.map((worker, index) => {
               const slot = DESK_SLOTS[index % DESK_SLOTS.length];
               const arch = getCharacterArchetype(worker.archetype);
               const isSelected = selectedAgentId === worker.id;
@@ -1002,7 +1898,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
                 <g
                   key={worker.id}
                   transform={`translate(${slot.x}, ${slot.y})`}
-                  onClick={() => setSelectedAgentId(worker.id)}
+                  onClick={() => handleSelectAgent(worker.id)}
                   style={{ cursor: "pointer" }}
                 >
                   <rect
@@ -1023,7 +1919,10 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
                   {/* Character sitting at desk if NOT walking */}
                   {!isWalkingNow ? (
                     <g transform="translate(25, -16)">
-                      {renderChibiSprite(worker.archetype, isWorking)}
+                      {renderChibiSprite(
+                        worker.archetype,
+                        isWorking && (!activeChatWorkerId || activeChatWorkerId === worker.id),
+                      )}
                     </g>
                   ) : (
                     // Walking indicator at empty desk
@@ -1047,10 +1946,64 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
                         fontWeight="bold"
                         fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif"
                       >
-                        {isReporting ? "🚶 BUTUH IZIN" : "🚶 REPORT"}
+                        {isReporting ? "BUTUH IZIN" : "REPORT"}
                       </text>
                     </g>
                   )}
+
+                  {/* Junior Assistant Helper ("Anak Buah" / Child Subagent Helper) */}
+                  {(() => {
+                    const parallelCount = activeDelegationsPerAgent.get(worker.id) || 1;
+                    const isParallelActive = isWorking && parallelCount > 1;
+
+                    return (
+                      <>
+                        <g transform={`translate(${isParallelActive ? 54 : 62}, -14)`}>
+                          {renderMiniHelperSprite(
+                            worker.archetype,
+                            !isWalkingNow && isWorking && (!activeChatWorkerId || activeChatWorkerId === worker.id),
+                          )}
+                        </g>
+
+                        {/* If multiple parallel subagents running, render 2nd junior helper */}
+                        {isParallelActive && (
+                          <g transform="translate(70, -10)">
+                            {renderMiniHelperSprite(
+                              worker.archetype,
+                              !isWalkingNow && isWorking,
+                            )}
+                          </g>
+                        )}
+
+                        {/* Active Squad Indicator Pill */}
+                        {isWorking && (!activeChatWorkerId || activeChatWorkerId === worker.id) && (
+                          <g transform={`translate(${isParallelActive ? 36 : 44}, -36)`}>
+                            <rect
+                              x="-2"
+                              y="-1"
+                              width={isParallelActive ? 48 : 36}
+                              height="11"
+                              rx="5.5"
+                              fill={arch.accentBg}
+                              stroke={arch.color}
+                              strokeWidth="0.8"
+                            />
+                            <text
+                              x={isParallelActive ? 22 : 16}
+                              y="7"
+                              textAnchor="middle"
+                              fill={arch.color}
+                              fontSize="5.5"
+                              fontWeight="700"
+                              fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif"
+                            >
+                              {isParallelActive ? `⚡ ${parallelCount}x PARALLEL` : "SQUAD +1"}
+                            </text>
+                          </g>
+                        )}
+                      </>
+                    );
+                  })()}
 
                   {/* Wooden Desk */}
                   <rect x="-80" y="-8" width="160" height="38" rx="8" fill="url(#woodDeskTop)" stroke="#475569" strokeWidth="1" />
@@ -1093,11 +2046,11 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
                   {/* Nameplate */}
                   <rect x="-76" y="12" width="152" height="20" rx="10" fill="#141a26" stroke="#2a354c" strokeWidth="0.8" />
                   <text x="-66" y="25" fill="#f8fafc" fontSize="8" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="600">
-                    {worker.name}
+                    {cleanAgentName(worker.name)}
                   </text>
-                  <rect x="22" y="15" width="50" height="14" rx="7" fill={arch.accentBg} />
-                  <text x="47" y="25" textAnchor="middle" fill={arch.color} fontSize="6.5" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="600">
-                    {worker.role.replace("Task(", "").replace(")", "").slice(0, 8)}
+                  <rect x="18" y="15" width="54" height="14" rx="7" fill={arch.accentBg} />
+                  <text x="45" y="25" textAnchor="middle" fill={arch.color} fontSize="6.5" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="600">
+                    {formatRoleBadge(worker.role)}
                   </text>
 
                   <circle
@@ -1108,14 +2061,40 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
                   />
 
                   {/* Speech Bubbles */}
-                  {worker.id === "fixer" && hermesBubble && !isWaitingPermission && (
-                    <g transform="translate(-40, -82)">
-                      <path d="M 20 28 L 28 35 L 34 28 Z" fill="#111827" />
-                      <rect x="0" y="0" width="175" height="28" rx="12" fill="#111827" stroke="#10b981" strokeWidth="1.2" />
-                      <text x="87" y="18" textAnchor="middle" fill="#dcfce7" fontSize="8.5" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="500">
-                        {hermesBubble}
-                      </text>
-                    </g>
+                  {!isWaitingPermission && isWorking && (
+                    worker.id === "fixer" && hermesBubble ? (
+                      <g transform="translate(-40, -82)">
+                        <path d="M 20 28 L 28 35 L 34 28 Z" fill="#111827" />
+                        <rect x="0" y="0" width="175" height="28" rx="12" fill="#111827" stroke="#10b981" strokeWidth="1.2" />
+                        <text x="87" y="18" textAnchor="middle" fill="#dcfce7" fontSize="8.5" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="500">
+                          {hermesBubble}
+                        </text>
+                      </g>
+                    ) : worker.id === "explorer" && !athenaIsWalking && athenaBubble ? (
+                      <g transform="translate(-40, -82)">
+                        <path d="M 20 28 L 28 35 L 34 28 Z" fill="#111827" />
+                        <rect x="0" y="0" width="175" height="28" rx="12" fill="#111827" stroke="#38bdf8" strokeWidth="1.2" />
+                        <text x="87" y="18" textAnchor="middle" fill="#e0f2fe" fontSize="8.5" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="500">
+                          {athenaBubble}
+                        </text>
+                      </g>
+                    ) : worker.id === "test-runner" && activeChatWorkerId === "test-runner" ? (
+                      <g transform="translate(-40, -82)">
+                        <path d="M 20 28 L 28 35 L 34 28 Z" fill="#111827" />
+                        <rect x="0" y="0" width="175" height="28" rx="12" fill="#111827" stroke="#ec4899" strokeWidth="1.2" />
+                        <text x="87" y="18" textAnchor="middle" fill="#fce7f3" fontSize="8.5" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="500">
+                          {latestLiveActivity?.target ? `Test: ${latestLiveActivity.target}` : "Menjalankan verifikasi test..."}
+                        </text>
+                      </g>
+                    ) : activeChatWorkerId === worker.id && latestLiveActivity ? (
+                      <g transform="translate(-40, -82)">
+                        <path d="M 20 28 L 28 35 L 34 28 Z" fill="#111827" />
+                        <rect x="0" y="0" width="175" height="28" rx="12" fill="#111827" stroke={arch.color} strokeWidth="1.2" />
+                        <text x="87" y="18" textAnchor="middle" fill="#f8fafc" fontSize="8.5" fontFamily="'Google Sans', 'Google Sans Text', var(--font-sans), sans-serif" fontWeight="500">
+                          {latestLiveActivity.toolName}: {latestLiveActivity.target || "eksekusi"}
+                        </text>
+                      </g>
+                    ) : null
                   )}
                 </g>
               );
@@ -1127,11 +2106,11 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               const workerIdx = officeSubagents.findIndex((w) => w.id === reportingWorker.id);
               const slot = DESK_SLOTS[Math.max(0, workerIdx) % DESK_SLOTS.length];
               const tWalk = Math.min(1, (cycleTick % 40) / 30); // 0 to 1
-              // Walk path towards Zeus at (280, 165)
+              // Walk path towards Zeus at (250, 205)
               const startX = slot.x;
               const startY = slot.y;
-              const targetX = 280;
-              const targetY = 165;
+              const targetX = 250;
+              const targetY = 205;
               const currentX = startX + (targetX - startX) * tWalk;
               const currentY = startY + (targetY - startY) * tWalk;
               const stepBob = cycleTick % 6 < 3 ? -2 : 2;
@@ -1163,8 +2142,8 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
             {athenaIsWalking && (() => {
               const tWalk = (cycleTick - 30) / 44;
               const walkPhase = Math.sin(tWalk * Math.PI);
-              const walkX = 670 - walkPhase * 280;
-              const walkY = 175 + walkPhase * 55;
+              const walkX = 725 - walkPhase * 275;
+              const walkY = 205 + walkPhase * 40;
               const stepBob = cycleTick % 6 < 3 ? -2 : 2;
 
               return (
@@ -1187,6 +2166,164 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
           </g>
         </svg>
       </div>
+      )}
+
+      {/* ── Alternate View: CrewAI Task Flow Pipeline ── */}
+      {officeViewMode === "pipeline" && (
+        <div className="pixel-office-pipeline-view">
+          <div className="pipeline-view-header">
+            <div className="pipeline-header-title">
+              <HugeiconsIcon icon={WorkflowSquare01Icon} size={18} color="#f59e0b" />
+              <span>Multi-Agent Task Flow: Feature Delivery</span>
+            </div>
+            <span className="pipeline-view-status-chip">SEQUENTIAL TASK PIPELINE</span>
+          </div>
+
+          <div className="pipeline-steps-grid">
+            {[
+              {
+                step: "01",
+                role: "Explorer",
+                agent: "Athena",
+                title: "Codebase Survey & Reconnaissance",
+                desc: "Memindai arsitektur, symbol call-sites, dan file target.",
+                status: isWorking ? "Completed" : "Standby",
+                output: "Discovered 4 affected files: shared, agent-runtime, desktop",
+              },
+              {
+                step: "02",
+                role: "Fixer",
+                agent: "Hermes",
+                title: "Code Implementation & Patching",
+                desc: "Menulis modifikasi kode dan memvalidasi kontrak schema.",
+                status: isWaitingPermission ? "Waiting Permission" : isWorking ? "Running" : "Standby",
+                output: "Applying changes with shared context buffer injection",
+              },
+              {
+                step: "03",
+                role: "Code Reviewer",
+                agent: "Artemis",
+                title: "Quality & Security Audit",
+                desc: "Memeriksa edge-case, regresi tipe, dan kompatibilitas API.",
+                status: "Queued",
+                output: "Pending completion of step 2",
+              },
+              {
+                step: "04",
+                role: "Test Runner",
+                agent: "Apollo",
+                title: "Automated Suite Verification",
+                desc: "Eksekusi test runner dan verifikasi green status.",
+                status: "Queued",
+                output: "Pending completion of step 3",
+              },
+            ].map((st) => (
+              <div key={st.step} className={cx("pipeline-step-card", st.status === "Running" && "is-active")}>
+                <div className="step-card-top">
+                  <span className="step-num">{st.step}</span>
+                  <span className="step-role-badge">{st.role} ({st.agent})</span>
+                  <span className={cx("step-status-chip", st.status === "Running" ? "is-live" : st.status.includes("Waiting") ? "is-warning" : "is-idle")}>
+                    {st.status}
+                  </span>
+                </div>
+                <h4 className="step-card-title">{st.title}</h4>
+                <p className="step-card-desc">{st.desc}</p>
+                <div className="step-card-scratchpad">
+                  <span className="scratchpad-label">Shared Scratchpad Output:</span>
+                  <code className="scratchpad-val">{st.output}</code>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Alternate View: Block Buzz War Room & Audit Trail ── */}
+      {officeViewMode === "war-room" && (
+        <div className="pixel-office-war-room-view">
+          <div className="war-room-header">
+            <div className="war-room-title">
+              <HugeiconsIcon icon={Message01Icon} size={18} color="#38bdf8" />
+              <span>Block Buzz Collaborative War Room &amp; Audit Trail</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span className="war-room-relay-badge">Signed Event Relay: Localhost</span>
+              <button
+                type="button"
+                className="war-room-export-btn"
+                data-testid="war-room-export-btn"
+                onClick={handleExportWarRoomAudit}
+                title="Ekspor riwayat event audit ke Markdown"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  padding: "3px 8px",
+                  borderRadius: 4,
+                  fontSize: 11.5,
+                  background: "rgba(56, 189, 248, 0.15)",
+                  color: "#7dd3fc",
+                  border: "1px solid rgba(56, 189, 248, 0.35)",
+                  cursor: "pointer",
+                }}
+              >
+                <HugeiconsIcon icon={Download01Icon} size={13} />
+                <span>Export MD</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="war-room-timeline">
+            {[
+              {
+                id: "ev-1",
+                time: "Baru saja",
+                agent: "Zeus (Lead)",
+                role: "Orchestrator",
+                event: "Flow Started",
+                detail: "Memulai workflow Feature Delivery dengan shared context scratchpad.",
+              },
+              {
+                id: "ev-2",
+                time: "1 menit lalu",
+                agent: "Athena",
+                role: "Explorer",
+                event: "Task Completed & Context Handoff",
+                detail: "Menyimpan 4 target file ke dalam scratchpad memory untuk Hermes.",
+              },
+              {
+                id: "ev-3",
+                time: "2 menit lalu",
+                agent: "Hermes",
+                role: "Fixer",
+                event: "Tool Execution Dispatched",
+                detail: "Eksekusi replace_file_content pada modul UI dan styling.",
+              },
+              {
+                id: "ev-4",
+                time: "3 menit lalu",
+                agent: "Apollo",
+                role: "Test Runner",
+                event: "Suite Validation Asserted",
+                detail: "Verifikasi 3 unit test suites berjalan 100% green.",
+              },
+            ].map((ev) => (
+              <div key={ev.id} className="war-room-timeline-item">
+                <div className="timeline-item-time">{ev.time}</div>
+                <div className="timeline-item-body">
+                  <div className="timeline-item-header">
+                    <span className="timeline-agent-name">{ev.agent}</span>
+                    <span className="timeline-agent-role">({ev.role})</span>
+                    <span className="timeline-event-badge">{ev.event}</span>
+                  </div>
+                  <p className="timeline-event-detail">{ev.detail}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
 
       {/* ── 4. Tactical Status, Active Dossier & Telemetry ── */}
       <div className="pixel-office-dossier-grid">
@@ -1201,10 +2338,10 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
                 border: `1.5px solid ${activeAgent.color}`,
               }}
             >
-              {activeAgent.avatarChar}
+              <HugeiconsIcon icon={getArchetypeHugeIcon(activeAgent.archetype)} size={20} />
             </div>
             <div className="pixel-card-identity">
-              <span className="agent-identity-name">{activeAgent.name}</span>
+              <span className="agent-identity-name">{cleanAgentName(activeAgent.name)}</span>
               <span className="agent-identity-role" style={{ color: activeAgent.color }}>
                 {activeAgent.role}
               </span>
@@ -1230,35 +2367,69 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
             </div>
           </div>
 
-          <div className="pixel-card-metrics">
-            <div className="pixel-metric-item">
-              <span className="metric-label">TOOLS & SKILLS</span>
-              <span className="metric-value metric-value-text" title={activeAgent.stats}>
-                {activeAgent.stats}
-              </span>
-            </div>
-            <div className="pixel-metric-item">
-              <span className="metric-label">LOAD</span>
-              <div className="metric-bar-track">
-                <div
-                  className="metric-bar-fill"
-                  style={{
-                    width: `${isWorking ? activeAgent.load : 18}%`,
-                    backgroundColor: activeAgent.color,
-                  }}
-                />
+          <div className="pixel-card-metrics dossier-spec-grid">
+            <div className="dossier-spec-row">
+              <div className="dossier-spec-item">
+                <span className="metric-label dossier-spec-label">LOAD</span>
+                <div className="dossier-load-bar-wrap">
+                  <div className="metric-bar-track dossier-load-track">
+                    <div
+                      className="metric-bar-fill dossier-load-fill"
+                      style={{
+                        width: `${isWorking ? activeAgent.load : 18}%`,
+                        backgroundColor: activeAgent.color,
+                      }}
+                    />
+                  </div>
+                  <span className="metric-value dossier-load-val">
+                    {isWorking ? `${activeAgent.load}%` : "18%"}
+                  </span>
+                </div>
               </div>
-              <span className="metric-value">
-                {isWorking ? `${activeAgent.load}%` : "18%"}
-              </span>
+
+              <div className="dossier-spec-item dossier-spec-squad">
+                <span className="metric-label dossier-spec-label" title="SUB-SQUAD / ANAK BUAH">
+                  SUB-SQUAD / ANAK BUAH
+                </span>
+                <span
+                  className="metric-value dossier-squad-badge"
+                  style={{
+                    color: activeAgent.color,
+                    background: activeAgent.accentBg,
+                    border: `1px solid ${activeAgent.color}40`,
+                  }}
+                >
+                  {activeAgent.id === "zeus"
+                    ? "Chief Dispatcher (Standby)"
+                    : (activeDelegationsPerAgent.get(activeAgent.id) || 1) > 1
+                      ? `⚡ ${activeDelegationsPerAgent.get(activeAgent.id)}x Parallel (Aktif)`
+                      : "1x Junior Helper (Aktif)"}
+                </span>
+              </div>
             </div>
+
+            {activeAgentTools.length > 0 && (
+              <div className="dossier-tools-section">
+                <div className="dossier-tools-header">
+                  <span className="metric-label dossier-spec-label">TOOLS &amp; SKILLS</span>
+                  <span className="dossier-tools-count">{activeAgentTools.length} tools</span>
+                </div>
+                <div className="dossier-tool-chips" role="list" aria-label="Available tools">
+                  {activeAgentTools.map((tool) => (
+                    <span key={tool} className="dossier-tool-chip" role="listitem">
+                      {tool}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="pixel-card-task">
             <span className="task-label">CURRENT FOCUS:</span>
             <span className="task-desc">
               {isWaitingPermission
-                ? `⚠️ Agen dijeda sementara: Menunggu persetujuan user untuk tool "${pendingPermission?.toolName || "action"}" di chat.`
+                ? `Agen dijeda sementara: Menunggu persetujuan user untuk tool "${pendingPermission?.toolName || "action"}" di chat.`
                 : isWorking
                   ? activeAgent.task
                   : "Standby mode · Siap memproses prompt atau tugas baru dari pengguna."}
@@ -1276,13 +2447,50 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
         {/* Action Log Panel */}
         <div className="pixel-action-log-panel clean-log-panel">
           <div className="pixel-log-header">
-            <span className="pixel-log-title">AI AGENT TEAM TELEMETRY</span>
-            <span className="pixel-log-count">
-              {isWaitingPermission ? "PAUSED (APPROVAL NEEDED)" : isWorking ? "ACTIVE" : "STANDBY"}
-            </span>
+            <div className="pixel-log-header-left">
+              <span className="pixel-log-title">
+                {logFilter === "selected" ? (
+                  <>
+                    <span className="pixel-log-agent-chip" style={{ color: activeAgent.color }}>
+                      {cleanAgentName(activeAgent.name)}
+                    </span>{" "}
+                    ACTIVITY LOG
+                  </>
+                ) : (
+                  "AI AGENT TEAM TELEMETRY"
+                )}
+              </span>
+              <span className="pixel-log-count">
+                {displayedLogItems.length} ACTIONS
+              </span>
+            </div>
+
+            <div className="pixel-log-filter-tabs" role="tablist" aria-label="Log View Filter">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={logFilter === "selected"}
+                className={cx("log-filter-btn", logFilter === "selected" && "is-active")}
+                onClick={() => setLogFilter("selected")}
+                title={`Tampilkan riwayat log khusus ${cleanAgentName(activeAgent.name)}`}
+              >
+                {shortAgentTabLabel}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={logFilter === "all"}
+                className={cx("log-filter-btn", logFilter === "all" && "is-active")}
+                onClick={() => setLogFilter("all")}
+                title="Tampilkan seluruh aktivitas tim agent"
+              >
+                Semua Tim
+              </button>
+            </div>
           </div>
+
           <div className="pixel-log-list">
-            {isWaitingPermission && (
+            {isWaitingPermission && logFilter === "all" && (
               <div
                 className="pixel-log-row is-warning-row"
                 style={{
@@ -1298,39 +2506,41 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
                   System:
                 </span>
                 <span className="pixel-log-text" style={{ color: "#fef3c7" }}>
-                  ⚠️ Menunggu persetujuan user untuk &quot;{pendingPermission?.toolName || "action"}&quot; (
+                  <HugeiconsIcon icon={Alert02Icon} size={12} style={{ display: "inline-block", verticalAlign: "middle", marginRight: 4 }} />
+                  Menunggu persetujuan user untuk &quot;{pendingPermission?.toolName || "action"}&quot; (
                   {pendingPermission?.risk || "high"} risk). Agen dijeda sementara demi keamanan.
                 </span>
               </div>
             )}
-            <div className="pixel-log-row">
-              <span className="pixel-log-time">15:20</span>
-              <span className="pixel-log-sender" style={{ color: "#f59e0b" }}>Zeus:</span>
-              <span className="pixel-log-text">
-                {isWorking ? "Mengkoordinasikan sub-agen untuk menyelesaikan tugas." : "Sistem idle, seluruh agen standby."}
-              </span>
-            </div>
-            <div className="pixel-log-row">
-              <span className="pixel-log-time">15:21</span>
-              <span className="pixel-log-sender" style={{ color: "#38bdf8" }}>Athena:</span>
-              <span className="pixel-log-text">
-                {isWorking ? "Sinkronisasi spesifikasi & tipe kontrak selesai." : "Spesifikasi siap digunakan kapan saja."}
-              </span>
-            </div>
-            <div className="pixel-log-row">
-              <span className="pixel-log-time">15:22</span>
-              <span className="pixel-log-sender" style={{ color: "#10b981" }}>Hermes:</span>
-              <span className="pixel-log-text">
-                {isWorking ? "Implementasi kode bersih, bebas dari slop." : "Workspace bersih, siap menerima tugas."}
-              </span>
-            </div>
-            <div className="pixel-log-row">
-              <span className="pixel-log-time">15:23</span>
-              <span className="pixel-log-sender" style={{ color: "#ec4899" }}>Apollo:</span>
-              <span className="pixel-log-text">
-                Semua pengujian dan boundary security terverifikasi (117/117 pass).
-              </span>
-            </div>
+            {displayedLogItems.length > 0 ? (
+              displayedLogItems.map((call) => (
+                <div key={call.id} className="pixel-log-row">
+                  <span className="pixel-log-time">{call.time}</span>
+                  <span className="pixel-log-sender" style={{ color: call.color }}>
+                    {cleanAgentName(call.agentName)}:
+                  </span>
+                  {call.toolName && (
+                    <span
+                      className="pixel-log-tool-tag"
+                      style={{
+                        color: call.color,
+                        borderColor: `${call.color}40`,
+                        background: `${call.color}15`,
+                      }}
+                    >
+                      {call.toolName}
+                    </span>
+                  )}
+                  <span className="pixel-log-text">{call.text}</span>
+                </div>
+              ))
+            ) : (
+              <div className="pixel-log-empty">
+                <span className="pixel-log-text">
+                  Belum ada log aktivitas tercatat untuk agen ini.
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1340,13 +2550,17 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
 
 export interface PixelAgentsOfficeModalProps extends PixelAgentsOfficeProps {
   isOpen: boolean;
+  initialDisplayMode?: PixelOfficeDisplayMode;
 }
 
 export function PixelAgentsOfficeModal({
   isOpen,
   onClose,
+  initialDisplayMode = "modal",
   ...props
 }: PixelAgentsOfficeModalProps) {
+  const [displayMode, setDisplayMode] = useState<PixelOfficeDisplayMode>(initialDisplayMode);
+
   // ESC key listener to reliably close the modal
   useEffect(() => {
     if (!isOpen) return;
@@ -1361,22 +2575,42 @@ export function PixelAgentsOfficeModal({
 
   if (!isOpen) return null;
 
+  const isDocked = displayMode === "docked";
+  const isPip = displayMode === "pip";
+
   // Mount directly to document.body via portalToBody with explicit pointer-events
   return portalToBody(
     <div
-      className="overlay pixel-office-modal-backdrop"
-      onClick={onClose}
-      style={{ pointerEvents: "auto", cursor: "pointer" }}
+      className={cx(
+        "overlay pixel-office-modal-backdrop",
+        isDocked && "is-docked",
+        isPip && "is-pip",
+      )}
+      onClick={isDocked || isPip ? undefined : onClose}
+      style={{
+        pointerEvents: isDocked || isPip ? "none" : "auto",
+        cursor: isDocked || isPip ? "default" : "pointer",
+      }}
     >
       <div
-        className="pixel-office-modal-dialog"
+        className={cx(
+          "pixel-office-modal-dialog",
+          isDocked && "is-docked",
+          isPip && "is-pip",
+        )}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
-        aria-modal="true"
+        aria-modal={!isDocked && !isPip}
         aria-label="AI Agent Team Virtual Office"
-        style={{ cursor: "default" }}
+        style={{ cursor: "default", pointerEvents: "auto" }}
       >
-        <PixelAgentsOffice {...props} isModal onClose={onClose} />
+        <PixelAgentsOffice
+          {...props}
+          isModal
+          displayMode={displayMode}
+          onToggleDisplayMode={setDisplayMode}
+          onClose={onClose}
+        />
       </div>
     </div>,
   );

@@ -53,6 +53,14 @@ import {
 } from "./TranscriptMenu";
 import { useSmoothText } from "../../../hooks/useSmoothText";
 import { TurnProcess } from "./TurnProcess";
+import { TurnReviewChangesBar } from "./TurnReviewChangesBar";
+import { ImplementationPlanCard } from "./ImplementationPlanCard";
+import { SubagentSquadCard, type SquadMemberTask } from "./SubagentSquadCard";
+import {
+  reviewChangesFromMessages,
+  summarizeReviewChanges,
+
+} from "../../../lib/workspace-review";
 
 type AssistantTurnProps = {
   entry: AssistantTurnEntry;
@@ -361,13 +369,194 @@ export const AssistantTurn = memo(function AssistantTurn({
   );
   statusesRef.current = turnDelegationStatuses;
   timingsRef.current = turnDelegationTimings;
+
+  const turnReviewChanges = useMemo(() => {
+    const toolMessages: UiMessage[] = [];
+    for (const item of turnAllActivityItems) {
+      if (item.kind === "tool") {
+        toolMessages.push(item.message);
+        if (item.delegate) {
+          for (const subItem of item.delegate.items) {
+            if (subItem.kind === "tool") {
+              toolMessages.push(subItem.message);
+            }
+          }
+        }
+      }
+    }
+    return reviewChangesFromMessages(toolMessages);
+  }, [turnAllActivityItems]);
+
+  const turnReviewSummary = useMemo(
+    () => summarizeReviewChanges(turnReviewChanges),
+    [turnReviewChanges],
+  );
+
   const groupProcess = useAppStore((state) =>
     shouldGroupTurnProcess(
       resolveThinkingDisplayMode(state.settings?.thinkingDisplayMode),
     ),
   );
+  const activeSessionId = useAppStore((state) => state.activeSessionId);
+  const pendingPlan = useAppStore((state) =>
+    activeSessionId ? state.pendingPlans[activeSessionId] : undefined,
+  );
+  const planCheckpoint = useAppStore((state) =>
+    activeSessionId ? state.planCheckpoints[activeSessionId] : undefined,
+  );
+
+  const turnPlan = useMemo(() => {
+    // 1. Check if there's a SubmitPlan / SubmitGoal tool call in this turn
+    for (const item of turnAllActivityItems) {
+      if (
+        item.kind === "tool" &&
+        (item.message.toolName === "SubmitPlan" ||
+          item.message.toolName === "SubmitGoal")
+      ) {
+        const args = (item.message.toolArgs || {}) as Record<string, any>;
+        const title = args.title || "Implementation Plan";
+        const markdown = args.markdown || "";
+        const question = args.question || "";
+        const summary =
+          args.summary ||
+          question ||
+          markdown
+            .split("\n\n")
+            .find((p: string) => p.trim() && !p.trim().startsWith("#"))
+            ?.replace(/[#*`_]/g, "")
+            .trim() ||
+          "";
+
+        const proposal =
+          pendingPlan?.toolCallId === item.message.toolCallId ||
+          pendingPlan?.turnId === entry.id
+            ? pendingPlan
+            : planCheckpoint?.toolCallId === item.message.toolCallId ||
+                planCheckpoint?.turnId === entry.id
+              ? planCheckpoint
+              : undefined;
+
+        return {
+          title,
+          summary,
+          markdown,
+          artifactPath: proposal?.artifact?.relativePath,
+          status: proposal?.status ?? "pending",
+          proposalId: proposal?.id,
+          sessionId: proposal?.sessionId || activeSessionId || "",
+          turnId: entry.id,
+          toolCallId: item.message.toolCallId || item.message.id,
+          version: proposal?.version,
+        };
+      }
+    }
+
+    // 2. Check if the active pendingPlan or planCheckpoint belongs to this turn
+    const proposal =
+      pendingPlan?.turnId === entry.id
+        ? pendingPlan
+        : planCheckpoint?.turnId === entry.id
+          ? planCheckpoint
+          : undefined;
+
+    if (proposal) {
+      const summary =
+        proposal.question ||
+        proposal.markdown
+          .split("\n\n")
+          .find((p) => p.trim() && !p.trim().startsWith("#"))
+          ?.replace(/[#*`_]/g, "")
+          .trim() ||
+        "";
+      return {
+        title: proposal.title || "Implementation Plan",
+        summary,
+        markdown: proposal.markdown,
+        artifactPath: proposal.artifact?.relativePath,
+        status: proposal.status,
+        proposalId: proposal.id,
+        sessionId: proposal.sessionId,
+        turnId: proposal.turnId,
+        toolCallId: proposal.toolCallId,
+        version: proposal.version,
+      };
+    }
+
+    // 3. Check for write_to_file or edit tool creating an implementation_plan or plan.md
+    for (const item of turnAllActivityItems) {
+      if (item.kind === "tool") {
+        const args = (item.message.toolArgs || {}) as Record<string, any>;
+        const filePath =
+          args.TargetFile || args.path || args.filePath || args.targetFile || "";
+        if (
+          typeof filePath === "string" &&
+          (filePath.endsWith("implementation_plan.md") ||
+            filePath.endsWith("plan.md") ||
+            filePath.includes("/.pi/plan/"))
+        ) {
+          const content = args.CodeContent || args.content || "";
+          const firstHeading =
+            content.match(/^#+\s+(.+)$/m)?.[1]?.trim() || "Implementation Plan";
+          const summary =
+            content
+              .split("\n\n")
+              .find((p: string) => p.trim() && !p.trim().startsWith("#"))
+              ?.replace(/[#*`_]/g, "")
+              .trim() || "";
+
+          return {
+            title: firstHeading,
+            summary,
+            markdown: content,
+            artifactPath: filePath,
+            status: "approved" as const,
+            sessionId: activeSessionId || "",
+            turnId: entry.id,
+            toolCallId: item.message.toolCallId || item.message.id,
+          };
+        }
+      }
+    }
+
+    return null;
+  }, [turnAllActivityItems, pendingPlan, planCheckpoint, activeSessionId, entry.id]);
+
+  // Group multiple parallel/sequential task delegations by subagent role (e.g. Fixer Squad, Explorer Squad)
+  const turnSquadGroups = useMemo(() => {
+    const roleGroups = new Map<string, SquadMemberTask[]>();
+    for (const item of turnAllActivityItems) {
+      if (item.kind === "tool" && item.message.toolName?.toLowerCase() === "task") {
+        const args = (item.message.toolArgs || {}) as Record<string, any>;
+        const agentRaw = String(args.agent || args.subagent || "fixer").trim();
+        const roleKey = agentRaw.charAt(0).toUpperCase() + agentRaw.slice(1).toLowerCase();
+        const promptText = String(args.prompt || args.task || args.instruction || "").trim();
+        const status = item.message.toolStatus === "error"
+          ? "failed"
+          : item.message.toolStatus === "running"
+            ? "running"
+            : "completed";
+
+        const currentTasks = roleGroups.get(roleKey) || [];
+        currentTasks.push({
+          id: item.message.toolCallId || item.message.id,
+          role: agentRaw,
+          label: `${roleKey} ${currentTasks.length + 1}`,
+          taskDescription: promptText.split("\n")[0] || "Menjalankan sub-tugas implementasi",
+          status,
+        });
+        roleGroups.set(roleKey, currentTasks);
+      }
+    }
+    return Array.from(roleGroups.entries()).map(([role, tasks]) => ({
+      role,
+      tasks,
+      isLive: isActive && tasks.some((t) => t.status === "running"),
+    }));
+  }, [turnAllActivityItems, isActive]);
+
   const { process, responses } = projectTurnProcess(entry);
   const activePart = isActive ? entry.parts.at(-1) : undefined;
+
 
   const renderPart = (part: AssistantTurnPart) =>
     part.kind === "activity" ? (
@@ -410,9 +599,38 @@ export const AssistantTurn = memo(function AssistantTurn({
         ) : (
           entry.parts.map(renderPart)
         )}
+        {turnPlan && (
+          <ImplementationPlanCard
+            title={turnPlan.title}
+            summary={turnPlan.summary}
+            markdown={turnPlan.markdown}
+            artifactPath={turnPlan.artifactPath}
+            status={turnPlan.status}
+            proposalId={turnPlan.proposalId}
+            sessionId={turnPlan.sessionId}
+            turnId={turnPlan.turnId}
+            toolCallId={turnPlan.toolCallId}
+            version={turnPlan.version}
+          />
+        )}
         {turnAllActivityItems.filter((item) => item.kind === "tool" && item.message.toolName === "GenerateImages").map((item) => (
           <GeneratedImages key={item.message.id} message={item.message} />
         ))}
+        {turnSquadGroups.map((squad) => (
+          <SubagentSquadCard
+            key={squad.role}
+            squadRole={squad.role}
+            tasks={squad.tasks}
+            isLive={squad.isLive}
+          />
+        ))}
+        {turnReviewChanges.length > 0 && (
+
+          <TurnReviewChangesBar
+            entries={turnReviewChanges}
+            summary={turnReviewSummary}
+          />
+        )}
         {!isActive && metaMessage ? (
           <MessageMeta
             modelId={modelId}

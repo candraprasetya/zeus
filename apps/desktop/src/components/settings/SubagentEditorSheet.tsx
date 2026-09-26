@@ -31,6 +31,14 @@ import {
 import { SubagentModelPicker } from "./SubagentModelPicker";
 import { SubagentFallbackModels } from "./SubagentFallbackModels";
 import { SettingsMenuSelect } from "./SettingsMenuSelect";
+import {
+  CHARACTER_ARCHETYPES,
+  getCharacterArchetype,
+  getSubagentProfile,
+  getArchetypeHugeIcon,
+  type CharacterArchetypeId,
+} from "./subagent-character-profiles";
+import { HugeiconsIcon } from "@hugeicons/react";
 
 /** Hard cap host-core enforces on a definition document. */
 export const MAX_SUBAGENT_BYTES = 32 * 1024;
@@ -39,6 +47,8 @@ export type SubagentDraft = {
   id: string;
   name: string;
   description: string;
+  role?: string;
+  archetype?: CharacterArchetypeId;
   /** Assignable extras. May be empty when `inheritTools` is on. */
   tools: string[];
   /** Frontmatter `tools: inherit` — union the parent session catalog. */
@@ -135,6 +145,8 @@ export function emptySubagentDraft(): SubagentDraft {
     id: "",
     name: "",
     description: "",
+    role: "Specialist",
+    archetype: "hermes",
     tools: [...DEFAULT_SUBAGENT_TOOLS],
     inheritTools: false,
     model: "",
@@ -149,10 +161,13 @@ export function emptySubagentDraft(): SubagentDraft {
 
 export function draftFromRecord(record: UserSubagentRecord, body: string): SubagentDraft {
   const grant = splitSubagentToolGrant(record.tools);
+  const profile = getSubagentProfile(record.id);
   return {
     id: record.id,
-    name: record.name,
+    name: profile.customName || record.name,
     description: record.description ?? "",
+    role: profile.customRole || "Specialist",
+    archetype: profile.archetype || "hermes",
     tools: grant.tools,
     inheritTools: grant.inheritTools,
     model: record.model ?? "",
@@ -168,6 +183,7 @@ export function draftFromRecord(record: UserSubagentRecord, body: string): Subag
 /** Prefill the create sheet from a shipped definition (Copy as mine). */
 export function draftFromDefinition(definition: SubagentDefinition): SubagentDraft {
   const preset = findSubagentPreset(definition.name);
+  const profile = getSubagentProfile(definition.name);
   const grant = splitSubagentToolGrant(
     definition.inheritTools
       ? [SUBAGENT_INHERIT_TOKEN, ...definition.tools]
@@ -175,8 +191,10 @@ export function draftFromDefinition(definition: SubagentDefinition): SubagentDra
   );
   return {
     ...emptySubagentDraft(),
-    name: preset?.name ?? definition.name,
+    name: profile.customName || (preset?.name ?? definition.name),
     description: definition.description,
+    role: profile.customRole || preset?.name || "Specialist",
+    archetype: profile.archetype || (definition.name === "explorer" ? "athena" : definition.name === "fixer" ? "hermes" : definition.name === "test-runner" ? "apollo" : "hermes"),
     tools: grant.tools,
     inheritTools: grant.inheritTools,
     model: definition.model
@@ -674,20 +692,79 @@ export function SubagentEditorSheet({
             <PresetPicker selectedId={presetId} onSelect={applyPreset} />
           ) : null}
 
-          <Field
-            label={t("extensions.subagents.name")}
-            hint={slug ? t("extensions.subagents.slugHint", { id: slug }) : undefined}
-          >
-            <Input
-              value={draft.name}
-              autoFocus={!editing}
-              placeholder={t("extensions.subagents.namePlaceholder")}
-              onChange={(event) => {
-                setNameTouched(true);
-                setName(event.target.value);
-              }}
-            />
-          </Field>
+          {/* Character Archetype Chibi Picker */}
+          <div className="ext-field-group">
+            <div className="ext-field-label">
+              <span>Karakter Anime Chibi (Visual Avatar)</span>
+              <HelpIcon label="Pilih visual karakter Chibi anime untuk sub-agent ini di Virtual Office" />
+            </div>
+            <div
+              className="ext-archetype-pick"
+              role="group"
+              aria-label="Character Archetype"
+            >
+              {CHARACTER_ARCHETYPES.map((arch) => {
+                const isSelected = (draft.archetype || "hermes") === arch.id;
+                return (
+                  <button
+                    key={arch.id}
+                    type="button"
+                    className={cx("ext-archetype-chip", isSelected && "is-selected")}
+                    style={{
+                      borderColor: isSelected ? arch.color : undefined,
+                    }}
+                    onClick={() => {
+                      setDraft({
+                        ...draft,
+                        archetype: arch.id,
+                        name: draft.name ? draft.name : arch.name,
+                        role: draft.role ? draft.role : arch.defaultRole,
+                      });
+                    }}
+                    title={`${arch.name} (${arch.defaultRole}) - ${arch.description}`}
+                  >
+                    <span className="ext-archetype-emoji" aria-hidden="true" style={{ color: arch.color, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                      <HugeiconsIcon icon={getArchetypeHugeIcon(arch.id)} size={16} />
+                    </span>
+                    <div className="ext-archetype-info">
+                      <span className="ext-archetype-name" style={{ color: arch.color }}>
+                        {arch.name}
+                      </span>
+                      <span className="ext-archetype-role">{arch.defaultRole}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="ext-field-pair">
+            <Field
+              label={t("extensions.subagents.name")}
+              hint={slug ? t("extensions.subagents.slugHint", { id: slug }) : undefined}
+            >
+              <Input
+                value={draft.name}
+                autoFocus={!editing}
+                placeholder={t("extensions.subagents.namePlaceholder")}
+                onChange={(event) => {
+                  setNameTouched(true);
+                  setName(event.target.value);
+                }}
+              />
+            </Field>
+
+            <Field
+              label="Role / Title"
+              hint="Misal: Fixer, Explorer, Test Runner, Main Orchestrator"
+            >
+              <Input
+                value={draft.role || ""}
+                placeholder="Misal: Fixer / Implementasi"
+                onChange={(event) => set("role", event.target.value)}
+              />
+            </Field>
+          </div>
 
           <Field label={t("extensions.subagents.description")}>
             <Textarea
