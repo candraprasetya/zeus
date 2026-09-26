@@ -25,6 +25,7 @@ export const ko = {
     save: "저장",
     saving: "저장 중…",
     loading: "불러오는 중…",
+    clear: "지우기",
   },
   window: {
     minimize: "최소화",

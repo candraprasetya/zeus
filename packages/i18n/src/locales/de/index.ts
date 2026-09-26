@@ -23,7 +23,8 @@ export const de = {
     "cancel": "Abbrechen",
     "save": "Speichern",
     "saving": "Speichern…",
-    "loading": "Laden…"
+    "loading": "Laden…",
+    "clear": "Löschen"
   },
   "window": {
     "minimize": "Minimieren",

@@ -23,7 +23,8 @@ export const ptBR = {
     cancel: "Cancelar",
     save: "Salvar",
     saving: "Salvando…",
-    loading: "Carregando…"
+    loading: "Carregando…",
+    clear: "Limpar",
   },
   window: {
     minimize: "Minimizar",

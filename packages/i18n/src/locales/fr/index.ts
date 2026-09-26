@@ -23,7 +23,8 @@ export const fr = {
     "cancel": "Annuler",
     "save": "Enregistrer",
     "saving": "Enregistrement…",
-    "loading": "Chargement…"
+    "loading": "Chargement…",
+    "clear": "Effacer"
   },
   "window": {
     "minimize": "Réduire",

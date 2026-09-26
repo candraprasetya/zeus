@@ -24,6 +24,7 @@ export const zhTW = {
     save: "儲存",
     saving: "正在儲存…",
     loading: "正在載入…",
+    clear: "清除",
   },
   window: {
     minimize: "最小化",
