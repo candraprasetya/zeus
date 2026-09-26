@@ -90,6 +90,8 @@ export function MindmapTab() {
   const containerRef = useRef<HTMLDivElement>(null);
   // tracks previous `loading` value so the pop-in only fires on the loading→done transition
   const prevLoadingRef = useRef(true);
+  // container pixel size — updated by ResizeObserver for accurate fit-to-bounds
+  const containerSizeRef = useRef({ w: 0, h: 0 });
 
   // Load .knowledge/ data: canvas first, or scan .md files
   const loadKnowledgeData = useCallback(async () => {
@@ -242,34 +244,100 @@ export function MindmapTab() {
     void loadKnowledgeData();
   }, [loadKnowledgeData]);
 
-  // Fire pop-in entry animation only on the loading → done transition
+  // Fire pop-in entry animation + fit-to-bounds on the loading → done transition
   useEffect(() => {
     if (prevLoadingRef.current && !loading && graph.nodes.length > 0) {
+      // Fit all nodes into view centered in the container
+      const { w, h } = containerSizeRef.current;
+      if (w > 0 && h > 0) {
+        const padX = 80;
+        const padY = 80;
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const n of graph.nodes) {
+          const r = n.radius ?? 24;
+          minX = Math.min(minX, n.x - r);
+          maxX = Math.max(maxX, n.x + r);
+          minY = Math.min(minY, n.y - r);
+          maxY = Math.max(maxY, n.y + r);
+        }
+        const graphW = maxX - minX || 1;
+        const graphH = maxY - minY || 1;
+        const fitZoom = Math.min(
+          (w - padX * 2) / graphW,
+          (h - padY * 2) / graphH,
+          1.2,  // never start more zoomed-in than 1.2×
+        );
+        const clampedZoom = Math.max(0.15, fitZoom);
+        const cx = (minX + maxX) / 2;
+        const cy = (minY + maxY) / 2;
+        setZoom(clampedZoom);
+        setPan({ x: -cx * clampedZoom, y: -cy * clampedZoom });
+      }
+
       setIntroAnimating(true);
-      const totalMs = graph.nodes.length * 60 + 500;
+      // last node delay = (n-1)*60ms, animation duration = 700ms → total ≈ n*60 + 700
+      const totalMs = graph.nodes.length * 60 + 700;
       const id = setTimeout(() => setIntroAnimating(false), totalMs);
       prevLoadingRef.current = false;
       return () => clearTimeout(id);
     }
     prevLoadingRef.current = loading;
-  }, [loading, graph.nodes.length]);
+  }, [loading, graph.nodes]);
 
-  // Native non-passive wheel listener for smooth zoom without browser event suppression
+  // Track container size via ResizeObserver (used for fit-to-bounds)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const rect = entries[0]?.contentRect;
+      if (rect) containerSizeRef.current = { w: rect.width, h: rect.height };
+    });
+    ro.observe(el);
+    // Capture initial size immediately
+    const rect = el.getBoundingClientRect();
+    containerSizeRef.current = { w: rect.width, h: rect.height };
+    return () => ro.disconnect();
+  }, []);
+
+  // Native non-passive wheel: pinch → zoom-to-pointer; two-finger scroll → pan
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
     const onWheel = (e: WheelEvent) => {
-      // Prevent browser default back/forward or outer scroll
       e.preventDefault();
-      const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
-      setZoom((prev) => Math.min(2.5, Math.max(0.2, Number((prev * zoomFactor).toFixed(3)))));
+
+      // macOS/Electron sets ctrlKey=true for pinch gestures
+      if (e.ctrlKey) {
+        // Zoom toward cursor position
+        const rect = el.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left - rect.width / 2;
+        const mouseY = e.clientY - rect.top - rect.height / 2;
+
+        // Pinch delta is typically small; clamp aggressively
+        const raw = -e.deltaY;
+        const factor = raw > 0 ? 1 + Math.min(raw * 0.015, 0.12) : 1 / (1 + Math.min(-raw * 0.015, 0.12));
+
+        setZoom((prevZoom) => {
+          const nextZoom = Math.min(3, Math.max(0.1, prevZoom * factor));
+          const scale = nextZoom / prevZoom;
+          setPan((prevPan) => ({
+            x: mouseX - (mouseX - prevPan.x) * scale,
+            y: mouseY - (mouseY - prevPan.y) * scale,
+          }));
+          return nextZoom;
+        });
+      } else {
+        // Two-finger scroll → pan (natural direction)
+        setPan((prev) => ({
+          x: prev.x - e.deltaX,
+          y: prev.y - e.deltaY,
+        }));
+      }
     };
 
     el.addEventListener("wheel", onWheel, { passive: false });
-    return () => {
-      el.removeEventListener("wheel", onWheel);
-    };
+    return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
   // Pan handling: allow panning everywhere EXCEPT on node clicks or HUD controls
@@ -366,11 +434,34 @@ export function MindmapTab() {
     return Math.min(130 / w, 90 / h);
   }, [bounds]);
 
-  // Center fit helper
+  // Fit all nodes into view, centered in the container
   const handleResetView = useCallback(() => {
-    setZoom(1);
-    setPan({ x: 0, y: 0 });
-  }, []);
+    const { w, h } = containerSizeRef.current;
+    if (w === 0 || h === 0 || graph.nodes.length === 0) {
+      setZoom(1);
+      setPan({ x: 0, y: 0 });
+      return;
+    }
+    const pad = 80;
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const n of graph.nodes) {
+      const r = n.radius ?? 24;
+      minX = Math.min(minX, n.x - r);
+      maxX = Math.max(maxX, n.x + r);
+      minY = Math.min(minY, n.y - r);
+      maxY = Math.max(maxY, n.y + r);
+    }
+    const fitZoom = Math.min(
+      (w - pad * 2) / (maxX - minX || 1),
+      (h - pad * 2) / (maxY - minY || 1),
+      1.2,
+    );
+    const z = Math.max(0.15, fitZoom);
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
+    setZoom(z);
+    setPan({ x: -cx * z, y: -cy * z });
+  }, [graph.nodes]);
 
   const handleCenterOnNode = useCallback((node: MindmapNode) => {
     setSelectedNode(node);
