@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Field, Input, TooltipButton, portalOverlay } from "../ui";
 import { IconX } from "../icons";
@@ -14,6 +14,7 @@ export function SquadNameSheet({
   submitLabel,
   initial,
   placeholder,
+  children,
   onClose,
   onSubmit,
 }: {
@@ -24,6 +25,8 @@ export function SquadNameSheet({
   /** `null` creates a new entry; a string opens it for renaming. */
   initial: string | null;
   placeholder?: string;
+  /** Extra sections under the name field — a team's roster, for instance. */
+  children?: ReactNode;
   onClose: () => void;
   onSubmit: (name: string) => void;
 }) {
@@ -87,6 +90,7 @@ export function SquadNameSheet({
               }}
             />
           </Field>
+          {children}
         </div>
 
         <div className="ext-sheet-actions">

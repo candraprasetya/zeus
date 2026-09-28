@@ -441,3 +441,95 @@ test("the member sheet offers built-ins and shipped roles as pre-fills only", as
   assert.match(sheetSrc, /settings\.zeusSquad\.templates/);
   assert.match(sheetSrc, /createZeusSquadMember\(draft\)/);
 });
+
+test("the member sheet splits the character from its properties and picks skills in a dialog", async () => {
+  const [sheetSrc, dialogSrc, cssSrc, enSrc] = await Promise.all([
+    read("../src/components/settings/ZeusSquadMemberSheet.tsx"),
+    read("../src/components/settings/SquadMemberSkillsDialog.tsx"),
+    read("../src/styles/extensions.css"),
+    read("../../../packages/i18n/src/locales/en/index.ts"),
+  ]);
+
+  // Appearance and character sit left of the fields that describe them.
+  assert.match(sheetSrc, /ext-sheet-columns/);
+  assert.match(sheetSrc, /dialog ext-sheet is-wide/);
+  assert.match(cssSrc, /\.ext-sheet\.is-wide \{\s*\n\s*width: min\(100%, 720px\)/);
+  assert.match(cssSrc, /\.ext-sheet-columns \{\s*\n\s*display: grid/);
+  assert.match(cssSrc, /\.ext-transport-pick,\s*\.ext-sheet-columns \{\s*\n\s*grid-template-columns: 1fr/);
+
+  // Skills are a string array edited through the picker, never a comma list.
+  assert.match(sheetSrc, /const \[skills, setSkills\] = useState<string\[\]>/);
+  assert.doesNotMatch(sheetSrc, /skillsPlaceholder/);
+  assert.match(sheetSrc, /SquadMemberSkillsDialog/);
+  // Escape unwinds one layer: the picker first, the sheet second.
+  assert.match(sheetSrc, /event\.key === "Escape" && !skillsDialogOpen/);
+  assert.match(dialogSrc, /listUserSkills\(/);
+  assert.match(dialogSrc, /CheckboxGroup/);
+  assert.match(dialogSrc, /global.*project|levels\.push\("project"\)/);
+  assert.match(dialogSrc, /settings\.zeusSquad\.skillsDialogTitle/);
+  assert.match(dialogSrc, /settings\.zeusSquad\.skillsCustom/);
+
+  // All nine UI languages carry the same picker copy.
+  const otherCatalogs = await Promise.all(
+    ["de", "es", "fr", "ko", "pt-BR", "tr", "zh-CN", "zh-TW"].map((locale) =>
+      read(`../../../packages/i18n/src/locales/${locale}/index.ts`),
+    ),
+  );
+  for (const catalog of [enSrc, ...otherCatalogs]) {
+    for (const key of [
+      "skillsPick",
+      "skillsDialogTitle",
+      "skillsDialogSubtitle",
+      "skillsCustom",
+      "skillsCustomPlaceholder",
+      "skillsAdd",
+      "skillsSelected",
+    ]) {
+      assert.match(catalog, new RegExp(`^\\s*"${key}": |^\\s*${key}: `, "m"));
+    }
+  }
+  assert.match(enSrc, /      skillsDialogTitle: "Choose skills",/);
+  // settings.skillsEmpty owns the skills page; zeusSquad.skillsEmpty owns the
+  // member sheet, so the word appears in both blocks of the English catalog.
+  assert.ok((enSrc.match(/skillsEmpty/g) ?? []).length >= 2);
+  assert.doesNotMatch(enSrc, /skillsPlaceholder/);
+});
+
+test("editing a team shows its agents and each opens its own member sheet", async () => {
+  const [pageSrc, nameSrc, enSrc] = await Promise.all([
+    read("../src/components/settings/AgentSubagentsPage.tsx"),
+    read("../src/components/settings/SquadNameSheet.tsx"),
+    read("../../../packages/i18n/src/locales/en/index.ts"),
+  ]);
+
+  // Team edit sheet shows a roster section with per-agent edit buttons.
+  assert.match(pageSrc, /settings\.zeusSquad\.teamMembers/);
+  assert.match(pageSrc, /settings\.zeusSquad\.teamNoMembers/);
+  // Clicking an agent in the roster opens the member sheet.
+  assert.match(
+    pageSrc,
+    /zeusSquad\.teamMembers[\s\S]{0,2000}setSquadSheet\(\{ member: m \}\)/,
+  );
+  // The SquadNameSheet accepts optional children for the roster.
+  assert.match(nameSrc, /children\?: ReactNode/);
+  assert.match(nameSrc, /\{children\}/);
+  // Escape closes member sheet before team sheet.
+  assert.match(pageSrc, /if \(!squadSheet\) setNameSheet\(null\)/);
+  // Title uses editTeamTitle, not the old renameTeamTitle.
+  assert.match(pageSrc, /settings\.zeusSquad\.editTeamTitle/);
+  assert.doesNotMatch(pageSrc, /settings\.zeusSquad\.renameTeamTitle/);
+
+  // All nine catalogs carry the team roster keys, none keeps renameTeamTitle.
+  const otherCatalogs = await Promise.all(
+    ["de", "es", "fr", "ko", "pt-BR", "tr", "zh-CN", "zh-TW"].map((locale) =>
+      read(`../../../packages/i18n/src/locales/${locale}/index.ts`),
+    ),
+  );
+  for (const catalog of [enSrc, ...otherCatalogs]) {
+    for (const key of ["editTeamTitle", "teamMembers", "teamNoMembers"]) {
+      assert.match(catalog, new RegExp(`^\\s*"${key}": |^\\s*${key}: `, "m"));
+    }
+    assert.doesNotMatch(catalog, /renameTeamTitle/);
+  }
+  assert.match(enSrc, /      editTeamTitle: "Edit team",/);
+});

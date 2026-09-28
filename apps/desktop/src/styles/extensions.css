@@ -978,6 +978,18 @@
   width: min(100%, 480px);
 }
 
+/* Two-column edit sheets: character on the left, properties on the right. */
+.ext-sheet.is-wide {
+  width: min(100%, 720px);
+}
+
+.ext-sheet-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+  min-width: 0;
+}
+
 /* D297: head, body and actions are set apart by spacing, not rules. */
 .ext-sheet-head {
   display: flex;
@@ -1530,7 +1542,8 @@
   }
 
   .ext-field-pair,
-  .ext-transport-pick {
+  .ext-transport-pick,
+  .ext-sheet-columns {
     grid-template-columns: 1fr;
   }
 

@@ -1038,7 +1038,7 @@ export function AgentSubagentsPage() {
           title={t(
             nameSheet.kind === "team"
               ? nameSheet.id
-                ? "settings.zeusSquad.renameTeamTitle"
+                ? "settings.zeusSquad.editTeamTitle"
                 : "settings.zeusSquad.newTeamTitle"
               : nameSheet.id
                 ? "settings.zeusSquad.renamePipelineTitle"
@@ -1059,8 +1059,67 @@ export function AgentSubagentsPage() {
                 )
           }
           initial={nameSheet.name}
-          onClose={() => setNameSheet(null)}
+          // Escape unwinds member sheet before team sheet: guarded onClose is a
+          // no-op while a member is open, so a single Escape never closes both.
+          onClose={() => {
+            if (!squadSheet) setNameSheet(null);
+          }}
           onSubmit={submitNameSheet}
+          children={
+            nameSheet.kind === "team" && nameSheet.id
+              ? (() => {
+                  const teamMembers = workspace.members.filter(
+                    (m) => m.teamId === nameSheet.id,
+                  );
+                  return (
+                    <div className="ext-field-group">
+                      <div className="ext-field-label">
+                        {t("settings.zeusSquad.teamMembers")}
+                      </div>
+                      {teamMembers.length === 0 ? (
+                        <p className="ext-sheet-note">
+                          {t("settings.zeusSquad.teamNoMembers")}
+                        </p>
+                      ) : (
+                        <div
+                          style={{ display: "flex", flexDirection: "column", gap: "6px" }}
+                        >
+                          {teamMembers.map((m) => (
+                            <div
+                              key={m.id}
+                              style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                            >
+                              <span
+                                style={{
+                                  color: m.color,
+                                  display: "inline-flex",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <m.icon size={16} />
+                              </span>
+                              <span style={{ flex: 1, minWidth: 0 }}>{m.name}</span>
+                              {m.badge ? (
+                                <span className="agent-capability-badge">{m.badge}</span>
+                              ) : null}
+                              <TooltipButton
+                                type="button"
+                                className="settings-icon-button"
+                                tooltip={t("extensions.subagents.edit")}
+                                ariaLabel={t("extensions.subagents.edit")}
+                                onClick={() => setSquadSheet({ member: m })}
+                              >
+                                <IconPencil size={15} />
+                              </TooltipButton>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()
+              : undefined
+          }
         />
       ) : null}
 

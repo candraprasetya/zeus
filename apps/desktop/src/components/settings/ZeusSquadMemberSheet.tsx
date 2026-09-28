@@ -3,7 +3,9 @@ import { useTranslation } from "react-i18next";
 import { Button, Field, Input, Textarea, TooltipButton, cx, portalOverlay } from "../ui";
 import { IconX } from "../icons";
 import { SettingsMenuSelect } from "./SettingsMenuSelect";
+import { SquadMemberSkillsDialog } from "./SquadMemberSkillsDialog";
 import { CHARACTER_ARCHETYPES } from "./subagent-character-profiles";
+import { useAppStore } from "../../stores/app-store";
 import {
   ZEUS_SQUAD_COLORS,
   ZEUS_SQUAD_ICONS,
@@ -22,6 +24,9 @@ import {
  * Create or edit one squad member. A shipped member edits only its
  * overrides — icon, color, character, and copy fall back to the shipped
  * default — while a new member stores exactly what this sheet fills in.
+ *
+ * The form is two columns: who the member is (appearance and character) on
+ * the left, what the member carries (copy, skills, team) on the right.
  *
  * A new member first shows suggestions: the shipped roles this team does not
  * have yet plus the built-ins the page passes in. Picking one only fills the
@@ -42,12 +47,14 @@ export function ZeusSquadMemberSheet({
 }) {
   const { t } = useTranslation();
   const { teams, activeTeamId } = useSquadWorkspace();
+  const projectPath = useAppStore((state) => state.workspace?.path ?? null);
   const [name, setName] = useState(member?.name ?? "");
   const [badge, setBadge] = useState(member?.badge ?? "");
   const [description, setDescription] = useState(member?.description ?? "");
   const [iconId, setIconId] = useState<ZeusSquadIconId>(member?.iconId ?? "bot");
   const [color, setColor] = useState<string>(member?.color ?? ZEUS_SQUAD_COLORS[0]);
-  const [skills, setSkills] = useState((member?.skills ?? []).join(", "));
+  const [skills, setSkills] = useState<string[]>(member?.skills ?? []);
+  const [skillsDialogOpen, setSkillsDialogOpen] = useState(false);
   const [teamId, setTeamId] = useState(member?.teamId ?? activeTeamId);
   /**
    * `null` means "follow the icon": the character tracks the icon until this
@@ -72,7 +79,7 @@ export function ZeusSquadMemberSheet({
     setName(template.name);
     setBadge(template.badge);
     setDescription(template.description);
-    setSkills(template.skills.join(", "));
+    setSkills([...template.skills]);
     setIconId(template.iconId);
     setColor(template.color);
     setCharacter(template.character ?? null);
@@ -80,11 +87,13 @@ export function ZeusSquadMemberSheet({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      // Escape unwinds one layer at a time: the skills dialog first, then this
+      // sheet, so a picker opened here never closes both on one key press.
+      if (event.key === "Escape" && !skillsDialogOpen) onClose();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  }, [onClose, skillsDialogOpen]);
 
   const save = () => {
     const nextName = name.trim();
@@ -95,10 +104,7 @@ export function ZeusSquadMemberSheet({
       description: description.trim(),
       iconId,
       color,
-      skills: skills
-        .split(",")
-        .map((skill) => skill.trim())
-        .filter(Boolean),
+      skills: skills.map((skill) => skill.trim()).filter(Boolean),
       character: resolvedCharacter,
       teamId,
     };
@@ -120,7 +126,7 @@ export function ZeusSquadMemberSheet({
       }}
     >
       <div
-        className="dialog ext-sheet is-narrow"
+        className="dialog ext-sheet is-wide"
         role="dialog"
         aria-modal
         aria-labelledby="zeus-squad-sheet-title"
@@ -174,142 +180,161 @@ export function ZeusSquadMemberSheet({
             </div>
           ) : null}
 
-          <div className="ext-field-pair">
-            <Field label={t("settings.zeusSquad.name")}>
-              <Input
-                value={name}
-                autoFocus={created}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </Field>
-            <Field label={t("settings.zeusSquad.role")}>
-              <Input value={badge} onChange={(event) => setBadge(event.target.value)} />
-            </Field>
-          </div>
+          <div className="ext-sheet-columns">
+            {/* Left: who the member is — how the Live Office draws it. */}
+            <div>
+              <div className="ext-field-group">
+                <div className="ext-field-label">{appearanceLabel}</div>
+                <div
+                  style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}
+                  role="group"
+                  aria-label={appearanceLabel}
+                >
+                  {ZEUS_SQUAD_ICON_IDS.map((id) => {
+                    const Icon = ZEUS_SQUAD_ICONS[id];
+                    const selected = iconId === id;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        aria-pressed={selected}
+                        className={cx("ext-archetype-chip", selected && "is-selected")}
+                        style={{
+                          width: 36,
+                          height: 36,
+                          padding: 0,
+                          justifyContent: "center",
+                          color: selected ? color : undefined,
+                          borderColor: selected ? color : undefined,
+                        }}
+                        onClick={() => setIconId(id)}
+                        aria-label={id}
+                        title={id}
+                      >
+                        <span className="ext-archetype-emoji" aria-hidden="true">
+                          <Icon size={16} />
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div
+                  style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px" }}
+                  role="group"
+                  aria-label={appearanceLabel}
+                >
+                  {ZEUS_SQUAD_COLORS.map((swatch) => {
+                    const selected = color === swatch;
+                    return (
+                      <button
+                        key={swatch}
+                        type="button"
+                        aria-pressed={selected}
+                        aria-label={swatch}
+                        title={swatch}
+                        onClick={() => setColor(swatch)}
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: "50%",
+                          background: swatch,
+                          cursor: "pointer",
+                          border: selected
+                            ? "2px solid var(--ds-text-primary)"
+                            : "1px solid var(--ds-border-subtle)",
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
 
-          <Field label={t("extensions.subagents.description")}>
-            <Textarea
-              value={description}
-              rows={2}
-              onChange={(event) => setDescription(event.target.value)}
-            />
-          </Field>
-
-          <Field label={t("settings.zeusSquad.skills")}>
-            <Input
-              value={skills}
-              placeholder={t("settings.zeusSquad.skillsPlaceholder")}
-              onChange={(event) => setSkills(event.target.value)}
-            />
-          </Field>
-
-          {teams.length > 1 ? (
-            <div className="ext-field-group">
-              <div className="ext-field-label">{t("settings.zeusSquad.team")}</div>
-              <SettingsMenuSelect
-                fullWidth
-                label={t("settings.zeusSquad.team")}
-                value={teamId}
-                options={teams.map((team) => ({ id: team.id, label: team.name }))}
-                onChange={setTeamId}
-              />
+              <div className="ext-field-group">
+                <div className="ext-field-label">{characterLabel}</div>
+                <div
+                  style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}
+                  role="group"
+                  aria-label={characterLabel}
+                >
+                  {CHARACTER_ARCHETYPES.map((archetype) => {
+                    const selected = resolvedCharacter === archetype.id;
+                    return (
+                      <button
+                        key={archetype.id}
+                        type="button"
+                        aria-pressed={selected}
+                        className={cx("ext-archetype-chip", selected && "is-selected")}
+                        style={{
+                          color: selected ? archetype.color : undefined,
+                          borderColor: selected ? archetype.color : undefined,
+                        }}
+                        onClick={() => setCharacter(archetype.id)}
+                      >
+                        <span className="ext-archetype-emoji" aria-hidden="true">
+                          {archetype.avatarEmoji}
+                        </span>
+                        {archetype.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
-          ) : null}
 
-          <div className="ext-field-group">
-            <div className="ext-field-label">{appearanceLabel}</div>
-            <div
-              style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}
-              role="group"
-              aria-label={appearanceLabel}
-            >
-              {ZEUS_SQUAD_ICON_IDS.map((id) => {
-                const Icon = ZEUS_SQUAD_ICONS[id];
-                const selected = iconId === id;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    aria-pressed={selected}
-                    className={cx("ext-archetype-chip", selected && "is-selected")}
-                    style={{
-                      width: 36,
-                      height: 36,
-                      padding: 0,
-                      justifyContent: "center",
-                      color: selected ? color : undefined,
-                      borderColor: selected ? color : undefined,
-                    }}
-                    onClick={() => setIconId(id)}
-                    aria-label={id}
-                    title={id}
-                  >
-                    <span className="ext-archetype-emoji" aria-hidden="true">
-                      <Icon size={16} />
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            <div
-              style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px" }}
-              role="group"
-              aria-label={appearanceLabel}
-            >
-              {ZEUS_SQUAD_COLORS.map((swatch) => {
-                const selected = color === swatch;
-                return (
-                  <button
-                    key={swatch}
-                    type="button"
-                    aria-pressed={selected}
-                    aria-label={swatch}
-                    title={swatch}
-                    onClick={() => setColor(swatch)}
-                    style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: "50%",
-                      background: swatch,
-                      cursor: "pointer",
-                      border: selected
-                        ? "2px solid var(--ds-text-primary)"
-                        : "1px solid var(--ds-border-subtle)",
-                    }}
+            {/* Right: what the member carries. */}
+            <div>
+              <div className="ext-field-pair">
+                <Field label={t("settings.zeusSquad.name")}>
+                  <Input
+                    value={name}
+                    autoFocus={created}
+                    onChange={(event) => setName(event.target.value)}
                   />
-                );
-              })}
-            </div>
-          </div>
+                </Field>
+                <Field label={t("settings.zeusSquad.role")}>
+                  <Input value={badge} onChange={(event) => setBadge(event.target.value)} />
+                </Field>
+              </div>
 
-          <div className="ext-field-group">
-            <div className="ext-field-label">{characterLabel}</div>
-            <div
-              style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}
-              role="group"
-              aria-label={characterLabel}
-            >
-              {CHARACTER_ARCHETYPES.map((archetype) => {
-                const selected = resolvedCharacter === archetype.id;
-                return (
-                  <button
-                    key={archetype.id}
-                    type="button"
-                    aria-pressed={selected}
-                    className={cx("ext-archetype-chip", selected && "is-selected")}
-                    style={{
-                      color: selected ? archetype.color : undefined,
-                      borderColor: selected ? archetype.color : undefined,
-                    }}
-                    onClick={() => setCharacter(archetype.id)}
-                  >
-                    <span className="ext-archetype-emoji" aria-hidden="true">
-                      {archetype.avatarEmoji}
+            <Field label={t("extensions.subagents.description")}>
+              <Textarea
+                value={description}
+                rows={2}
+                onChange={(event) => setDescription(event.target.value)}
+              />
+            </Field>
+
+            <div className="ext-field-group">
+              <div className="ext-field-label">{t("settings.zeusSquad.skills")}</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                {skills.length === 0 ? (
+                  <span className="ext-sheet-note">{t("settings.zeusSquad.skillsEmpty")}</span>
+                ) : (
+                  skills.map((skill) => (
+                    <span key={skill} className="agent-capability-badge">
+                      {skill}
                     </span>
-                    {archetype.name}
-                  </button>
-                );
-              })}
+                  ))
+                )}
+              </div>
+              <Button variant="ghost" onClick={() => setSkillsDialogOpen(true)}>
+                {t("settings.zeusSquad.skillsPick")}
+              </Button>
+            </div>
+
+            {teams.length > 1 ? (
+              <div className="ext-field-group">
+                <div className="ext-field-label">{t("settings.zeusSquad.team")}</div>
+                <SettingsMenuSelect
+                  fullWidth
+                  label={t("settings.zeusSquad.team")}
+                  value={teamId}
+                  options={teams.map((team) => ({ id: team.id, label: team.name }))}
+                  onChange={setTeamId}
+                />
+              </div>
+            ) : null}
+
             </div>
           </div>
         </div>
@@ -325,6 +350,15 @@ export function ZeusSquadMemberSheet({
           </div>
         </div>
       </div>
+
+      {skillsDialogOpen ? (
+        <SquadMemberSkillsDialog
+          selected={skills}
+          projectPath={projectPath ?? undefined}
+          onApply={setSkills}
+          onClose={() => setSkillsDialogOpen(false)}
+        />
+      ) : null}
     </div>,
   );
 }
