@@ -226,15 +226,16 @@ export const DEFAULT_ZEUS_SQUAD: readonly ZeusSquadMemberDefinition[] = [
     badge: "Android Native / Kotlin",
     category: "Mobile Dev",
     description:
-      "Spesialis Android Native Kotlin, Clean Architecture (Domain, Data, Presentation), Coroutines StateFlow, Hilt DI, Room DB, dan enkripsi AndroidKeyStore.",
+      "Spesialis Android Native Kotlin, Clean Architecture (Domain, Data, Presentation), Coroutines StateFlow, Hilt DI, Room DB, enkripsi AndroidKeyStore, dan otomatisasi Android via Zeus Mobile MCP.",
     skillId: "zeus-squad",
-    skills: ["Kotlin", "Compose", "Hilt"],
+    skills: ["Kotlin", "Compose", "Hilt", "Zeus Mobile MCP"],
     character: "hermes",
     checklist: [
       "Clean Architecture (Domain/Data/Presentation)",
       "Jetpack Compose UI dengan BankTheme tokens",
       "Coroutines & StateFlow unidirectional data flow",
       "AndroidKeyStore & FLAG_SECURE window protection",
+      "Otomatisasi pengujian via Zeus Mobile MCP (ADB/Emulator)",
     ],
     samplePrompt:
       "Evan, tolong implementasikan modul Android Native Kotlin dengan Clean Architecture untuk fitur: ",
@@ -248,15 +249,16 @@ export const DEFAULT_ZEUS_SQUAD: readonly ZeusSquadMemberDefinition[] = [
     badge: "iOS Native / SwiftUI",
     category: "Mobile Dev",
     description:
-      "Spesialis iOS Native Swift, Clean Architecture, SwiftUI declarative views, Swift Concurrency (async/await), Combine/Observation, dan Keychain Services.",
+      "Spesialis iOS Native Swift, Clean Architecture, SwiftUI declarative views, Swift Concurrency (async/await), Combine/Observation, Keychain Services, dan otomatisasi iOS via Zeus Mobile MCP.",
     skillId: "zeus-squad",
-    skills: ["Swift", "SwiftUI", "Concurrency"],
+    skills: ["Swift", "SwiftUI", "Concurrency", "Zeus Mobile MCP"],
     character: "hephaestus",
     checklist: [
       "Clean Architecture (Domain/Data/Presentation)",
       "SwiftUI declarative views dengan ThemeModifier",
       "Swift Concurrency (async/await & Task lifecycle)",
       "Keychain Services & background snapshot masking",
+      "Otomatisasi pengujian via Zeus Mobile MCP (Simulator/Device)",
     ],
     samplePrompt:
       "Candra, tolong implementasikan modul iOS Native SwiftUI dengan Clean Architecture untuk fitur: ",

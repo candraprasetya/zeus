@@ -222,5 +222,23 @@ export const BUILTIN_MCP_CATALOG: McpCatalogFile = {
         },
       ],
     },
+    {
+      id: "zeus-mobile-mcp",
+      name: "Zeus Mobile MCP",
+      description: "Enterprise & Banking-Grade Mobile automation: control Android/iOS emulators, simulators and devices with automatic PII masking and zero telemetry",
+      author: "CandraPrasetya",
+      homepage: "https://github.com/candraprasetya/zeus-mobile-mcp",
+      categories: ["devtools"],
+      verified: true,
+      transport: "stdio",
+      command: "node",
+      args: ["/Users/itbca/Documents/GitHub/mobile-mcp/lib/index.js"],
+      env: {
+        MOBILEMCP_BANKING_MODE: "1",
+        MOBILEMCP_MASK_PII: "true",
+        MOBILEMCP_SCREENSHOT_POLICY: "allow",
+      },
+      notes: "Banking-grade hardened mobile automation with local device lock",
+    },
   ],
 };

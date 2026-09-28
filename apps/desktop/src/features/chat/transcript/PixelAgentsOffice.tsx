@@ -428,6 +428,14 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
         else if (lower === "grep") actionVerb = `Cari pola kode: "${shortTarget}"`;
         else if (lower === "bash") actionVerb = `Perintah shell: ${shortTarget || "command"}`;
         else if (lower === "task") actionVerb = `Delegasi subtask: ${shortTarget || "pekerjaan"}`;
+        else if (lower.includes("mobile_") || lower.includes("zeus_mobile") || lower.includes("zeus-mobile")) {
+          if (lower.includes("click") || lower.includes("tap")) actionVerb = `Otomasi Mobile: Tap pada layar (${shortTarget || "koordinat"})`;
+          else if (lower.includes("screenshot")) actionVerb = "Otomasi Mobile: Ambil tangkapan layar perangkat";
+          else if (lower.includes("list_elements") || lower.includes("elements")) actionVerb = "Otomasi Mobile: Baca hierarki UI & PII Masking";
+          else if (lower.includes("launch")) actionVerb = `Otomasi Mobile: Buka aplikasi (${shortTarget || "app"})`;
+          else if (lower.includes("device")) actionVerb = "Otomasi Mobile: Deteksi perangkat Android/iOS";
+          else actionVerb = `Otomasi Mobile (${m.toolName})`;
+        }
 
         list.push({
           id: m.id || `${i}-${m.toolName}`,
