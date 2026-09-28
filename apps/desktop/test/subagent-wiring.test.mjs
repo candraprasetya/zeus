@@ -164,5 +164,7 @@ test("a switched-off builtin leaves the delegation catalog, not the page", () =>
     sessionLaunchSource,
     /async function disabledBuiltinSubagents\(\): Promise<string\[\]>/,
   );
-  assert.match(pageSource, /api\.setBuiltinSubagentEnabled\(handle, next\)/);
+  // Settings does not flip that switch any more — the roster is the squad
+  // store now — so the page must not reach into builtin activation at all.
+  assert.doesNotMatch(pageSource, /setBuiltinSubagentEnabled/);
 });

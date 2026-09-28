@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   fetchSubagentPageData,
+  SUBAGENT_CHANGE_EVENT,
   type SubagentPageData,
 } from "../components/settings/subagent-settings";
 import {
@@ -35,25 +36,33 @@ export function useSubagentsData() {
 
   useEffect(() => {
     let unmounted = false;
-    fetchSubagentPageData()
-      .then((data) => {
-        if (!unmounted && data) {
-          setPageData(data);
-        }
-      })
-      .catch(() => {
-        // Keeps fallback data
-      });
+    const load = () => {
+      fetchSubagentPageData()
+        .then((data) => {
+          if (!unmounted && data) {
+            setPageData(data);
+          }
+        })
+        .catch(() => {
+          // Keeps the last known roster over a failed refresh.
+        });
+    };
+    load();
 
     const handleProfileChange = () => {
       setProfileRevision((r) => r + 1);
     };
 
+    // Settings writes through the host, so a toggle made there has to pull the
+    // catalog again here — the office and the strip are still mounted and
+    // would otherwise keep the roster the user just switched off.
+    window.addEventListener(SUBAGENT_CHANGE_EVENT, load);
     window.addEventListener(PROFILE_CHANGE_EVENT, handleProfileChange);
     window.addEventListener("storage", handleProfileChange);
 
     return () => {
       unmounted = true;
+      window.removeEventListener(SUBAGENT_CHANGE_EVENT, load);
       window.removeEventListener(PROFILE_CHANGE_EVENT, handleProfileChange);
       window.removeEventListener("storage", handleProfileChange);
     };

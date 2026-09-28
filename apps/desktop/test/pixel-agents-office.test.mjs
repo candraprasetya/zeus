@@ -12,11 +12,12 @@ test("Pixel Agents Office and View Office button adhere to repository contracts"
     read("../src/styles/chat-shell.css"),
   ]);
 
-  // 1. Verify 4 agents exist in PixelAgentsOffice
+  // 1. The lead desk is fixed; the floor itself is the configured squad, so a
+  // member the user switches off in Settings stops advertising a desk.
   assert.match(pixelOfficeSrc, /id:\s*"zeus"/);
-  assert.match(pixelOfficeSrc, /id:\s*"hermes"/);
-  assert.match(pixelOfficeSrc, /id:\s*"athena"/);
-  assert.match(pixelOfficeSrc, /id:\s*"apollo"/);
+  assert.match(pixelOfficeSrc, /useZeusSquad\(\)/);
+  assert.match(pixelOfficeSrc, /squadWorkers/);
+  assert.doesNotMatch(pixelOfficeSrc, /const AGENTS: AgentMember\[\]/);
 
   // 2. Verify walking & inquiring sub-agent behavior for Athena
   assert.match(pixelOfficeSrc, /athenaIsWalking/);
@@ -51,12 +52,14 @@ test("Pixel Agents Office and View Office button adhere to repository contracts"
 });
 
 test("PixelAgentsOffice and ZeusSubagentTasksFloatingPanel use dynamic settings subagent data", async () => {
-  const [pixelOfficeSrc, floatingPanelSrc, subagentsHookSrc, subagentsPageSrc] = await Promise.all([
-    read("../src/features/chat/transcript/PixelAgentsOffice.tsx"),
-    read("../src/components/ZeusSubagentTasksFloatingPanel.tsx"),
-    read("../src/hooks/use-subagents-data.ts"),
-    read("../src/components/settings/AgentSubagentsPage.tsx"),
-  ]);
+  const [pixelOfficeSrc, floatingPanelSrc, subagentsHookSrc, subagentsPageSrc, subagentSettingsSrc] =
+    await Promise.all([
+      read("../src/features/chat/transcript/PixelAgentsOffice.tsx"),
+      read("../src/components/ZeusSubagentTasksFloatingPanel.tsx"),
+      read("../src/hooks/use-subagents-data.ts"),
+      read("../src/components/settings/AgentSubagentsPage.tsx"),
+      read("../src/components/settings/subagent-settings.ts"),
+    ]);
 
   // Hook exports useSubagentsData and handles zeus, presets & custom subagents
   assert.match(subagentsHookSrc, /export function useSubagentsData/);
@@ -78,16 +81,26 @@ test("PixelAgentsOffice and ZeusSubagentTasksFloatingPanel use dynamic settings 
   assert.match(floatingPanelSrc, /explorerSubagent\.tag/);
   assert.match(floatingPanelSrc, /testRunnerSubagent\.tag/);
 
+  // A switch flipped in Settings reaches the mounted office without a reload:
+  // the page notifies, the hook refetches the catalog it read once on mount.
+  assert.match(subagentSettingsSrc, /export const SUBAGENT_CHANGE_EVENT/);
+  assert.match(subagentSettingsSrc, /export function notifySubagentsChanged/);
+  assert.match(subagentsHookSrc, /SUBAGENT_CHANGE_EVENT, load/);
+  assert.match(subagentsPageSrc, /notifySubagentsChanged\(\)/);
+
   // Settings page provides Lead Orchestrator group and Zeus customization
   assert.match(subagentsPageSrc, /Lead Orchestrator/);
   assert.match(subagentsPageSrc, /⚡ Zeus \(Lead Agent\)/);
   assert.match(subagentsPageSrc, /Main Orchestrator/);
   assert.match(subagentsPageSrc, /openEditZeus/);
 
-  // Settings page displays CrewAI & Buzz Multi-Agent Task Flow Pipelines
-  assert.match(subagentsPageSrc, /Multi-Agent Task Flow Pipelines \(CrewAI & Buzz\)/);
-  assert.match(subagentsPageSrc, /BUILTIN_TASK_FLOWS/);
-  assert.match(subagentsPageSrc, /Steps Pipeline/);
+  // Settings displays the squad workspace (teams, members, pipelines)
+  // instead of a static CrewAI pipeline group.
+  assert.match(subagentsPageSrc, /settings\.zeusSquad\.teams/);
+  assert.match(subagentsPageSrc, /settings\.zeusSquad\.pipelines/);
+  assert.match(subagentsPageSrc, /useSquadWorkspace\(\)/);
+  assert.doesNotMatch(subagentsPageSrc, /BUILTIN_TASK_FLOWS/);
+  assert.doesNotMatch(subagentsPageSrc, /Steps Pipeline/);
 });
 
 
@@ -105,10 +118,15 @@ test("Virtual Office renders walking subagent on permission request with interac
     read("../src/styles/messages.css"),
   ]);
 
-  // 1. Dynamic Office Subagents count matching Settings
+  // 1. Desks come from the configured squad; runtime subagents still map live
+  // activity and permission prompts onto those desks. The floor draws one
+  // responsive floor of at most sixteen members instead of paging wings.
   assert.match(subagentsHookSrc, /officeSubagents/);
-  assert.match(pixelOfficeSrc, /officeSubagents\.map/);
-  assert.match(pixelOfficeSrc, /officeSubagents\.length/);
+  assert.match(pixelOfficeSrc, /officeSubagents\.find/);
+  assert.match(pixelOfficeSrc, /squad\.filter\(\(member\) => member\.enabled\)/);
+  assert.match(pixelOfficeSrc, /MAX_OFFICE_AGENTS = 16/);
+  assert.match(pixelOfficeSrc, /layoutDeskSlots/);
+  assert.doesNotMatch(pixelOfficeSrc, /WING_CAPACITY/);
 
   // 2. Character Archetypes definitions & picker in Settings
   assert.match(characterProfilesSrc, /CHARACTER_ARCHETYPES/);
@@ -119,6 +137,11 @@ test("Virtual Office renders walking subagent on permission request with interac
   assert.match(characterProfilesSrc, /hephaestus/);
   assert.match(characterProfilesSrc, /artemis/);
   assert.match(characterProfilesSrc, /iris/);
+  // The extra styles the sheet offers, each drawn with its own outfit.
+  for (const archetype of ["poseidon", "hera", "helios", "metis"]) {
+    assert.match(characterProfilesSrc, new RegExp(`"${archetype}"`));
+    assert.match(pixelOfficeSrc, new RegExp(`archetype === "${archetype}"`));
+  }
   assert.match(subagentEditorSrc, /ext-archetype-pick/);
   assert.match(subagentEditorSrc, /ext-archetype-chip/);
   assert.match(subagentEditorSrc, /CHARACTER_ARCHETYPES/);
@@ -188,6 +211,12 @@ test("Virtual Office renders walking subagent on permission request with interac
   assert.match(pixelOfficeSrc, /pixel-office-pipeline-view/);
   assert.match(pixelOfficeSrc, /pixel-office-war-room-view/);
   assert.match(pixelOfficeSrc, /Block Buzz Collaborative War Room/);
+  // The pipeline view draws the squad store's active pipeline (falling back
+  // to one stage per enabled member), never a hardcoded feature-delivery flow.
+  assert.match(pixelOfficeSrc, /useSquadWorkspace\(\)/);
+  assert.match(pixelOfficeSrc, /pipelineStages/);
+  assert.match(pixelOfficeSrc, /resolveSquadCharacter\(member\)/);
+  assert.doesNotMatch(pixelOfficeSrc, /Codebase Survey & Reconnaissance/);
   assert.match(chatShellCss, /\.pixel-office-pipeline-view/);
   assert.match(chatShellCss, /\.pixel-office-war-room-view/);
   assert.match(chatShellCss, /\.pipeline-steps-grid/);
@@ -218,13 +247,70 @@ test("Virtual Office renders walking subagent on permission request with interac
   // 15. Dock-to-Side Split View & PiP Layout Modes (Anti-Modal-Fatigue)
   assert.match(pixelOfficeSrc, /PixelOfficeDisplayMode/);
   assert.match(pixelOfficeSrc, /pixel-dock-mode-toggles/);
-  assert.match(pixelOfficeSrc, /SEQUENTIAL TASK PIPELINE/);
   assert.match(chatShellCss, /\.pixel-office-modal-backdrop\.is-docked/);
   assert.match(chatShellCss, /\.pixel-office-modal-dialog\.is-docked/);
   assert.match(chatShellCss, /\.pixel-dock-mode-toggles/);
 });
 
+test("Dynamic Grok-style project workspace seamlessly integrates Team Roster Bar, Mindmap, Pipeline, and Live Office without pop-up modals", async () => {
+  const [chatSurfaceSrc, sidebarSrc, workspaceStoreSrc, teamRosterSrc, mindmapSrc, chatShellCss, pixelOfficeSrc] = await Promise.all([
+    read("../src/components/ChatSurface.tsx"),
+    read("../src/components/Sidebar.tsx"),
+    read("../src/stores/workspace-view-store.ts"),
+    read("../src/features/chat/transcript/TeamRosterBar.tsx"),
+    read("../src/components/workpanel/MindmapTab.tsx"),
+    read("../src/styles/chat-shell.css"),
+    read("../src/features/chat/transcript/PixelAgentsOffice.tsx"),
+  ]);
 
+  // 1. Workspace View Store contract
+  assert.match(workspaceStoreSrc, /useWorkspaceViewStore/);
+  assert.match(workspaceStoreSrc, /WorkspaceViewMode = "chat" \| "office" \| "mindmap" \| "pipeline"/);
+  assert.match(workspaceStoreSrc, /activeView:\s*WorkspaceViewMode/);
+  assert.match(workspaceStoreSrc, /selectedAgentId/);
+  assert.match(workspaceStoreSrc, /setActiveView/);
 
+  // 2. Dynamic Main Panel rendering inside ChatSurface (MindmapTab replaces static ProjectMindmapView)
+  assert.match(chatSurfaceSrc, /TeamRosterBar/);
+  assert.match(chatSurfaceSrc, /activeWorkspaceView/);
+  assert.match(chatSurfaceSrc, /dynamic-workspace-canvas/);
+  assert.match(chatSurfaceSrc, /MindmapTab/);
+  assert.match(chatSurfaceSrc, /PixelAgentsOffice/);
 
+  // 3. Sidebar workspace view navigation
+  assert.match(sidebarSrc, /sidebar-workspace-views-nav/);
+  assert.match(sidebarSrc, /activeWorkspaceView/);
+  assert.match(sidebarSrc, /setWorkspaceActiveView\("office"\)/);
+  assert.match(sidebarSrc, /setWorkspaceActiveView\("mindmap"\)/);
+  assert.match(sidebarSrc, /setWorkspaceActiveView\("pipeline"\)/);
 
+  // 4. The bar is only a view switcher: the roster strip moved into the Live
+  // Office, so the bar keeps no member chips and reads no roster itself.
+  assert.match(teamRosterSrc, /team-roster-container/);
+  assert.match(teamRosterSrc, /workspace-view-segmented-tabs/);
+  assert.doesNotMatch(teamRosterSrc, /team-member-chip/);
+  assert.doesNotMatch(teamRosterSrc, /useZeusSquad/);
+  assert.doesNotMatch(teamRosterSrc, /useSubagentsData/);
+
+  // 5. Assign to Team lives in the office: picking a team rewrites the shared
+  // active team, and the floor redraws from that team's roster.
+  assert.match(pixelOfficeSrc, /TeamAssignPicker/);
+  assert.match(pixelOfficeSrc, /office\.assignToTeam/);
+  assert.match(pixelOfficeSrc, /setActiveTeamId/);
+  assert.match(pixelOfficeSrc, /useSquadWorkspace\(\)/);
+  assert.match(pixelOfficeSrc, /useZeusSquad\(\)/);
+
+  // 6. Real project mindmap from MindmapTab reads .knowledge/ data (not static fake)
+  assert.match(mindmapSrc, /loadKnowledgeData/);
+  assert.match(mindmapSrc, /\.knowledge/);
+  assert.match(mindmapSrc, /mindmap-container/);
+  assert.match(mindmapSrc, /mindmap-canvas/);
+
+  // 7. CSS styles are clean, responsive, and free of backdrop-filter
+  assert.match(chatShellCss, /\.team-roster-container/);
+  assert.match(chatShellCss, /\.workspace-view-segmented-tabs/);
+  assert.doesNotMatch(chatShellCss, /\.team-member-chip/);
+  assert.match(chatShellCss, /\.pixel-office-team-picker/);
+  assert.match(chatShellCss, /\.dynamic-workspace-canvas/);
+  assert.match(chatShellCss, /\.sidebar-workspace-views-nav/);
+});

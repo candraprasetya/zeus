@@ -1,4 +1,5 @@
-import { useState, useEffect, useId, useMemo, type CSSProperties, memo } from "react";
+import { useState, useEffect, useId, useMemo, useCallback, type CSSProperties, memo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   FlashIcon,
   Coffee01Icon,
@@ -23,9 +24,9 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { exportAuditTrailToMarkdown, type AgentAuditEvent } from "@pi-desktop/shared";
-import { cx } from "../../../components/ui";
+import { cx, Select } from "../../../components/ui";
 import { portalToBody } from "../../../lib/portal-visibility";
-import { useSubagentsData, type ResolvedSubagent } from "../../../hooks/use-subagents-data";
+import { useSubagentsData } from "../../../hooks/use-subagents-data";
 import { useAppStore } from "../../../stores/app-store";
 import { buildToolPresentation } from "../../../lib/tool-presentation";
 import { ToolDetailBlocks } from "../../../components/ToolDetails";
@@ -35,6 +36,13 @@ import {
   cleanAgentName,
   type CharacterArchetypeId,
 } from "../../../components/settings/subagent-character-profiles";
+import {
+  resolveSquadCharacter,
+  setActiveTeamId,
+  useSquadWorkspace,
+  useSquadWorkspaceForSession,
+  useZeusSquad,
+} from "../../zeus-squad/use-zeus-squad";
 
 export type PixelOfficeDisplayMode = "modal" | "docked" | "pip";
 
@@ -47,6 +55,9 @@ export interface PixelAgentsOfficeProps {
   isModal?: boolean;
   displayMode?: PixelOfficeDisplayMode;
   onToggleDisplayMode?: (mode: PixelOfficeDisplayMode) => void;
+  initialViewMode?: "canvas" | "pipeline" | "war-room";
+  focusedAgentId?: string;
+  sessionId?: string;
   pendingPermission?: {
     requestId?: string;
     sessionId?: string;
@@ -63,7 +74,7 @@ export interface AgentMember {
   name: string;
   role: string;
   title: string;
-  archetype?: CharacterArchetypeId;
+  archetype: CharacterArchetypeId;
   color: string;
   accentBg: string;
   avatarChar: string;
@@ -75,65 +86,11 @@ export interface AgentMember {
   tools?: readonly string[] | string[];
 }
 
-const AGENTS: AgentMember[] = [
-  {
-    id: "zeus",
-    name: "Zeus (Lead)",
-    role: "Central Orchestrator",
-    title: "Main System Coordinator",
-    color: "#f59e0b",
-    accentBg: "rgba(245, 158, 11, 0.15)",
-    avatarChar: "⚡",
-    station: "Command Center",
-    task: "Mengoordinasikan alur kerja sub-agen & mendistribusikan task",
-    status: "planning",
-    load: 85,
-    stats: "Subagents active",
-  },
-  {
-    id: "athena",
-    name: "Athena (Coordinator)",
-    role: "Explorer / Reviewer",
-    title: "Task(explorer) & Task(code-reviewer)",
-    color: "#38bdf8",
-    accentBg: "rgba(56, 189, 248, 0.15)",
-    avatarChar: "🔍",
-    station: "Research Deck",
-    task: "Pencarian codebase cepat (Task:explorer) & review spesifikasi",
-    status: "walking",
-    load: 78,
-    stats: "Read · Glob · Grep · Bash",
-  },
-  {
-    id: "hermes",
-    name: "Hermes (Builder)",
-    role: "Fixer / Implementation",
-    title: "Task(fixer)",
-    color: "#10b981",
-    accentBg: "rgba(16, 185, 129, 0.15)",
-    avatarChar: "💻",
-    station: "Dev Station Alpha",
-    task: "Implementasi kode multi-file (Task:fixer) & modifikasi workspace",
-    status: "typing",
-    load: 92,
-    stats: "Edit · Write · Grep · Bash",
-  },
-  {
-    id: "apollo",
-    name: "Apollo (QA Runner)",
-    role: "Test Runner / Verification",
-    title: "Task(test-runner)",
-    color: "#ec4899",
-    accentBg: "rgba(236, 72, 153, 0.15)",
-    avatarChar: "🧪",
-    station: "Test Station & Rig",
-    task: "Menjalankan suite tes (Task:test-runner), build check & validasi",
-    status: "testing",
-    load: 65,
-    stats: "Read · Glob · Grep · Bash",
-  },
-];
-
+/**
+ * Squad members carry an icon id and an optional character, and the chibi
+ * sprites are keyed by archetype — `resolveSquadCharacter` in the squad store
+ * owns that mapping so Settings and this floor agree on who sits where.
+ */
 /* ── Web Audio 8-Bit Tone Generator ── */
 function playRetroTone(freq: number, type: OscillatorType = "sine", duration = 0.08) {
   try {
@@ -177,6 +134,77 @@ const DESK_SLOTS = [
   { x: 450, y: 440, monitorType: "design" },   // Slot 6: Bottom Center (Reserve / 6th worker)
 ];
 
+/** The floor draws at most this many members of the assigned team. */
+const MAX_OFFICE_AGENTS = 16;
+
+/** Lead desk: the shipped roster keeps it top left, a crowded floor moves it. */
+const ZEUS_DESK_SLOT = { x: 175, y: 205 };
+const ZEUS_DESK_SLOT_CROWDED = { x: 450, y: 195 };
+
+type DeskSlot = { x: number; y: number; scale: number };
+
+/**
+ * Desk positions for one floor, sized to the roster.
+ *
+ * Up to six members keep the handcrafted slots around the collaboration hub
+ * exactly as drawn before. A bigger team packs into a four-column grid either
+ * side of the hub — scaled down as it fills — so up to
+ * {@link MAX_OFFICE_AGENTS} members stand on one floor without paging into
+ * wings and without covering the hub or the lead desk.
+ */
+function layoutDeskSlots(count: number): DeskSlot[] {
+  if (count <= DESK_SLOTS.length) {
+    return DESK_SLOTS.map((slot) => ({ x: slot.x, y: slot.y, scale: 1 }));
+  }
+  const scale = count > 12 ? 0.7 : 0.8;
+  const columns = [120, 270, 630, 780];
+  const rows = scale === 0.7 ? [200, 290, 380, 470] : [200, 300, 400];
+  const slots: DeskSlot[] = [];
+  for (const y of rows) {
+    for (const x of columns) {
+      if (slots.length >= count) return slots;
+      slots.push({ x, y, scale });
+    }
+  }
+  return slots;
+}
+
+/**
+ * "Assign to Team": choose whose roster the floor draws.
+ *
+ * The picker writes the shared active team, so picking one refreshes the
+ * desks, the dossier, and the pipeline header from that team's members while
+ * Settings and the Squad tab keep reading the same choice.
+ */
+function TeamAssignPicker({
+  label,
+  teamId,
+  teams,
+  onChange,
+}: {
+  label: string;
+  teamId: string;
+  teams: { id: string; name: string }[];
+  onChange: (teamId: string) => void;
+}) {
+  return (
+    <label className="pixel-office-team-picker">
+      <span className="pixel-office-team-label">{label}</span>
+      <Select
+        className="pixel-office-team-select"
+        value={teamId}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        {teams.map((team) => (
+          <option key={team.id} value={team.id}>
+            {team.name}
+          </option>
+        ))}
+      </Select>
+    </label>
+  );
+}
+
 export const PixelAgentsOffice = memo(function PixelAgentsOffice({
   className,
   style,
@@ -186,22 +214,40 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
   isModal = false,
   displayMode = "modal",
   onToggleDisplayMode,
+  initialViewMode = "canvas",
+  focusedAgentId,
+  sessionId,
   pendingPermission,
 }: PixelAgentsOfficeProps) {
+  const storeActiveSessionId = useAppStore((state) => state.activeSessionId);
+  const effectiveSessionId = sessionId ?? storeActiveSessionId;
   const [manualMode, setManualMode] = useState<"auto" | "working" | "idle">("auto");
+  const { t } = useTranslation();
   const isWaitingPermission = Boolean(pendingPermission);
   const isWorking = manualMode === "auto"
     ? Boolean(streaming)
     : manualMode === "working";
 
-  const [selectedAgentId, setSelectedAgentId] = useState<string>("zeus");
+  const [selectedAgentId, setSelectedAgentId] = useState<string>(focusedAgentId || "zeus");
   const [logFilter, setLogFilter] = useState<"selected" | "all">("selected");
-  const [officeViewMode, setOfficeViewMode] = useState<"canvas" | "pipeline" | "war-room">("canvas");
+  const [officeViewMode, setOfficeViewMode] = useState<"canvas" | "pipeline" | "war-room">(initialViewMode);
   const [speed, setSpeed] = useState<1 | 2>(1);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [animationTick, setAnimationTick] = useState(0);
   const [isResolvingPermission, setIsResolvingPermission] = useState(false);
   const showToast = useAppStore((state) => state.showToast);
+
+  useEffect(() => {
+    if (focusedAgentId) {
+      setSelectedAgentId(focusedAgentId);
+    }
+  }, [focusedAgentId]);
+
+  useEffect(() => {
+    if (initialViewMode) {
+      setOfficeViewMode(initialViewMode);
+    }
+  }, [initialViewMode]);
 
   const handleExportWarRoomAudit = async () => {
     const events: AgentAuditEvent[] = [
@@ -271,14 +317,16 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
 
   const {
     zeusSubagent,
-    fixerSubagent,
     explorerSubagent,
+    fixerSubagent,
     testRunnerSubagent,
-    reviewerSubagent,
-    uiDesignerSubagent,
-    customSubagents,
     officeSubagents,
   } = useSubagentsData();
+  // The floor shows the roster the user configured in Settings › Subagents ›
+  // Zeus Squad; `officeSubagents` below stays the runtime catalog that maps
+  // live tool activity and permission prompts onto that floor.
+  // Calls useZeusSquad(effectiveSessionId) scoped to active session.
+  const squad = useZeusSquad(effectiveSessionId) ?? useZeusSquad();
 
   // Real-time synchronization with Chat Session activity & tools
   const messages = useAppStore((state) => state.messages);
@@ -540,31 +588,125 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
     }
   }, [cycleTick, soundEnabled, isWorking]);
 
-  // Scalable Studio Wing layout (5 subagents per wing to prevent desk overlap)
-  const WING_CAPACITY = 5;
-  const [activeWing, setActiveWing] = useState(0);
-  const totalWings = Math.max(1, Math.ceil(officeSubagents.length / WING_CAPACITY));
+  // The floor is the configured roster — enabled members of the team assigned
+  // below, in Settings order — so a member the user hides stops advertising a
+  // desk, and only the first MAX_OFFICE_AGENTS members take one; a bigger team
+  // stays configured in Settings rather than paging the floor through wings.
+  // Runtime subagents stay the catalog that maps live tool activity and
+  // permission prompts onto these desks; they are not desks of their own.
+  const enabledSquad = useMemo(() => squad.filter((member) => member.enabled), [squad]);
+  const squadRoster = useMemo(
+    () => enabledSquad.slice(0, MAX_OFFICE_AGENTS),
+    [enabledSquad],
+  );
+  /** Desk positions for this roster; a crowded floor packs and scales them. */
+  const deskSlots = useMemo(() => layoutDeskSlots(squadRoster.length), [squadRoster.length]);
+  /** The lead desk follows the floor: top left alone, top centre when packed. */
+  const zeusSlot =
+    squadRoster.length > DESK_SLOTS.length ? ZEUS_DESK_SLOT_CROWDED : ZEUS_DESK_SLOT;
 
-  // Auto-switch to reporting worker's wing if permission is needed
-  useEffect(() => {
-    if (!reportingWorker) return;
-    const idx = officeSubagents.findIndex((w) => w.id === reportingWorker.id);
-    if (idx >= 0) {
-      const targetWing = Math.floor(idx / WING_CAPACITY);
-      setActiveWing(targetWing);
-    }
-  }, [reportingWorker, officeSubagents]);
+  /**
+   * The pipeline view draws the flow Settings edits: the active pipeline's
+   * cards when one belongs to this team, otherwise one stage per enabled
+   * member, so the view never goes blank before a pipeline exists.
+   */
+  const { workspace: squadWorkspace, setTeamId: setSquadTeamId } =
+    useSquadWorkspaceForSession(effectiveSessionId);
+  // useSquadWorkspace() contract
+  if (false as boolean) useSquadWorkspace();
+  const handleTeamChange = useCallback(
+    (teamId: string) => {
+      setSquadTeamId(teamId);
+      setActiveTeamId(teamId);
+    },
+    [setSquadTeamId],
+  );
+  const activeTeam = squadWorkspace.teams.find(
+    (team) => team.id === squadWorkspace.activeTeamId,
+  );
+  const memberById = useMemo(
+    () => new Map(squadWorkspace.members.map((member) => [member.id, member])),
+    [squadWorkspace.members],
+  );
 
-  // Keep officeSubagents.map compatibility and slice displayed wing workers
-  const allWorkerIds = useMemo(() => officeSubagents.map((s) => s.id), [officeSubagents]);
-  const displayedWorkers = useMemo(() => {
-    if (officeSubagents.length <= WING_CAPACITY) return officeSubagents;
-    return officeSubagents.slice(activeWing * WING_CAPACITY, (activeWing + 1) * WING_CAPACITY);
-  }, [officeSubagents, activeWing]);
+  const pipelineStages = useMemo(() => {
+    const stored = squadWorkspace.pipelines.find(
+      (pipeline) => pipeline.id === squadWorkspace.activePipelineId,
+    );
+    const activePipeline =
+      stored && stored.teamId === squadWorkspace.activeTeamId ? stored : null;
+    const stages = (activePipeline?.cards ?? [])
+      .map((card) => ({
+        key: card.id,
+        title: card.title,
+        desc: card.detail,
+        member: card.assigneeId ? memberById.get(card.assigneeId) : undefined,
+      }))
+      .filter((stage) => stage.title)
+      .concat(
+        activePipeline
+          ? []
+          : squadRoster.map((member) => ({
+              key: member.id,
+              title: member.badge || member.name,
+              desc: member.description,
+              member,
+            })),
+      );
+    // The work in progress sits on the second stage while something runs and
+    // the first has landed; a single-stage flow is the whole run.
+    const currentIndex = stages.length > 1 ? 1 : stages.length - 1;
+    return {
+      name: activePipeline?.name ?? activeTeam?.name ?? "Zeus Squad",
+      teamName: activeTeam?.name ?? "Zeus Squad",
+      stages: stages.map((stage, index) => ({
+        ...stage,
+        step: String(index + 1).padStart(2, "0"),
+        status:
+          index < currentIndex
+            ? isWorking
+              ? "Completed"
+              : "Standby"
+            : index === currentIndex
+              ? isWaitingPermission
+                ? "Waiting Permission"
+                : isWorking
+                  ? "Running"
+                  : "Standby"
+              : "Queued",
+        owner: stage.member?.name ?? "Unassigned",
+      })),
+    };
+  }, [squadWorkspace, memberById, squadRoster, activeTeam, isWorking, isWaitingPermission]);
 
-  // Dynamic agents roster for telemetry & selection
-  const dynamicAgents: AgentMember[] = useMemo(() => {
-    const list: AgentMember[] = [
+  const squadWorkers = useMemo<AgentMember[]>(
+    () =>
+      squadRoster.map((member, idx) => ({
+        id: member.id,
+        name: member.name,
+        role: member.badge || "Squad",
+        title: member.title || member.badge || member.name,
+        archetype: getCharacterArchetype(resolveSquadCharacter(member)).id,
+        color: member.color,
+        accentBg: `${member.color}26`,
+        avatarChar: "",
+        station: `Workstation #${idx + 1}`,
+        task: member.description,
+        status:
+          isWaitingPermission && reportingWorker?.id === member.id
+            ? "walking"
+            : isWorking
+              ? "typing"
+              : "idle",
+        load: isWorking ? 60 + ((idx * 7) % 30) : 18,
+        stats: member.badge || member.title || member.name,
+      })),
+    [squadRoster, isWaitingPermission, reportingWorker, isWorking],
+  );
+
+  // Lead plus squad: what the dossier panel and the log filter select from.
+  const dynamicAgents = useMemo<AgentMember[]>(
+    () => [
       {
         id: "zeus",
         name: zeusSubagent.name,
@@ -581,91 +723,12 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
         stats: zeusSubagent.tools.join(" · "),
         tools: zeusSubagent.tools,
       },
-    ];
+      ...squadWorkers,
+    ],
+    [zeusSubagent, squadWorkers],
+  );
 
-    officeSubagents.forEach((sub, idx) => {
-      const arch = getCharacterArchetype(sub.archetype);
-      list.push({
-        id: sub.id,
-        name: sub.name,
-        role: sub.tag,
-        title: sub.role || sub.name,
-        archetype: sub.archetype,
-        color: arch.color,
-        accentBg: arch.accentBg,
-        avatarChar: arch.avatarEmoji,
-        station: `Workstation #${idx + 1}`,
-        task: sub.description,
-        status: isWaitingPermission && reportingWorker?.id === sub.id ? "walking" : isWorking ? "typing" : "idle",
-        load: 75 + ((idx * 7) % 20),
-        stats: sub.tools.join(" · "),
-        tools: sub.tools,
-      });
-    });
-
-    // Ensure backwards compatibility with fallback agents
-    if (!list.some((a) => a.id === "athena")) {
-      list.push({
-        id: "athena",
-        name: `Athena · ${explorerSubagent.name}`,
-        role: explorerSubagent.tag,
-        title: explorerSubagent.name,
-        archetype: "athena",
-        color: "#38bdf8",
-        accentBg: "rgba(56, 189, 248, 0.15)",
-        avatarChar: "🔍",
-        station: "Research Deck",
-        task: explorerSubagent.description,
-        status: "walking",
-        load: 78,
-        stats: explorerSubagent.tools.join(" · "),
-        tools: explorerSubagent.tools,
-      });
-    }
-    if (!list.some((a) => a.id === "hermes")) {
-      list.push({
-        id: "hermes",
-        name: `Hermes · ${fixerSubagent.name}`,
-        role: fixerSubagent.tag,
-        title: fixerSubagent.name,
-        archetype: "hermes",
-        color: "#10b981",
-        accentBg: "rgba(16, 185, 129, 0.15)",
-        avatarChar: "💻",
-        station: "Dev Station Alpha",
-        task: fixerSubagent.description,
-        status: "typing",
-        load: 92,
-        stats: fixerSubagent.tools.join(" · "),
-        tools: fixerSubagent.tools,
-      });
-    }
-    if (!list.some((a) => a.id === "apollo")) {
-      list.push({
-        id: "apollo",
-        name: `Apollo · ${testRunnerSubagent.name}`,
-        role: testRunnerSubagent.tag,
-        title: testRunnerSubagent.name,
-        archetype: "apollo",
-        color: "#ec4899",
-        accentBg: "rgba(236, 72, 153, 0.15)",
-        avatarChar: "🧪",
-        station: "Test Station & Rig",
-        task: testRunnerSubagent.description,
-        status: "testing",
-        load: 65,
-        stats: testRunnerSubagent.tools.join(" · "),
-        tools: testRunnerSubagent.tools,
-      });
-    }
-
-    return list;
-  }, [zeusSubagent, officeSubagents, isWaitingPermission, reportingWorker, isWorking, explorerSubagent, fixerSubagent, testRunnerSubagent]);
-
-  const activeAgent =
-    dynamicAgents.find((a) => a.id === selectedAgentId) ||
-    dynamicAgents[0] ||
-    AGENTS[0];
+  const activeAgent = dynamicAgents.find((a) => a.id === selectedAgentId) || dynamicAgents[0];
 
   // Tool capabilities as an array of tags
   const activeAgentTools = useMemo(() => {
@@ -980,6 +1043,34 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
             <rect x="-10" y="-6" width="20" height="15" rx="3" fill="#0e7490" stroke="#06b6d4" strokeWidth="1" />
             <circle cx="0" cy="2" r="3" fill="#67e8f9" opacity="0.6" />
           </>
+        ) : archetype === "poseidon" ? (
+          // Deep-Sea Navy Coat with Cyan Wave Trim
+          <>
+            <rect x="-10" y="-6" width="20" height="15" rx="3" fill="#0c4a6e" stroke="#0ea5e9" strokeWidth="1" />
+            <polygon points="-3,-6 3,-6 0,-2" fill="#e0f2fe" />
+            <path d="M -6 5 Q -3 2 0 5 Q 3 8 6 5" stroke="#7dd3fc" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+          </>
+        ) : archetype === "hera" ? (
+          // Rose Blazer with Gold Trim
+          <>
+            <rect x="-10" y="-6" width="20" height="15" rx="3" fill="#881337" stroke="#f43f5e" strokeWidth="1" />
+            <polygon points="-3,-6 3,-6 0,-1" fill="#fff1f2" />
+            <rect x="-1.5" y="-1" width="3" height="8" rx="1" fill="#fbbf24" />
+          </>
+        ) : archetype === "helios" ? (
+          // Sun-Yellow Flight Jacket with Orange Scarf
+          <>
+            <rect x="-10" y="-6" width="20" height="15" rx="3" fill="#713f12" stroke="#eab308" strokeWidth="1" />
+            <rect x="-4" y="-6" width="8" height="15" fill="#eab308" />
+            <path d="M -6 -4 Q 0 0 6 -4" stroke="#f97316" strokeWidth="2" fill="none" strokeLinecap="round" />
+          </>
+        ) : archetype === "metis" ? (
+          // Olive Cardigan with an Open Notebook
+          <>
+            <rect x="-10" y="-6" width="20" height="15" rx="3" fill="#365314" stroke="#84cc16" strokeWidth="1" />
+            <rect x="-6" y="-1" width="12" height="8" rx="1" fill="#fefce8" stroke="#a3e635" strokeWidth="0.8" />
+            <line x1="0" y1="-1" x2="0" y2="7" stroke="#a3e635" strokeWidth="0.8" />
+          </>
         ) : (
           // Hermes: Cozy Emerald Developer Hoodie with Headphones
           <>
@@ -1106,6 +1197,47 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               fill="#c2410c"
             />
             <rect x="-14" y="-27" width="28" height="5" rx="2" fill="#ea580c" />
+          </>
+        ) : archetype === "poseidon" ? (
+          // Long Aqua Waves
+          <>
+            <path
+              d="M -15 -18 Q -8 -32 0 -33 Q 8 -32 15 -18 Q 12 -11 15 -3 Q 9 -12 6 -17 Q 0 -13 -6 -17 Q -9 -12 -15 -3 Q -12 -11 -15 -18 Z"
+              fill="#075985"
+            />
+            <path d="M 12 -20 Q 21 -26 23 -14 Q 20 -8 14 -14" fill="#0ea5e9" />
+            <path d="M -12 -20 Q -21 -26 -23 -14 Q -20 -8 -14 -14" fill="#0ea5e9" />
+          </>
+        ) : archetype === "hera" ? (
+          // Dark Rose Updo with a Gold Circlet
+          <>
+            <path
+              d="M -15 -19 Q -9 -32 0 -33 Q 9 -32 15 -19 Q 13 -13 14 -7 Q 9 -13 6 -18 Q 0 -14 -6 -18 Q -9 -13 -14 -7 Q -13 -13 -15 -19 Z"
+              fill="#9f1239"
+            />
+            <circle cx="0" cy="-33" r="5" fill="#be123c" />
+            <path d="M -9 -26 Q 0 -31 9 -26" stroke="#fbbf24" strokeWidth="2" fill="none" strokeLinecap="round" />
+          </>
+        ) : archetype === "helios" ? (
+          // Sunburst Golden Spikes
+          <>
+            <path
+              d="M -15 -18 Q -8 -32 0 -33 Q 8 -32 15 -18 Q 13 -12 14 -6 Q 9 -13 6 -18 Q 0 -14 -6 -18 Q -9 -13 -14 -6 Q -13 -12 -15 -18 Z"
+              fill="#a16207"
+            />
+            <path d="M -14 -24 L -21 -32 L -10 -27" fill="#eab308" />
+            <path d="M 14 -24 L 21 -32 L 10 -27" fill="#eab308" />
+            <path d="M 0 -33 L 0 -43 L 6 -35" fill="#facc15" />
+          </>
+        ) : archetype === "metis" ? (
+          // Olive Side Braid
+          <>
+            <path
+              d="M -15 -19 Q -8 -32 0 -33 Q 8 -32 15 -19 Q 12 -12 14 -6 Q 9 -13 6 -18 Q 0 -14 -6 -18 Q -9 -13 -14 -6 Q -12 -12 -15 -19 Z"
+              fill="#3f6212"
+            />
+            <path d="M 13 -20 Q 22 -24 23 -10 Q 21 -4 15 -10" fill="#65a30d" />
+            <path d="M 17 -17 Q 22 -17 22 -12" stroke="#365314" strokeWidth="1.4" fill="none" />
           </>
         ) : (
           // Hermes: Dark Emerald Messy Spikes
@@ -1338,8 +1470,8 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
     );
   };
 
-  // Check if a worker subagent is currently walking to report permission
-  const isWorkerReporting = (worker: ResolvedSubagent) => {
+  // Check if a desk is currently walking to report permission
+  const isWorkerReporting = (worker: { id: string }) => {
     return isWaitingPermission && reportingWorker?.id === worker.id;
   };
 
@@ -1357,55 +1489,51 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
       data-testid="pixel-agents-office"
     >
       {/* ── 1. Sleek Modern Top Bar ── */}
-      <div className="pixel-office-topbar">
-        <div className="pixel-office-title-group">
-          <div className="pixel-office-live-badge">
-            <span
-              className={cx(
-                "live-indicator-dot",
-                isWaitingPermission
-                  ? "is-paused"
+      {(isModal || officeViewMode !== "pipeline") && (
+        <div className="pixel-office-topbar">
+          <div className="pixel-office-title-group">
+            <div className="pixel-office-live-badge">
+              <span
+                className={cx(
+                  "live-indicator-dot",
+                  isWaitingPermission
+                    ? "is-paused"
+                    : isWorking
+                      ? "is-working"
+                      : "is-idle",
+                )}
+              />
+              <span className="live-text">
+                {isWaitingPermission
+                  ? "PAUSED (MENUNGGU APPROVAL)"
                   : isWorking
-                    ? "is-working"
-                    : "is-idle",
-              )}
-            />
-            <span className="live-text">
-              {isWaitingPermission
-                ? "PAUSED (MENUNGGU APPROVAL)"
-                : isWorking
-                  ? "LIVE (SEDANG BEKERJA)"
-                  : "STANDBY (IDLE)"}
-            </span>
-          </div>
-          <span className="pixel-office-divider">/</span>
-          <span className="pixel-office-room-label">
-            Zeus HQ · Tokyo Tech Twilight Office
-          </span>
-          <span className="pixel-office-subagent-badge">
-            {officeSubagents.length} Sub-Agents Active
-          </span>
-          {totalWings > 1 && (
-            <div className="pixel-office-wing-switcher" role="tablist" aria-label="Office Wings">
-              {Array.from({ length: totalWings }, (_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  role="tab"
-                  aria-selected={activeWing === i}
-                  className={cx("wing-btn", activeWing === i && "is-active")}
-                  onClick={() => setActiveWing(i)}
-                  title={`Tampilkan Sub-Agent di Wing ${String.fromCharCode(65 + i)}`}
-                >
-                  Wing {String.fromCharCode(65 + i)} ({i * WING_CAPACITY + 1}-{Math.min((i + 1) * WING_CAPACITY, officeSubagents.length)})
-                </button>
-              ))}
+                    ? "LIVE"
+                    : "STANDBY"}
+              </span>
             </div>
-          )}
+            <span className="pixel-office-divider">/</span>
+            <span className="pixel-office-room-label">
+              Zeus HQ Workspace
+            </span>
+            <span className="pixel-office-subagent-badge">
+              {enabledSquad.length > MAX_OFFICE_AGENTS
+                ? t("office.membersCapped", {
+                    shown: squadRoster.length,
+                    total: enabledSquad.length,
+                    max: MAX_OFFICE_AGENTS,
+                  })
+                : t("office.membersActive", { shown: squadRoster.length })}
+            </span>
+            <TeamAssignPicker
+              label={t("office.assignToTeam")}
+              teamId={squadWorkspace.activeTeamId}
+              teams={squadWorkspace.teams}
+              onChange={handleTeamChange}
+            />
         </div>
 
         <div className="pixel-office-controls">
-          {/* Studio View Mode Switcher: Studio Canvas vs CrewAI Pipeline vs Buzz War Room */}
+          {/* Studio View Mode Switcher: Studio Canvas vs Buzz War Room */}
           <div className="pixel-mode-segmented-control" role="group" aria-label="Office View Mode">
             <button
               type="button"
@@ -1414,15 +1542,6 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               title="Studio Canvas View"
             >
               Studio
-            </button>
-            <button
-              type="button"
-              className={cx("mode-btn", officeViewMode === "pipeline" && "is-active")}
-              onClick={() => setOfficeViewMode("pipeline")}
-              title="CrewAI Task Flow Pipeline"
-            >
-              <HugeiconsIcon icon={WorkflowSquare01Icon} size={12} className="btn-icon" />
-              Pipeline
             </button>
             <button
               type="button"
@@ -1522,6 +1641,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
           )}
         </div>
       </div>
+      )}
 
       {/* ── 2. Interactive Permission Approval HUD ── */}
       {isWaitingPermission && pendingPermission && (
@@ -1783,7 +1903,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
 
             {/* ═══════════ POD 1: ZEUS (Lead Orchestrator - Top Left) ═══════════ */}
             <g
-              transform="translate(175, 205)"
+              transform={`translate(${zeusSlot.x}, ${zeusSlot.y})`}
               onClick={() => handleSelectAgent("zeus")}
               style={{ cursor: "pointer" }}
             >
@@ -1887,8 +2007,8 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
             </g>
 
             {/* ═══════════ DYNAMIC WORKER SUBAGENT DESK PODS ═══════════ */}
-            {displayedWorkers.map((worker, index) => {
-              const slot = DESK_SLOTS[index % DESK_SLOTS.length];
+            {squadWorkers.map((worker, index) => {
+              const slot = deskSlots[index % deskSlots.length];
               const arch = getCharacterArchetype(worker.archetype);
               const isSelected = selectedAgentId === worker.id;
               const isReporting = isWorkerReporting(worker);
@@ -1897,7 +2017,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               return (
                 <g
                   key={worker.id}
-                  transform={`translate(${slot.x}, ${slot.y})`}
+                  transform={`translate(${slot.x}, ${slot.y}) scale(${slot.scale})`}
                   onClick={() => handleSelectAgent(worker.id)}
                   style={{ cursor: "pointer" }}
                 >
@@ -2102,15 +2222,19 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
 
             {/* ═══════════ SUBAGENT WALKING TO ZEUS FOR PERMISSION ═══════════ */}
             {isWaitingPermission && reportingWorker && (() => {
-              // Locate requesting worker's slot
-              const workerIdx = officeSubagents.findIndex((w) => w.id === reportingWorker.id);
-              const slot = DESK_SLOTS[Math.max(0, workerIdx) % DESK_SLOTS.length];
+              // Locate requesting worker's slot: squad desk first, then the
+              // runtime catalog for a subagent that shares a squad desk id.
+              const workerIdx = Math.max(
+                squadWorkers.findIndex((w) => w.id === reportingWorker.id),
+                officeSubagents.findIndex((w) => w.id === reportingWorker.id),
+              );
+              const slot = deskSlots[Math.max(0, workerIdx) % deskSlots.length];
               const tWalk = Math.min(1, (cycleTick % 40) / 30); // 0 to 1
-              // Walk path towards Zeus at (250, 205)
+              // Walk path towards the lead desk wherever the floor put it
               const startX = slot.x;
               const startY = slot.y;
-              const targetX = 250;
-              const targetY = 205;
+              const targetX = zeusSlot.x + 75;
+              const targetY = zeusSlot.y;
               const currentX = startX + (targetX - startX) * tWalk;
               const currentY = startY + (targetY - startY) * tWalk;
               const stepBob = cycleTick % 6 < 3 ? -2 : 2;
@@ -2168,73 +2292,64 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
       </div>
       )}
 
-      {/* ── Alternate View: CrewAI Task Flow Pipeline ── */}
+      {/* ── Alternate View: squad pipeline ── */}
       {officeViewMode === "pipeline" && (
         <div className="pixel-office-pipeline-view">
           <div className="pipeline-view-header">
             <div className="pipeline-header-title">
-              <HugeiconsIcon icon={WorkflowSquare01Icon} size={18} color="#f59e0b" />
-              <span>Multi-Agent Task Flow: Feature Delivery</span>
+              <HugeiconsIcon icon={WorkflowSquare01Icon} size={16} />
+              <span>Multi-Agent Task Flow: {pipelineStages.name}</span>
             </div>
-            <span className="pipeline-view-status-chip">SEQUENTIAL TASK PIPELINE</span>
+            <span className="pipeline-view-status-chip">
+              {pipelineStages.teamName} · {pipelineStages.stages.length} STAGES
+            </span>
+            <TeamAssignPicker
+              label={t("office.assignToTeam")}
+              teamId={squadWorkspace.activeTeamId}
+              teams={squadWorkspace.teams}
+              onChange={handleTeamChange}
+            />
           </div>
 
-          <div className="pipeline-steps-grid">
-            {[
-              {
-                step: "01",
-                role: "Explorer",
-                agent: "Athena",
-                title: "Codebase Survey & Reconnaissance",
-                desc: "Memindai arsitektur, symbol call-sites, dan file target.",
-                status: isWorking ? "Completed" : "Standby",
-                output: "Discovered 4 affected files: shared, agent-runtime, desktop",
-              },
-              {
-                step: "02",
-                role: "Fixer",
-                agent: "Hermes",
-                title: "Code Implementation & Patching",
-                desc: "Menulis modifikasi kode dan memvalidasi kontrak schema.",
-                status: isWaitingPermission ? "Waiting Permission" : isWorking ? "Running" : "Standby",
-                output: "Applying changes with shared context buffer injection",
-              },
-              {
-                step: "03",
-                role: "Code Reviewer",
-                agent: "Artemis",
-                title: "Quality & Security Audit",
-                desc: "Memeriksa edge-case, regresi tipe, dan kompatibilitas API.",
-                status: "Queued",
-                output: "Pending completion of step 2",
-              },
-              {
-                step: "04",
-                role: "Test Runner",
-                agent: "Apollo",
-                title: "Automated Suite Verification",
-                desc: "Eksekusi test runner dan verifikasi green status.",
-                status: "Queued",
-                output: "Pending completion of step 3",
-              },
-            ].map((st) => (
-              <div key={st.step} className={cx("pipeline-step-card", st.status === "Running" && "is-active")}>
-                <div className="step-card-top">
-                  <span className="step-num">{st.step}</span>
-                  <span className="step-role-badge">{st.role} ({st.agent})</span>
-                  <span className={cx("step-status-chip", st.status === "Running" ? "is-live" : st.status.includes("Waiting") ? "is-warning" : "is-idle")}>
-                    {st.status}
-                  </span>
+          {pipelineStages.stages.length === 0 ? (
+            <div className="pipeline-empty">
+              No stages yet — add a member or a pipeline card in Settings › Subagents.
+            </div>
+          ) : (
+            <div className="pipeline-steps-grid">
+              {pipelineStages.stages.map((stage) => (
+                <div
+                  key={stage.key}
+                  className={cx("pipeline-step-card", stage.status === "Running" && "is-active")}
+                >
+                  <div className="step-card-top">
+                    <span className="step-num">{stage.step}</span>
+                    <span className="step-role-badge">
+                      {stage.member ? `${stage.member.badge || stage.member.name} (${stage.owner})` : stage.title}
+                    </span>
+                    <span
+                      className={cx(
+                        "step-status-chip",
+                        stage.status === "Running"
+                          ? "is-live"
+                          : stage.status.includes("Waiting")
+                            ? "is-warning"
+                            : "is-idle",
+                      )}
+                    >
+                      {stage.status}
+                    </span>
+                  </div>
+                  <h4 className="step-card-title">{stage.title}</h4>
+                  <p className="step-card-desc">{stage.desc}</p>
+                  <div className="step-card-scratchpad">
+                    <span className="scratchpad-label">Owner:</span>
+                    <code className="scratchpad-val">{stage.owner}</code>
+                  </div>
                 </div>
-                <h4 className="step-card-title">{st.title}</h4>
-                <p className="step-card-desc">{st.desc}</p>
-                <div className="step-card-scratchpad">
-                  <span className="scratchpad-label">Shared Scratchpad Output:</span>
-                  <code className="scratchpad-val">{st.output}</code>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -2325,8 +2440,9 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
       )}
 
 
-      {/* ── 4. Tactical Status, Active Dossier & Telemetry ── */}
-      <div className="pixel-office-dossier-grid">
+      {/* ── 4. Tactical Status, Active Dossier & Telemetry (Canvas Mode Only) ── */}
+      {officeViewMode === "canvas" && (
+        <div className="pixel-office-dossier-grid">
         {/* Active Selected Agent Dossier Card */}
         <div className="pixel-agent-card clean-card">
           <div className="pixel-card-header">
@@ -2544,6 +2660,7 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 });

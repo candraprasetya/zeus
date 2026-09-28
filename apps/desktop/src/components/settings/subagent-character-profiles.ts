@@ -6,6 +6,10 @@ import {
   Wrench01Icon,
   Target01Icon,
   PaintBoardIcon,
+  CloudServerIcon,
+  CrownIcon,
+  Rocket01Icon,
+  BookOpen01Icon,
   BotIcon,
 } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
@@ -17,7 +21,11 @@ export type CharacterArchetypeId =
   | "apollo"
   | "hephaestus"
   | "artemis"
-  | "iris";
+  | "iris"
+  | "poseidon"
+  | "hera"
+  | "helios"
+  | "metis";
 
 export interface CharacterArchetype {
   id: CharacterArchetypeId;
@@ -48,6 +56,14 @@ export function getArchetypeHugeIcon(archetype: string | undefined): IconSvgElem
       return Target01Icon;
     case "iris":
       return PaintBoardIcon;
+    case "poseidon":
+      return CloudServerIcon;
+    case "hera":
+      return CrownIcon;
+    case "helios":
+      return Rocket01Icon;
+    case "metis":
+      return BookOpen01Icon;
     default:
       return BotIcon;
   }
@@ -142,6 +158,54 @@ export const CHARACTER_ARCHETYPES: CharacterArchetype[] = [
     hairColor: "#0891b2",
     outfitColor: "#0e7490",
     description: "Web interface design, accessible components & styling",
+  },
+  {
+    id: "poseidon",
+    name: "Poseidon",
+    defaultRole: "Infrastructure & Networks",
+    badge: "Infra Engineer",
+    avatarEmoji: "🌊",
+    color: "#0ea5e9",
+    accentBg: "rgba(14, 165, 233, 0.15)",
+    hairColor: "#075985",
+    outfitColor: "#0c4a6e",
+    description: "Hosts, CI/CD pipelines & service networking",
+  },
+  {
+    id: "hera",
+    name: "Hera",
+    defaultRole: "Scope & Coordination",
+    badge: "Product Lead",
+    avatarEmoji: "👑",
+    color: "#f43f5e",
+    accentBg: "rgba(244, 63, 94, 0.15)",
+    hairColor: "#9f1239",
+    outfitColor: "#881337",
+    description: "Priorities, acceptance criteria & cross-agent coordination",
+  },
+  {
+    id: "helios",
+    name: "Helios",
+    defaultRole: "DevOps & Release",
+    badge: "Release Engineer",
+    avatarEmoji: "🚀",
+    color: "#eab308",
+    accentBg: "rgba(234, 179, 8, 0.15)",
+    hairColor: "#a16207",
+    outfitColor: "#713f12",
+    description: "Build, release & environment automation",
+  },
+  {
+    id: "metis",
+    name: "Metis",
+    defaultRole: "Documentation & Research",
+    badge: "Docs Researcher",
+    avatarEmoji: "📚",
+    color: "#84cc16",
+    accentBg: "rgba(132, 204, 22, 0.15)",
+    hairColor: "#3f6212",
+    outfitColor: "#365314",
+    description: "Documentation, specs & knowledge research",
   },
 ];
 

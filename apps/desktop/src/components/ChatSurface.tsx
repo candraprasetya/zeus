@@ -16,7 +16,10 @@ import { ConversationWidthHandles } from "./ConversationWidthHandles";
 import { useAppStore } from "../stores/app-store";
 import { headPermission } from "../lib/pending-permissions";
 import { headAsk } from "../lib/pending-asks";
-import { PixelAgentsOfficeModal } from "../features/chat/transcript/PixelAgentsOffice";
+import { PixelAgentsOffice, PixelAgentsOfficeModal } from "../features/chat/transcript/PixelAgentsOffice";
+import { TeamRosterBar } from "../features/chat/transcript/TeamRosterBar";
+import { MindmapTab } from "./workpanel/MindmapTab";
+import { useWorkspaceViewStore } from "../stores/workspace-view-store";
 import { ZeusSubagentTasksFloatingPanel } from "./ZeusSubagentTasksFloatingPanel";
 import { useSubagentsData } from "../hooks/use-subagents-data";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -26,6 +29,9 @@ import {
   Alert02Icon,
   ChevronDownIcon,
   ChevronUpIcon,
+  Folder01Icon,
+  Route01Icon,
+  WorkflowSquare01Icon,
 } from "@hugeicons/core-free-icons";
 
 const StableComposer = memo(Composer);
@@ -74,6 +80,10 @@ export const ChatSurface = memo(function ChatSurface({
   const error = useAppStore((state) => state.error);
   const errorCode = useAppStore((state) => state.errorCode);
   const errorRetriable = useAppStore((state) => state.errorRetriable);
+  const openProject = useAppStore((state) => state.openProject);
+  const activeWorkspaceView = useWorkspaceViewStore((s) => s.activeView);
+  const setWorkspaceActiveView = useWorkspaceViewStore((s) => s.setActiveView);
+  const selectedAgentId = useWorkspaceViewStore((s) => s.selectedAgentId);
   const [hiddenVendorModelKey, setHiddenVendorModelKey] = useState<string | null>(
     null,
   );
@@ -243,13 +253,49 @@ export const ChatSurface = memo(function ChatSurface({
                   <button
                     type="button"
                     className="zeus-view-office-btn is-idle"
-                    onClick={() => setIsOfficeModalOpen(true)}
+                    onClick={() => {
+                      setWorkspaceActiveView("office");
+                      setIsOfficeModalOpen(true);
+                    }}
                     title="Buka AI Agent Office (Standby / Idle)"
                     style={{ marginTop: "8px" }}
                   >
                     <HugeiconsIcon icon={Building03Icon} size={14} className="office-btn-icon" />
                     <span className="office-btn-text">View AI Agent Office</span>
                     <span className="office-btn-idle">IDLE</span>
+                  </button>
+                </div>
+
+                {/* Quick Launch Cards for Mindmap & Live Office */}
+                <div className="home-quick-launch-grid" role="group" aria-label="Project Actions">
+                  <button
+                    type="button"
+                    className="home-quick-launch-card"
+                    onClick={() => setWorkspaceActiveView("office")}
+                    title="Lihat Meja Kerja Tim Agen"
+                  >
+                    <div className="quick-launch-icon-badge" style={{ color: "#f59e0b", background: "rgba(245, 158, 11, 0.15)" }}>
+                      <HugeiconsIcon icon={Building03Icon} size={15} />
+                    </div>
+                    <div className="quick-launch-text">
+                      <span className="quick-launch-title">Live Office Studio</span>
+                      <span className="quick-launch-sub">Visual tim agen &amp; status</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="home-quick-launch-card"
+                    onClick={() => setWorkspaceActiveView("mindmap")}
+                    title="Jelajahi Peta Arsitektur Proyek"
+                  >
+                    <div className="quick-launch-icon-badge" style={{ color: "#10b981", background: "rgba(16, 185, 129, 0.15)" }}>
+                      <HugeiconsIcon icon={Route01Icon} size={15} />
+                    </div>
+                    <div className="quick-launch-text">
+                      <span className="quick-launch-title">Project Mindmap</span>
+                      <span className="quick-launch-sub">Peta arsitektur &amp; token</span>
+                    </div>
                   </button>
                 </div>
               </div>
@@ -262,7 +308,12 @@ export const ChatSurface = memo(function ChatSurface({
         </div>
       ) : (
         <>
-          <div className="session-panes">
+          <TeamRosterBar isStreaming={isSessionRunning} />
+
+          <div
+            className="session-panes"
+            style={{ display: activeWorkspaceView === "chat" ? undefined : "none" }}
+          >
             {retainedSessionIds.map((id) => (
               <SessionPane
                 key={id}
@@ -271,23 +322,66 @@ export const ChatSurface = memo(function ChatSurface({
               />
             ))}
           </div>
+
+          <div
+            className="dynamic-workspace-canvas"
+            style={{ display: activeWorkspaceView === "chat" ? "none" : "flex" }}
+          >
+            <div
+              className="workspace-view-pane"
+              style={{
+                display:
+                  activeWorkspaceView === "office" || activeWorkspaceView === "pipeline"
+                    ? "flex"
+                    : "none",
+                width: "100%",
+                height: "100%",
+                flex: 1,
+                minHeight: 0,
+              }}
+            >
+              <PixelAgentsOffice
+                isModal={false}
+                streaming={isSessionRunning}
+                pendingPermission={activePermission}
+                initialViewMode={activeWorkspaceView === "pipeline" ? "pipeline" : "canvas"}
+                focusedAgentId={selectedAgentId}
+                sessionId={visibleSessionId}
+              />
+            </div>
+
+            <div
+              className="workspace-view-pane"
+              style={{
+                display: activeWorkspaceView === "mindmap" ? "flex" : "none",
+                width: "100%",
+                height: "100%",
+                flex: 1,
+                minHeight: 0,
+              }}
+            >
+              <MindmapTab />
+            </div>
+          </div>
+
           <ZeusSubagentTasksFloatingPanel
             isOpen={isSubagentsPanelOpen}
             onClose={() => setIsSubagentsPanelOpen(false)}
-            onOpenOffice={() => setIsOfficeModalOpen(true)}
+            onOpenOffice={() => setWorkspaceActiveView("office")}
             isSessionRunning={isSessionRunning}
             activePermission={activePermission}
           />
 
-          <div
-            className={cx(
-              "zeus-floating-worker",
-              !isSessionRunning && !activePermission && "is-idle",
-              Boolean(activePermission) && "is-waiting",
-            )}
-            data-testid="zeus-floating-worker"
-            aria-live="polite"
-          >
+          {activeWorkspaceView === "chat" && (
+            <div
+              className={cx(
+                "zeus-floating-worker",
+                !isSessionRunning && !activePermission && "is-idle",
+                Boolean(activePermission) && "is-waiting",
+              )}
+              data-testid="zeus-floating-worker"
+              aria-live="polite"
+            >
             <YoungZeusMascot
               size={isSessionRunning || activePermission ? 26 : 22}
               state={activePermission ? "waiting" : isSessionRunning ? "working" : "waiting"}
@@ -351,7 +445,7 @@ export const ChatSurface = memo(function ChatSurface({
                 !isSessionRunning && !activePermission && "is-idle",
                 Boolean(activePermission) && "is-waiting",
               )}
-              onClick={() => setIsOfficeModalOpen(true)}
+              onClick={() => setWorkspaceActiveView("office")}
               title={
                 activePermission
                   ? "Buka AI Agent Office (Status: Paused Menunggu Approval)"
@@ -376,8 +470,9 @@ export const ChatSurface = memo(function ChatSurface({
               </span>
             </button>
           </div>
-          <StableComposer variant="docked" />
-        </>
+        )}
+        {activeWorkspaceView === "chat" && <StableComposer variant="docked" />}
+      </>
       )}
 
       {noticeError ? (
@@ -444,6 +539,7 @@ export const ChatSurface = memo(function ChatSurface({
         onClose={() => setIsOfficeModalOpen(false)}
         streaming={isSessionRunning}
         pendingPermission={activePermission}
+        sessionId={visibleSessionId}
       />
     </div>
   );
