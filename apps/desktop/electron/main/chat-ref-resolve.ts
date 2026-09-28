@@ -66,9 +66,32 @@ function toPosix(value: string): string {
   return String(value).replaceAll("\\", "/");
 }
 
+function stripDocExt(name: string): string {
+  return name.replace(/\.(?:md|markdown)$/i, "");
+}
+
+function slugifyRef(text: string): string {
+  return stripDocExt(text)
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function matchesSegment(candidate: string, wanted: string): boolean {
   if (candidate === wanted) return true;
-  return CASE_INSENSITIVE_FS && candidate.toLowerCase() === wanted.toLowerCase();
+  if (CASE_INSENSITIVE_FS && candidate.toLowerCase() === wanted.toLowerCase()) return true;
+
+  // Markdown document matching without extension (e.g. "Core Network & DI" <-> "Core Network & DI.md")
+  const candBase = stripDocExt(candidate);
+  const wantBase = stripDocExt(wanted);
+  if (candBase.toLowerCase() === wantBase.toLowerCase()) return true;
+
+  // Slugified matching (e.g. "Core Network & DI" <-> "core-network-di.md")
+  const candSlug = slugifyRef(candidate);
+  const wantSlug = slugifyRef(wanted);
+  if (candSlug && wantSlug && candSlug === wantSlug) return true;
+
+  return false;
 }
 
 /** Strip the composer sigil, optional quotes, and a `:line[:col]` reference. */
@@ -82,6 +105,15 @@ function cleanRef(raw: string): string {
 function stripRefDecorations(raw: string): string {
   let value = raw.trim();
   if (value.startsWith("@")) value = value.slice(1).trim();
+  if (value.startsWith("[[") && value.endsWith("]]")) {
+    value = value.slice(2, -2).trim();
+  }
+  if (value.includes("|")) {
+    value = value.split("|")[0].trim();
+  }
+  if (value.includes("#")) {
+    value = value.split("#")[0].trim();
+  }
   if (value.length >= 2 && value.startsWith("\"") && value.endsWith("\"")) {
     value = value.slice(1, -1).trim();
   }
@@ -331,6 +363,16 @@ export async function resolveChatFileRef(
           root: root.kind,
           relativePath: parsed.segments.join("/"),
           absolutePath,
+          matchedBy: "exact-relative",
+          ...(root.projectRoot ? { projectRoot: root.projectRoot } : {}),
+        };
+      }
+      const mdPath = `${absolutePath}.md`;
+      if (await isRegularFile(mdPath)) {
+        return {
+          root: root.kind,
+          relativePath: `${parsed.segments.join("/")}.md`,
+          absolutePath: mdPath,
           matchedBy: "exact-relative",
           ...(root.projectRoot ? { projectRoot: root.projectRoot } : {}),
         };

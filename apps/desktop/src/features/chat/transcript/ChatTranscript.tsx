@@ -17,6 +17,7 @@ import {
 } from "./ActivityGroup";
 import { TranscriptHistory, TranscriptTail } from "./AssistantTurn";
 import { useTranscriptScroll } from "./hooks/useTranscriptScroll";
+import { StickyChatContextBar } from "./StickyChatContextBar";
 import type { TranscriptSearchTarget } from "../../../lib/transcript-reading";
 import { TranscriptSearchContext } from "../../../lib/transcript-search-context";
 import { DisclosureAnchorContext } from "../../../lib/disclosure-anchor-context";
@@ -233,13 +234,20 @@ function TranscriptBody({
         * settle veil to lift: mounting it against still-moving rows would cache
         * offsets the settled layout no longer matches. */}
       {paneVisible && !veilCovering ? (
-        <ConversationMinimap
-          scrollRef={scrollRef}
-          messages={minimapMessages}
-          hasEarlier={hasEarlierHistory}
-          loadingEarlier={loadingOlder}
-          onRevealEarlier={revealEarlierHistory}
-        />
+        <>
+          <ConversationMinimap
+            scrollRef={scrollRef}
+            messages={minimapMessages}
+            hasEarlier={hasEarlierHistory}
+            loadingEarlier={loadingOlder}
+            onRevealEarlier={revealEarlierHistory}
+          />
+          <StickyChatContextBar
+            scrollRef={scrollRef}
+            messages={messages}
+            isRunning={transcriptRunning}
+          />
+        </>
       ) : null}
       <div
         className="thread-scroll"

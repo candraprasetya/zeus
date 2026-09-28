@@ -29,8 +29,10 @@ import {
   IconExternal,
   IconFileText,
   IconFolder,
+  IconWorkflow,
 } from "../icons";
 import { WorkTabEmpty } from "./WorkTabEmpty";
+import { MindmapTab } from "./MindmapTab";
 
 const VIEWER_LINE_CAP = 5000;
 
@@ -72,6 +74,10 @@ function langForPath(path: string): string | null {
 
 function isMarkdownPath(path: string): boolean {
   return /\.(?:md|markdown)$/i.test(path);
+}
+
+function isCanvasPath(path: string): boolean {
+  return /\.canvas$/i.test(path);
 }
 
 function formatSize(size: number): string {
@@ -340,6 +346,10 @@ export function FilesTab() {
             <WorkTabEmpty icon={IconFileText} title={t("panel.files.error")} />
           ) : !file ? (
             <div className="file-tree-note">{t("panel.files.loading")}</div>
+          ) : file.kind === "text" && isCanvasPath(selected) ? (
+            <div className="file-viewer-mindmap" style={{ flex: 1, minHeight: 0, position: "relative", height: "100%" }}>
+              <MindmapTab />
+            </div>
           ) : file.kind === "text" && isMarkdownPath(selected) ? (
             <div className="file-viewer-markdown prose-chat">
               <Markdown source={file.content ?? ""} baseDir={fileDirOf(selected)} />

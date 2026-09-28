@@ -144,6 +144,7 @@
   --ds-error: #ff6764;
   --ds-info: var(--gray-300);
   --ds-purple: #c27aff;
+  --ds-brand-gold: #facc15;
   --ds-shadow-dialog: 0 16px 48px rgba(0, 0, 0, 0.55);
   --ds-shadow-model-menu: var(--ds-shadow-dialog);
   /* Codex --elevation-prominent (same stroke+lift in dark and light) */
@@ -283,6 +284,7 @@
   --ds-error: #e02e2a;
   --ds-info: #5d5d5d;
   --ds-purple: #7c3aed;
+  --ds-brand-gold: #d97706;
   --ds-shadow-dialog: 0 16px 48px rgba(0, 0, 0, 0.12);
   --ds-shadow-model-menu:
     0 0 0 0.5px color-mix(in oklab, #1a1c1f 10%, transparent),
@@ -320,6 +322,7 @@
   --color-error: var(--ds-error);
   --color-info: var(--ds-info);
   --color-purple: var(--ds-purple);
+  --color-brand-gold: var(--ds-brand-gold);
 
   /*
     Token scales — the ONLY allowed values for typography and radii.
@@ -346,7 +349,7 @@
   --radius-full: 9999px;
   --radius-round: 50%;
 
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-sans: "Google Sans", "Google Sans Text", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas, "Liberation Mono",
     monospace;
 

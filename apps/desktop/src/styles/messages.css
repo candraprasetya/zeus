@@ -3199,3 +3199,743 @@
     opacity: 0.7;
   }
 }
+
+/* ==========================================================================
+   Antigravity Turn Review Changes Bar
+   ========================================================================== */
+.turn-review-bar-container {
+  width: min(100%, var(--chat-prose-max-width, 720px));
+  margin: 10px 0 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.turn-review-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: var(--ds-bg-raised, #1c1c1f);
+  border: 1px solid var(--ds-border-default);
+  border-radius: var(--radius-lg, 10px);
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--motion-duration-fast) var(--motion-ease-out),
+              border-color var(--motion-duration-fast) var(--motion-ease-out),
+              box-shadow var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+.turn-review-bar:hover {
+  background: color-mix(in oklab, var(--ds-bg-raised, #1c1c1f) 96%, transparent);
+  border-color: color-mix(in oklab, var(--ds-text-primary) 18%, var(--ds-border-default));
+}
+
+.turn-review-bar:focus-visible {
+  outline: 2px solid var(--ds-focus, #38bdf8);
+  outline-offset: 1px;
+}
+
+.turn-review-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.turn-review-bar-count {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ds-text-primary);
+  white-space: nowrap;
+}
+
+.turn-review-bar-diffs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.turn-review-bar-diffs .diff-count-add {
+  color: #10b981;
+}
+
+.turn-review-bar-diffs .diff-count-del {
+  color: #f43f5e;
+}
+
+.turn-review-bar-caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ds-text-muted);
+  transition: transform var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+.turn-review-bar-caret.is-open {
+  transform: rotate(90deg);
+}
+
+.turn-review-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.turn-review-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ds-text-primary);
+  background: color-mix(in oklab, var(--ds-text-primary) 8%, transparent);
+  border: 1px solid color-mix(in oklab, var(--ds-text-primary) 14%, transparent);
+  border-radius: var(--radius-md, 6px);
+  cursor: pointer;
+  transition: background var(--motion-duration-fast) var(--motion-ease-out),
+              border-color var(--motion-duration-fast) var(--motion-ease-out),
+              transform 100ms ease;
+}
+
+.turn-review-action-btn:hover {
+  background: color-mix(in oklab, var(--ds-text-primary) 14%, transparent);
+  border-color: color-mix(in oklab, var(--ds-text-primary) 22%, transparent);
+}
+
+.turn-review-action-btn:active {
+  transform: scale(0.97);
+}
+
+.turn-review-action-btn:focus-visible {
+  outline: 2px solid var(--ds-focus, #38bdf8);
+  outline-offset: 1px;
+}
+
+.turn-review-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: color-mix(in oklab, var(--ds-bg-raised, #1c1c1f) 50%, transparent);
+  border: 1px solid var(--ds-border-subtle);
+  border-radius: var(--radius-lg, 10px);
+  animation: turnReviewFadeIn var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+@keyframes turnReviewFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.turn-review-details-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px 6px;
+  border-bottom: 1px solid var(--ds-border-subtle);
+}
+
+.turn-review-details-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ds-text-muted);
+}
+
+.turn-review-open-panel-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: var(--ds-text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+.turn-review-open-panel-btn:hover {
+  color: var(--ds-text-primary);
+}
+
+.turn-review-files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ==========================================================================
+   Antigravity Sticky Chat Context Bar
+   ========================================================================== */
+.chat-sticky-context-bar {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translate(-50%, -10px);
+  width: min(calc(100% - 48px), var(--chat-content-max-width, 760px));
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  background: var(--ds-bg-raised, #161618);
+  border: 1px solid color-mix(in oklab, var(--ds-border-default) 80%, transparent);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  user-select: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-duration-fast) var(--motion-ease-out),
+              transform var(--motion-duration-fast) var(--motion-ease-out),
+              border-color var(--motion-duration-fast) var(--motion-ease-out),
+              background var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+.chat-sticky-context-bar.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+}
+
+.chat-sticky-context-bar:hover {
+  background: color-mix(in oklab, var(--ds-bg-raised, #161618) 95%, transparent);
+  border-color: color-mix(in oklab, var(--ds-text-primary) 22%, var(--ds-border-default));
+}
+
+.chat-sticky-context-bar:focus-visible {
+  outline: 2px solid var(--ds-focus, #38bdf8);
+  outline-offset: 1px;
+}
+
+.chat-sticky-context-left {
+  flex-shrink: 0;
+}
+
+.chat-sticky-context-thumb {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-sticky-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.chat-sticky-thumb-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ds-text-muted);
+  width: 100%;
+  height: 100%;
+}
+
+.chat-sticky-context-badge {
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  right: 2px;
+  background: rgba(15, 15, 18, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  padding: 1px 3px;
+  font-size: 8.5px;
+  font-weight: 600;
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-sticky-context-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-sticky-context-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ds-text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word;
+}
+
+.chat-sticky-context-action {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--ds-text-primary) 6%, transparent);
+  color: var(--ds-text-muted);
+  transition: background var(--motion-duration-fast) var(--motion-ease-out),
+              color var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+.chat-sticky-context-bar:hover .chat-sticky-context-action {
+  background: color-mix(in oklab, var(--ds-text-primary) 12%, transparent);
+  color: var(--ds-text-primary);
+}
+
+.chat-sticky-pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: color-mix(in oklab, var(--ds-text-primary) 6%, transparent);
+  border: 1px solid var(--ds-border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.chat-sticky-pager-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: var(--ds-text-muted);
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 0;
+  transition: color var(--motion-duration-fast) var(--motion-ease-out),
+              background var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+.chat-sticky-pager-btn:hover:not(:disabled) {
+  color: var(--ds-text-primary);
+  background: color-mix(in oklab, var(--ds-text-primary) 10%, transparent);
+}
+
+.chat-sticky-pager-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.chat-sticky-pager-count {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ds-text-secondary);
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Antigravity Implementation Plan Card */
+.implementation-plan-card {
+  margin: 12px 0;
+  border-radius: 10px;
+  background: var(--ds-tile, #18191b);
+  border: 1px solid var(--ds-border-subtle, rgba(255, 255, 255, 0.08));
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  transition: border-color var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+.implementation-plan-card:hover {
+  border-color: color-mix(in oklab, var(--ds-text-primary) 18%, transparent);
+}
+
+.implementation-plan-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.implementation-plan-icon {
+  color: var(--ds-text-secondary, #94a3b8);
+  flex-shrink: 0;
+}
+
+.implementation-plan-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ds-text-primary, #f1f5f9);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.implementation-plan-summary {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ds-text-secondary, #94a3b8);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.implementation-plan-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.implementation-plan-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all var(--motion-duration-fast) var(--motion-ease-out);
+}
+
+.implementation-plan-view-btn {
+  background: color-mix(in oklab, var(--ds-text-primary) 6%, transparent);
+  border-color: var(--ds-border-subtle, rgba(255, 255, 255, 0.1));
+  color: var(--ds-text-secondary, #cbd5e1);
+}
+
+.implementation-plan-view-btn:hover {
+  background: color-mix(in oklab, var(--ds-text-primary) 12%, transparent);
+  color: var(--ds-text-primary, #ffffff);
+}
+
+.implementation-plan-proceed-btn {
+  background: var(--ds-accent, #3b82f6);
+  color: #ffffff;
+  border-color: transparent;
+  font-weight: 600;
+}
+
+.implementation-plan-proceed-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.implementation-plan-proceed-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Antigravity Proceeded Confirmation Banner */
+.implementation-plan-proceeded-banner {
+  margin: 12px 0;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--ds-text-primary) 3.5%, transparent);
+  border: 1px solid var(--ds-border-subtle, rgba(255, 255, 255, 0.08));
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.implementation-plan-proceeded-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.implementation-plan-check-icon {
+  color: var(--ds-text-muted, #94a3b8);
+  flex-shrink: 0;
+}
+
+.implementation-plan-proceeded-label {
+  font-size: 13.5px;
+  color: var(--ds-text-secondary, #94a3b8);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.implementation-plan-file-icon {
+  color: var(--ds-text-secondary, #94a3b8);
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+
+.implementation-plan-proceeded-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ds-text-primary, #f1f5f9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.implementation-plan-view-mini-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--ds-text-secondary);
+  background: color-mix(in oklab, var(--ds-text-primary) 6%, transparent);
+  border: 1px solid var(--ds-border-subtle);
+  cursor: pointer;
+  transition: all var(--motion-duration-fast) var(--motion-ease-out);
+  flex-shrink: 0;
+}
+
+.implementation-plan-view-mini-btn:hover {
+  background: color-mix(in oklab, var(--ds-text-primary) 12%, transparent);
+  color: var(--ds-text-primary);
+}
+
+/* Plan Artifact Modal Preview */
+.plan-artifact-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal, 1000);
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: plan-modal-fade-in 150ms ease-out;
+}
+
+@keyframes plan-modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.plan-artifact-modal {
+  width: 100%;
+  max-width: 780px;
+  max-height: 85vh;
+  background: var(--ds-surface, #1e1e24);
+  border: 1px solid var(--ds-border, rgba(255, 255, 255, 0.12));
+  border-radius: 12px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.plan-artifact-modal-head {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--ds-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.plan-artifact-modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.plan-artifact-modal-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ds-text-primary);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plan-artifact-modal-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.plan-artifact-modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--ds-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  background: color-mix(in oklab, var(--ds-surface) 95%, black);
+}
+
+/* ==========================================================================
+   Multi-Agent Squad / Parallel Subagent Delegation Card in Chat
+   ========================================================================== */
+
+.subagent-squad-card {
+  margin: 6px 0;
+  border-radius: var(--radius-lg, 10px);
+  background: var(--ds-bg-surface, #1e293b);
+  border: 1px solid var(--ds-border-default, #334155);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  transition: all var(--motion-duration-fast);
+}
+
+.subagent-squad-card.is-squad-live {
+  background: color-mix(in oklab, var(--ds-bg-surface, #1e293b) 95%, white);
+}
+
+.squad-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ds-border-subtle, #334155);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.squad-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.squad-avatar-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full, 9999px);
+  border: 1px solid transparent;
+}
+
+.squad-header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.squad-title {
+  font-family: var(--font-sans, "Google Sans", sans-serif);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ds-text-primary, #f8fafc);
+  letter-spacing: 0.04em;
+}
+
+.squad-subtitle {
+  font-size: 9.5px;
+  color: var(--ds-text-muted, #94a3b8);
+}
+
+.squad-live-badge {
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+}
+
+.squad-live-badge.is-live {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  animation: squadPulse 1.5s infinite;
+}
+
+@keyframes squadPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.squad-live-badge.is-completed {
+  background: rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.squad-task-items {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 12px;
+  gap: 6px;
+}
+
+.squad-task-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.squad-task-status-dot {
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.task-pulsing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  animation: squadDot 1s infinite alternate;
+}
+
+@keyframes squadDot {
+  from { transform: scale(0.8); opacity: 0.5; }
+  to { transform: scale(1.2); opacity: 1; }
+}
+
+.squad-task-content {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.squad-task-label {
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+  font-size: 11px;
+}
+
+.squad-task-desc {
+  color: var(--ds-text-secondary, #cbd5e1);
+}
+
+

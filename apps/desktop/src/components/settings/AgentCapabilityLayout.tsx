@@ -247,7 +247,12 @@ export function CapabilityToolbar({
           onChange={(value) => onFilterChange(value)}
           options={segments.map((segment) => ({
             value: segment.id,
-            label: (<>{segment.label}<span className="agent-capability-segment-count">{segment.count}</span></>),
+            label: (
+              <span className="agent-capability-segment-label-wrap">
+                <span>{segment.label}</span>
+                <span className="agent-capability-segment-count">{segment.count}</span>
+              </span>
+            ),
           }))}
           label={t("settings.capabilityFilterLabel")}
           className="agent-capability-segment"

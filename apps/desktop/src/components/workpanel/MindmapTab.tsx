@@ -1,0 +1,1125 @@
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import { useTranslation } from "react-i18next";
+import { api } from "../../lib/api";
+import { useAppStore } from "../../stores/app-store";
+import { TooltipButton } from "../ui";
+import {
+  IconClose,
+  IconExternal,
+  IconFileText,
+  IconMinus,
+  IconPlus,
+  IconRefresh,
+  IconSearch,
+  IconTarget,
+  IconWorkflow,
+} from "../icons";
+import { WorkTabEmpty } from "./WorkTabEmpty";
+
+export type MindmapNode = {
+  id: string;
+  label: string;
+  detail?: string;
+  file?: string;
+  color?: string;
+  x: number;
+  y: number;
+  radius: number;
+  group?: string;
+};
+
+export type MindmapEdge = {
+  id: string;
+  from: string;
+  to: string;
+  label?: string;
+};
+
+export type MindmapGraph = {
+  nodes: MindmapNode[];
+  edges: MindmapEdge[];
+};
+
+const COLOR_MAP: Record<string, { bg: string; border: string; glow: string; text: string }> = {
+  "1": { bg: "#f43f5e", border: "#fda4af", glow: "rgba(244, 63, 94, 0.4)", text: "#fff" }, // Rose/Red
+  "2": { bg: "#f97316", border: "#fdba74", glow: "rgba(249, 115, 22, 0.4)", text: "#fff" }, // Orange
+  "3": { bg: "#eab308", border: "#fde047", glow: "rgba(234, 179, 8, 0.4)", text: "#1e1e24" }, // Yellow
+  "4": { bg: "#10b981", border: "#6ee7b7", glow: "rgba(16, 185, 129, 0.4)", text: "#fff" }, // Green
+  "5": { bg: "#06b6d4", border: "#67e8f9", glow: "rgba(6, 182, 212, 0.4)", text: "#1e1e24" }, // Cyan
+  "6": { bg: "#8b5cf6", border: "#c4b5fd", glow: "rgba(139, 92, 246, 0.4)", text: "#fff" }, // Purple
+  default: { bg: "#6366f1", border: "#a5b4fc", glow: "rgba(99, 102, 241, 0.35)", text: "#fff" },
+};
+
+function parseWikilinks(text: string): string[] {
+  const matches = text.matchAll(/\[\[(.*?)\]\]/g);
+  const links: string[] = [];
+  for (const m of matches) {
+    if (m[1]) {
+      const raw = m[1].split("|")[0]?.split("#")[0]?.trim();
+      if (raw) links.push(raw);
+    }
+  }
+  return links;
+}
+
+// Tracks projects whose mindmap intro animation has already been played in this app session
+const playedIntroProjects = new Set<string>();
+
+export function MindmapTab() {
+  const { t } = useTranslation();
+  const workspace = useAppStore((s) => s.workspace);
+  const openFile = useAppStore((s) => s.openFileInWorkPanel);
+  const root = workspace?.path ?? null;
+
+  const [loading, setLoading] = useState(true);
+  const [graph, setGraph] = useState<MindmapGraph>({ nodes: [], edges: [] });
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [selectedNode, setSelectedNode] = useState<MindmapNode | null>(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  // true while the sequential entry animation is running
+  const [introAnimating, setIntroAnimating] = useState(false);
+  // how many nodes have been revealed so far in the sequence (1 by 1)
+  const [revealedCount, setRevealedCount] = useState<number>(Infinity);
+  // measured container dimensions in pixels
+  const [containerSize, setContainerSize] = useState({ w: 0, h: 0 });
+  // temporary flag to apply smooth CSS glide on button actions (Reset View / Center on Node)
+  const [isSmoothAnimating, setIsSmoothAnimating] = useState(false);
+  const smoothTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerSmooth = useCallback(() => {
+    setIsSmoothAnimating(true);
+    if (smoothTimerRef.current) clearTimeout(smoothTimerRef.current);
+    smoothTimerRef.current = setTimeout(() => setIsSmoothAnimating(false), 380);
+  }, []);
+
+  const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
+  const prevLoadingRef = useRef(true);
+  const hasAutoCenteredRef = useRef(false);
+
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+  const panRef = useRef(pan);
+  panRef.current = pan;
+
+  // Load .knowledge/ data: canvas first, or scan .md files
+  const loadKnowledgeData = useCallback(async () => {
+    hasAutoCenteredRef.current = false;
+    if (!root) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      // 1. Try reading .knowledge/graph.canvas
+      let canvasLoaded = false;
+      try {
+        const canvasRead = await api.fsRead(".knowledge/graph.canvas");
+        if (canvasRead.kind === "text" && canvasRead.content) {
+          const parsed = JSON.parse(canvasRead.content);
+          if (Array.isArray(parsed.nodes)) {
+            const rawNodes = parsed.nodes;
+            const rawEdges = Array.isArray(parsed.edges) ? parsed.edges : [];
+
+            // Compute center offset
+            let minX = Infinity,
+              maxX = -Infinity,
+              minY = Infinity,
+              maxY = -Infinity;
+            for (const n of rawNodes) {
+              const x = typeof n.x === "number" ? n.x : 0;
+              const y = typeof n.y === "number" ? n.y : 0;
+              minX = Math.min(minX, x);
+              maxX = Math.max(maxX, x);
+              minY = Math.min(minY, y);
+              maxY = Math.max(maxY, y);
+            }
+
+            const centerX = minX === Infinity ? 0 : (minX + maxX) / 2;
+            const centerY = minY === Infinity ? 0 : (minY + maxY) / 2;
+
+            const nodes: MindmapNode[] = rawNodes.map((n: any, idx: number) => {
+              const label =
+                n.text?.split("\n")[0]?.replace(/^#+\s*/, "") ||
+                n.file?.split("/").pop()?.replace(/\.md$/, "") ||
+                n.id ||
+                `Node ${idx + 1}`;
+              const detail = n.text || (n.file ? `File: ${n.file}` : "");
+              return {
+                id: n.id || `node-${idx}`,
+                label,
+                detail,
+                file: n.file,
+                color: String(n.color || (idx % 6) + 1),
+                x: (typeof n.x === "number" ? n.x : 0) - centerX,
+                y: (typeof n.y === "number" ? n.y : 0) - centerY,
+                radius: n.type === "group" ? 30 : 24,
+                group: n.type === "group" ? "group" : undefined,
+              };
+            });
+
+            const edges: MindmapEdge[] = rawEdges.map((e: any, idx: number) => ({
+              id: e.id || `edge-${idx}`,
+              from: e.fromNode,
+              to: e.toNode,
+              label: e.label,
+            }));
+
+            setGraph({ nodes, edges });
+            canvasLoaded = true;
+          }
+        }
+      } catch {
+        // canvas file not found, fall back to directory scan
+      }
+
+      if (!canvasLoaded) {
+        // 2. Scan .knowledge directory for markdown notes
+        try {
+          const res = await api.fsList(".knowledge");
+          const mdFiles = res.entries.filter(
+            (e) => e.kind !== "dir" && e.name.endsWith(".md"),
+          );
+
+          if (mdFiles.length > 0) {
+            const nodes: MindmapNode[] = [];
+            const edges: MindmapEdge[] = [];
+            const nameToId = new Map<string, string>();
+
+            const count = mdFiles.length;
+            const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+
+            for (let i = 0; i < count; i++) {
+              const entry = mdFiles[i];
+              const nameWithoutExt = entry.name.replace(/\.md$/, "");
+              const id = `node-${i}`;
+              nameToId.set(nameWithoutExt, id);
+              nameToId.set(entry.name, id);
+
+              // Node 0 is the root core molecule at (0, 0); child nodes radiate outward
+              let x = 0;
+              let y = 0;
+              let radius = 28;
+              if (i > 0) {
+                const r = 130 + Math.sqrt(i) * 75;
+                const theta = (i - 1) * goldenAngle;
+                x = r * Math.cos(theta);
+                y = r * Math.sin(theta);
+                radius = 24;
+              }
+
+              nodes.push({
+                id,
+                label: nameWithoutExt,
+                file: `.knowledge/${entry.name}`,
+                color: String((i % 6) + 1),
+                x,
+                y,
+                radius,
+              });
+            }
+
+            // Extract wikilinks to form edges
+            for (let i = 0; i < count; i++) {
+              const entry = mdFiles[i];
+              try {
+                const content = await api.fsRead(`.knowledge/${entry.name}`);
+                if (content.kind === "text" && content.content) {
+                  const links = parseWikilinks(content.content);
+                  const fromId = `node-${i}`;
+                  for (const target of links) {
+                    const toId = nameToId.get(target);
+                    if (toId && toId !== fromId) {
+                      edges.push({
+                        id: `edge-${fromId}-${toId}`,
+                        from: fromId,
+                        to: toId,
+                      });
+                    }
+                  }
+                }
+              } catch {
+                // Ignore read errors
+              }
+            }
+
+            // Ensure isolated nodes connect back to core molecule (node-0)
+            if (count > 1) {
+              const connected = new Set<string>();
+              for (const e of edges) {
+                connected.add(e.from);
+                connected.add(e.to);
+              }
+              for (let i = 1; i < count; i++) {
+                const childId = `node-${i}`;
+                if (!connected.has(childId)) {
+                  edges.push({
+                    id: `edge-core-${childId}`,
+                    from: "node-0",
+                    to: childId,
+                  });
+                }
+              }
+            }
+
+            setGraph({ nodes, edges });
+          } else {
+            setGraph({ nodes: [], edges: [] });
+          }
+        } catch {
+          setGraph({ nodes: [], edges: [] });
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [root]);
+
+  useEffect(() => {
+    void loadKnowledgeData();
+  }, [loadKnowledgeData]);
+
+  // Calculate exact zoom and pan to fit all nodes centered in the given container dimensions
+  const fitToBounds = useCallback((w: number, h: number, nodes: MindmapNode[]) => {
+    if (w <= 0 || h <= 0 || nodes.length === 0) return;
+    const pad = 90;
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const n of nodes) {
+      const r = n.radius ?? 28;
+      minX = Math.min(minX, n.x - r);
+      maxX = Math.max(maxX, n.x + r);
+      minY = Math.min(minY, n.y - r);
+      maxY = Math.max(maxY, n.y + r);
+    }
+    const graphW = maxX - minX || 400;
+    const graphH = maxY - minY || 400;
+    const fitZoom = Math.min(
+      (w - pad * 2) / graphW,
+      (h - pad * 2) / graphH,
+      1.1,
+    );
+    const clampedZoom = Math.max(0.2, Math.min(1.8, fitZoom));
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
+    setZoom(clampedZoom);
+    setPan({ x: -cx * clampedZoom, y: -cy * clampedZoom });
+  }, []);
+
+  // Measure container and attach listeners whenever containerEl mounts (reliable callback ref)
+  useEffect(() => {
+    if (!containerEl) return;
+
+    // 1. Initial size measurement & auto-center
+    const updateSize = () => {
+      const rect = containerEl.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        setContainerSize((prev) =>
+          prev.w === rect.width && prev.h === rect.height ? prev : { w: rect.width, h: rect.height },
+        );
+        if (!hasAutoCenteredRef.current && graph.nodes.length > 0) {
+          hasAutoCenteredRef.current = true;
+          fitToBounds(rect.width, rect.height, graph.nodes);
+        }
+      }
+    };
+    updateSize();
+
+    // 2. ResizeObserver to track layout changes
+    const ro = new ResizeObserver(updateSize);
+    ro.observe(containerEl);
+
+    // 3. Wheel listener for touchpad pinch-to-zoom and two-finger pan
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      setIsSmoothAnimating(false);
+
+      if (e.ctrlKey || e.metaKey) {
+        // Pinch-to-zoom (trackpad pinch on macOS or Cmd/Ctrl + scroll)
+        const rect = containerEl.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left - rect.width / 2;
+        const mouseY = e.clientY - rect.top - rect.height / 2;
+
+        let dy = e.deltaY;
+        if (e.deltaMode === 1) dy *= 20;
+        if (e.deltaMode === 2) dy *= 500;
+
+        const factor = Math.exp(-dy * 0.01);
+
+        setZoom((prevZoom) => {
+          const nextZoom = Math.min(3, Math.max(0.15, prevZoom * factor));
+          const scale = nextZoom / prevZoom;
+          setPan((prevPan) => ({
+            x: mouseX - (mouseX - prevPan.x) * scale,
+            y: mouseY - (mouseY - prevPan.y) * scale,
+          }));
+          return nextZoom;
+        });
+      } else {
+        // Two-finger trackpad scroll -> pan (natural 2D canvas navigation)
+        setPan((prev) => ({
+          x: prev.x - e.deltaX,
+          y: prev.y - e.deltaY,
+        }));
+      }
+    };
+
+    containerEl.addEventListener("wheel", onWheel, { passive: false });
+
+    // 4. WebKit gesture events for Safari/Electron native macOS pinch
+    let gestureStartZoom = 1;
+    let gestureStartPan = { x: 0, y: 0 };
+    let gestureCenter = { x: 0, y: 0 };
+
+    const onGestureStart = (e: any) => {
+      e.preventDefault();
+      setIsSmoothAnimating(false);
+      gestureStartZoom = zoomRef.current;
+      gestureStartPan = panRef.current;
+      const rect = containerEl.getBoundingClientRect();
+      gestureCenter = {
+        x: (e.clientX || rect.width / 2) - rect.left - rect.width / 2,
+        y: (e.clientY || rect.height / 2) - rect.top - rect.height / 2,
+      };
+    };
+
+    const onGestureChange = (e: any) => {
+      e.preventDefault();
+      if (typeof e.scale === "number") {
+        const nextZoom = Math.min(3, Math.max(0.15, gestureStartZoom * e.scale));
+        const scale = nextZoom / gestureStartZoom;
+        setZoom(nextZoom);
+        setPan({
+          x: gestureCenter.x - (gestureCenter.x - gestureStartPan.x) * scale,
+          y: gestureCenter.y - (gestureCenter.y - gestureStartPan.y) * scale,
+        });
+      }
+    };
+
+    const onGestureEnd = (e: any) => {
+      e.preventDefault();
+    };
+
+    containerEl.addEventListener("gesturestart", onGestureStart, { passive: false });
+    containerEl.addEventListener("gesturechange", onGestureChange, { passive: false });
+    containerEl.addEventListener("gestureend", onGestureEnd, { passive: false });
+
+    return () => {
+      ro.disconnect();
+      containerEl.removeEventListener("wheel", onWheel);
+      containerEl.removeEventListener("gesturestart", onGestureStart);
+      containerEl.removeEventListener("gesturechange", onGestureChange);
+      containerEl.removeEventListener("gestureend", onGestureEnd);
+    };
+  }, [containerEl, graph.nodes, fitToBounds]);
+
+  // Fire sequential 1-by-1 liquid travel animation on initial project load or manual reload
+  useEffect(() => {
+    if (prevLoadingRef.current && !loading && graph.nodes.length > 0) {
+      prevLoadingRef.current = false;
+
+      const alreadyPlayed = root ? playedIntroProjects.has(root) : false;
+      if (alreadyPlayed) {
+        setRevealedCount(graph.nodes.length);
+        setIntroAnimating(false);
+        return;
+      }
+
+      // Start with Node 0 (Molecule core)
+      setIntroAnimating(true);
+      setRevealedCount(1);
+
+      if (graph.nodes.length <= 1) {
+        const singleTimer = setTimeout(() => {
+          setIntroAnimating(false);
+          if (root) playedIntroProjects.add(root);
+        }, 400);
+        return () => clearTimeout(singleTimer);
+      }
+
+      let current = 1;
+      let timer: ReturnType<typeof setInterval> | null = null;
+      let finalTimeout: ReturnType<typeof setTimeout> | null = null;
+
+      // Snappy cadence: 180ms initial pop, then 115ms per child droplet for rapid fluid cascade
+      const initialTimeout = setTimeout(() => {
+        current++;
+        setRevealedCount(current);
+
+        if (current >= graph.nodes.length) {
+          finalTimeout = setTimeout(() => {
+            setIntroAnimating(false);
+            if (root) playedIntroProjects.add(root);
+          }, 460);
+          return;
+        }
+
+        timer = setInterval(() => {
+          current++;
+          setRevealedCount(current);
+
+          if (current >= graph.nodes.length) {
+            if (timer) clearInterval(timer);
+            finalTimeout = setTimeout(() => {
+              setIntroAnimating(false);
+              if (root) playedIntroProjects.add(root);
+            }, 460);
+          }
+        }, 115);
+      }, 180);
+
+      return () => {
+        clearTimeout(initialTimeout);
+        if (timer) clearInterval(timer);
+        if (finalTimeout) clearTimeout(finalTimeout);
+      };
+    }
+    prevLoadingRef.current = loading;
+  }, [loading, graph.nodes, root]);
+
+  // Pan handling: allow panning everywhere EXCEPT on node clicks or HUD controls
+  const handlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement | SVGElement | null;
+    if (!target) return;
+
+    // Do not initiate background drag if clicking on interactive controls or nodes
+    if (
+      target.closest(".no-drag") ||
+      target.closest(".mindmap-node-group")
+    ) {
+      return;
+    }
+
+    setIsSmoothAnimating(false);
+    setDragging(true);
+    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // ignore pointer capture errors
+    }
+  };
+
+  const handlePointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!dragging) return;
+    setPan({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y,
+    });
+  };
+
+  const handlePointerUp = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (dragging) {
+      setDragging(false);
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        // pointer capture release
+      }
+    }
+  };
+
+  // Node position map
+  const nodeMap = useMemo(() => {
+    const map = new Map<string, MindmapNode>();
+    for (const node of graph.nodes) {
+      map.set(node.id, node);
+    }
+    return map;
+  }, [graph.nodes]);
+
+  // Compute connected nodes for hovered/selected state
+  const activeFocusId = selectedNode?.id ?? hoveredNodeId;
+  const connectedNodeIds = useMemo(() => {
+    if (!activeFocusId) return new Set<string>();
+    const set = new Set<string>([activeFocusId]);
+    for (const edge of graph.edges) {
+      if (edge.from === activeFocusId) set.add(edge.to);
+      if (edge.to === activeFocusId) set.add(edge.from);
+    }
+    return set;
+  }, [activeFocusId, graph.edges]);
+
+  // Search filter matching
+  const searchMatchingIds = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return null;
+    const matches = new Set<string>();
+    for (const node of graph.nodes) {
+      if (node.label.toLowerCase().includes(q) || node.detail?.toLowerCase().includes(q)) {
+        matches.add(node.id);
+      }
+    }
+    return matches;
+  }, [searchQuery, graph.nodes]);
+
+  // Minimap bounds
+  const bounds = useMemo(() => {
+    if (graph.nodes.length === 0) return { minX: -200, maxX: 200, minY: -200, maxY: 200 };
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const n of graph.nodes) {
+      minX = Math.min(minX, n.x - 50);
+      maxX = Math.max(maxX, n.x + 50);
+      minY = Math.min(minY, n.y - 50);
+      maxY = Math.max(maxY, n.y + 50);
+    }
+    return { minX, maxX, minY, maxY };
+  }, [graph.nodes]);
+
+  const minimapScale = useMemo(() => {
+    const w = bounds.maxX - bounds.minX || 400;
+    const h = bounds.maxY - bounds.minY || 400;
+    return Math.min(130 / w, 90 / h);
+  }, [bounds]);
+
+  const boundsCenterX = (bounds.minX + bounds.maxX) / 2;
+  const boundsCenterY = (bounds.minY + bounds.maxY) / 2;
+
+  // Minimap interactive pointer navigation (click or drag on minimap centers view)
+  const handleMinimapPointer = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
+    const svgRect = e.currentTarget.getBoundingClientRect();
+    if (svgRect.width <= 0 || svgRect.height <= 0) return;
+    const clickX = ((e.clientX - svgRect.left) / svgRect.width) * 140;
+    const clickY = ((e.clientY - svgRect.top) / svgRect.height) * 100;
+
+    const targetGraphX = (clickX - 70) / minimapScale + boundsCenterX;
+    const targetGraphY = (clickY - 50) / minimapScale + boundsCenterY;
+
+    triggerSmooth();
+    setPan({
+      x: -targetGraphX * zoom,
+      y: -targetGraphY * zoom,
+    });
+  }, [boundsCenterX, boundsCenterY, minimapScale, zoom, triggerSmooth]);
+
+  // Minimap viewport box indicator (shows current camera position & zoom)
+  const vpWInGraph = (containerSize.w || 800) / zoom;
+  const vpHInGraph = (containerSize.h || 600) / zoom;
+  const curCenterGraphX = -pan.x / zoom;
+  const curCenterGraphY = -pan.y / zoom;
+  const vpRectW = Math.max(16, Math.min(140, vpWInGraph * minimapScale));
+  const vpRectH = Math.max(12, Math.min(100, vpHInGraph * minimapScale));
+  const vpRectX = Math.max(0, Math.min(140 - vpRectW, 70 + (curCenterGraphX - boundsCenterX) * minimapScale - vpRectW / 2));
+  const vpRectY = Math.max(0, Math.min(100 - vpRectH, 50 + (curCenterGraphY - boundsCenterY) * minimapScale - vpRectH / 2));
+
+  // Fit all nodes into view, centered in the container with smooth glide
+  const handleResetView = useCallback(() => {
+    const el = containerEl;
+    const w = el?.clientWidth || containerSize.w;
+    const h = el?.clientHeight || containerSize.h;
+    triggerSmooth();
+    fitToBounds(w, h, graph.nodes);
+  }, [containerEl, containerSize, graph.nodes, fitToBounds, triggerSmooth]);
+
+  const handleCenterOnNode = useCallback((node: MindmapNode) => {
+    setSelectedNode(node);
+    triggerSmooth();
+    setPan({ x: -node.x * zoom, y: -node.y * zoom });
+  }, [zoom, triggerSmooth]);
+
+  // Reload knowledge data and replay the liquid animation on demand
+  const handleReload = useCallback(() => {
+    if (root) playedIntroProjects.delete(root);
+    hasAutoCenteredRef.current = false;
+    prevLoadingRef.current = true;
+    void loadKnowledgeData();
+  }, [root, loadKnowledgeData]);
+
+  if (!root) {
+    return (
+      <WorkTabEmpty
+        icon={IconWorkflow}
+        title={t("panel.files.noWorkspace")}
+        body={t("panel.files.noWorkspaceHint")}
+      />
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="mindmap-loading">
+        <IconWorkflow size={28} className="mindmap-spin-icon text-muted" />
+        <span className="mindmap-loading-text">{t("panel.mindmap.loading")}</span>
+      </div>
+    );
+  }
+
+  if (graph.nodes.length === 0) {
+    return (
+      <WorkTabEmpty
+        icon={IconWorkflow}
+        title={t("panel.mindmap.emptyTitle")}
+        body={t("panel.mindmap.emptyBody")}
+      />
+    );
+  }
+
+  const centerX = (containerSize.w || containerEl?.clientWidth || 800) / 2;
+  const centerY = (containerSize.h || containerEl?.clientHeight || 600) / 2;
+
+  return (
+    <div
+      ref={setContainerEl}
+      className={`mindmap-container ${dragging ? "is-dragging" : ""}`}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+    >
+      {/* Background canvas & SVG graph */}
+      <svg className="mindmap-canvas">
+        <defs>
+          <radialGradient id="mindmapCenterGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="var(--ds-accent)" stopOpacity="0.14" />
+            <stop offset="50%" stopColor="var(--ds-accent)" stopOpacity="0.04" />
+            <stop offset="100%" stopColor="transparent" stopOpacity="0" />
+          </radialGradient>
+          <filter id="nodeGlowFilter" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="6" />
+          </filter>
+        </defs>
+
+        {/* Viewport group placed at exact dead center of container */}
+        <g
+          className={`mindmap-viewport ${isSmoothAnimating ? "is-smooth-animating" : ""}`}
+          transform={`translate(${centerX + pan.x}, ${centerY + pan.y}) scale(${zoom})`}
+        >
+          {/* Full-coverage transparent underlay rect so empty SVG canvas areas receive drag */}
+          <rect
+            x="-20000"
+            y="-20000"
+            width="40000"
+            height="40000"
+            fill="transparent"
+            className="mindmap-bg-underlay"
+          />
+
+          {/* Ambient harmonic rings centered at (0, 0) */}
+          <circle cx={0} cy={0} r={420} fill="url(#mindmapCenterGlow)" className="mindmap-ambient-ring" />
+          <circle cx={0} cy={0} r={180} fill="none" stroke="var(--ds-border-subtle)" strokeDasharray="3 5" opacity={0.25} className="mindmap-ambient-ring" />
+          <circle cx={0} cy={0} r={340} fill="none" stroke="var(--ds-border-subtle)" strokeDasharray="5 7" opacity={0.15} className="mindmap-ambient-ring" />
+
+          {/* Edges */}
+          <g className="mindmap-edges-layer">
+            {graph.edges.map((edge) => {
+              const from = nodeMap.get(edge.from);
+              const to = nodeMap.get(edge.to);
+              if (!from || !to) return null;
+
+              const fromIdx = graph.nodes.findIndex((n) => n.id === edge.from);
+              const toIdx = graph.nodes.findIndex((n) => n.id === edge.to);
+
+              // Only show edge when both connected nodes are revealed
+              if (introAnimating && (fromIdx >= revealedCount || toIdx >= revealedCount)) {
+                return null;
+              }
+
+              const isEdgeHighlighted =
+                activeFocusId && (edge.from === activeFocusId || edge.to === activeFocusId);
+              const isEdgeDimmed = activeFocusId && !isEdgeHighlighted;
+              const isTraveling = introAnimating;
+
+              return (
+                <g
+                  key={edge.id}
+                  className={`mindmap-edge-group ${isTraveling ? "mindmap-edge-travel" : ""} ${isEdgeHighlighted ? "highlighted" : ""} ${isEdgeDimmed ? "dimmed" : ""}`}
+                >
+                  {/* Invisible thicker hit-line for hover precision */}
+                  <line
+                    x1={from.x}
+                    y1={from.y}
+                    x2={to.x}
+                    y2={to.y}
+                    stroke="transparent"
+                    strokeWidth={12}
+                  />
+                  <line
+                    x1={from.x}
+                    y1={from.y}
+                    x2={to.x}
+                    y2={to.y}
+                    className="mindmap-edge-line"
+                  />
+                  {edge.label && (
+                    <text
+                      x={(from.x + to.x) / 2}
+                      y={(from.y + to.y) / 2 - 5}
+                      className="mindmap-edge-label"
+                      textAnchor="middle"
+                    >
+                      {edge.label}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+          </g>
+
+          {/* Nodes */}
+          <g className="mindmap-nodes-layer">
+            {graph.nodes.map((node, index) => {
+              // Do not render nodes that haven't appeared yet in the sequence
+              if (introAnimating && index >= revealedCount) {
+                return null;
+              }
+
+              const colorMeta = COLOR_MAP[node.color ?? "default"] ?? COLOR_MAP.default;
+              const isSelected = selectedNode?.id === node.id;
+              const isHovered = hoveredNodeId === node.id;
+              const isConnected = connectedNodeIds.has(node.id);
+              const isDimmed = activeFocusId && !isConnected;
+              const isSearchMatch = searchMatchingIds ? searchMatchingIds.has(node.id) : null;
+              const isSearchDimmed = searchMatchingIds !== null && !isSearchMatch;
+
+              const isMoleculeCore = index === 0;
+              const animClass = introAnimating
+                ? isMoleculeCore
+                  ? "mindmap-node-core-spawn"
+                  : "mindmap-node-travel"
+                : "";
+
+              const node0 = graph.nodes[0];
+              const fromX = (node0?.x ?? 0) - node.x;
+              const fromY = (node0?.y ?? 0) - node.y;
+              const travelAngle = Math.round(Math.atan2(-fromY, -fromX) * (180 / Math.PI));
+
+              // Deterministic pseudo-random celestial orbit variables based on node index
+              const driftX = (Math.sin(index * 2.13) * 6.5).toFixed(2);
+              const driftY = (Math.cos(index * 1.77) * 5.5).toFixed(2);
+              const driftRot = (Math.sin(index * 3.41) * 2.8).toFixed(1);
+              const orbitDur = (6.0 + (index % 5) * 1.1).toFixed(1);
+              const orbitDelay = (-1 * ((index * 1.93) % 6)).toFixed(1);
+
+              const celestialClass = introAnimating
+                ? ""
+                : isMoleculeCore
+                  ? "mindmap-node-celestial-core"
+                  : "mindmap-node-celestial-orbit";
+
+              const celestialStyle = {
+                "--drift-x": `${driftX}px`,
+                "--drift-y": `${driftY}px`,
+                "--drift-rot": `${driftRot}deg`,
+                "--orbit-dur": `${orbitDur}s`,
+                "--orbit-delay": `${orbitDelay}s`,
+              } as React.CSSProperties;
+
+              return (
+                <g
+                  key={node.id}
+                  className={`mindmap-node-group ${isSelected ? "selected" : ""} ${isHovered ? "hovered" : ""} ${isDimmed || isSearchDimmed ? "dimmed" : ""} ${isSearchMatch ? "search-match" : ""}`}
+                  transform={`translate(${node.x}, ${node.y})`}
+                  onPointerEnter={() => setHoveredNodeId(node.id)}
+                  onPointerLeave={() => setHoveredNodeId((curr) => (curr === node.id ? null : curr))}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedNode(node);
+                    if (node.file) {
+                      openFile(node.file);
+                    }
+                  }}
+                >
+                  {/* Inner animating container so CSS transform does NOT overwrite SVG translate */}
+                  <g
+                    className={animClass}
+                    style={
+                      animClass && !isMoleculeCore
+                        ? ({
+                            "--from-x": `${fromX}px`,
+                            "--from-y": `${fromY}px`,
+                            "--travel-angle": `${travelAngle}deg`,
+                            "--travel-angle-neg": `${-travelAngle}deg`,
+                          } as React.CSSProperties)
+                        : undefined
+                    }
+                  >
+                    {/* Celestial planetary idle floating container */}
+                    <g className={celestialClass} style={celestialStyle}>
+                      {/* Search Match Halo */}
+                      {isSearchMatch && (
+                        <circle
+                          r={node.radius + 12}
+                          fill="none"
+                          stroke="var(--ds-accent)"
+                          strokeWidth={2}
+                          strokeDasharray="4 3"
+                          className="mindmap-search-halo"
+                        />
+                      )}
+
+                      {/* Planetary Atmosphere Ring */}
+                      <circle
+                        r={node.radius + 5}
+                        fill="none"
+                        stroke={colorMeta.border}
+                        strokeWidth={1}
+                        strokeDasharray={isMoleculeCore ? "none" : "2 3"}
+                        className="mindmap-node-atmosphere"
+                        opacity={isMoleculeCore ? 0.4 : 0.22}
+                      />
+
+                      {/* Outer Glow Halo on hover, active, or connection */}
+                      <circle
+                        r={node.radius + 8}
+                        fill={colorMeta.glow}
+                        filter="url(#nodeGlowFilter)"
+                        className="mindmap-node-glow"
+                        opacity={isSelected ? 0.9 : isHovered ? 0.75 : isConnected && activeFocusId ? 0.5 : 0}
+                      />
+
+                      {/* Node Outer Ring */}
+                      <circle
+                        r={node.radius + 3}
+                        fill="none"
+                        stroke={isSelected || isHovered ? colorMeta.border : "transparent"}
+                        strokeWidth={1.5}
+                        className="mindmap-node-ring"
+                      />
+
+                      {/* Node Main Disk */}
+                      <circle
+                        r={node.radius}
+                        fill={colorMeta.bg}
+                        stroke={colorMeta.border}
+                        strokeWidth={2}
+                        className="mindmap-node-circle"
+                      />
+
+                      {/* Inner Ambient Accent Pulse */}
+                      <circle
+                        r={node.radius * 0.45}
+                        fill="#ffffff"
+                        opacity={isSelected || isHovered ? 0.95 : 0.8}
+                        className="mindmap-node-core"
+                      />
+
+                      {/* Node Label Pill Background */}
+                      <text
+                        y={node.radius + 18}
+                        className="mindmap-node-label"
+                        textAnchor="middle"
+                      >
+                        {node.label}
+                      </text>
+                    </g>
+                  </g>
+                </g>
+              );
+            })}
+          </g>
+        </g>
+      </svg>
+
+      {/* Top-Right Dedicated Reload / Refresh Button */}
+      <div className="mindmap-top-bar no-drag">
+        <button
+          type="button"
+          className={`mindmap-reload-btn ${loading ? "is-reloading" : ""}`}
+          title="Reload & Replay Mindmap"
+          onClick={handleReload}
+        >
+          <IconRefresh size={14} />
+          <span>Reload</span>
+        </button>
+      </div>
+
+      {/* Floating Toolbar with Search, Zoom, and Recenter */}
+      <div className="mindmap-controls no-drag">
+        {/* Search input for large mindmaps */}
+        <div className="mindmap-search-box">
+          <IconSearch size={14} className="mindmap-search-icon" />
+          <input
+            type="text"
+            className="mindmap-search-input"
+            placeholder="Cari konsep..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              className="mindmap-search-clear"
+              onClick={() => setSearchQuery("")}
+            >
+              <IconClose size={11} />
+            </button>
+          )}
+        </div>
+
+        <div className="mindmap-stats">
+          <span>{t("panel.mindmap.nodesCount", { count: graph.nodes.length })}</span>
+          <span className="mindmap-stats-divider">·</span>
+          <span>{t("panel.mindmap.edgesCount", { count: graph.edges.length })}</span>
+        </div>
+
+        <div className="mindmap-actions-group">
+          <TooltipButton
+            type="button"
+            className="icon-btn icon-btn-square"
+            tooltip={t("panel.mindmap.zoomIn")}
+            ariaLabel={t("panel.mindmap.zoomIn")}
+            onClick={() => {
+              triggerSmooth();
+              setZoom((z) => Math.min(3, Number((z + 0.2).toFixed(2))));
+            }}
+          >
+            <IconPlus size={14} />
+          </TooltipButton>
+
+          <button
+            type="button"
+            className="mindmap-zoom-label"
+            title={t("panel.mindmap.resetZoom")}
+            onClick={handleResetView}
+          >
+            {Math.round(zoom * 100)}%
+          </button>
+
+          <TooltipButton
+            type="button"
+            className="icon-btn icon-btn-square"
+            tooltip={t("panel.mindmap.zoomOut")}
+            ariaLabel={t("panel.mindmap.zoomOut")}
+            onClick={() => {
+              triggerSmooth();
+              setZoom((z) => Math.max(0.15, Number((z - 0.2).toFixed(2))));
+            }}
+          >
+            <IconMinus size={14} />
+          </TooltipButton>
+
+          <TooltipButton
+            type="button"
+            className="icon-btn icon-btn-square"
+            tooltip="Center View"
+            ariaLabel="Center View"
+            onClick={handleResetView}
+          >
+            <IconTarget size={14} />
+          </TooltipButton>
+
+          <TooltipButton
+            type="button"
+            className="icon-btn icon-btn-square"
+            tooltip="Refresh Mindmap"
+            ariaLabel="Refresh Mindmap"
+            onClick={handleReload}
+          >
+            <IconRefresh size={14} />
+          </TooltipButton>
+        </div>
+      </div>
+
+      {/* Mini-map Interactive Overview with Camera Viewport */}
+      <div className="mindmap-minimap no-drag" title="Klik atau drag untuk navigasi peta">
+        <svg
+          viewBox="0 0 140 100"
+          className="mindmap-minimap-svg"
+          onPointerDown={handleMinimapPointer}
+        >
+          {/* Edges */}
+          {graph.edges.map((e) => {
+            const from = nodeMap.get(e.from);
+            const to = nodeMap.get(e.to);
+            if (!from || !to) return null;
+            const x1 = 70 + (from.x - boundsCenterX) * minimapScale;
+            const y1 = 50 + (from.y - boundsCenterY) * minimapScale;
+            const x2 = 70 + (to.x - boundsCenterX) * minimapScale;
+            const y2 = 50 + (to.y - boundsCenterY) * minimapScale;
+            return <line key={e.id} x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" opacity={0.25} strokeWidth={1} />;
+          })}
+
+          {/* Nodes */}
+          {graph.nodes.map((n) => {
+            const cx = 70 + (n.x - boundsCenterX) * minimapScale;
+            const cy = 50 + (n.y - boundsCenterY) * minimapScale;
+            const colorMeta = COLOR_MAP[n.color ?? "default"] ?? COLOR_MAP.default;
+            const isSelected = selectedNode?.id === n.id;
+            return (
+              <circle
+                key={n.id}
+                cx={cx}
+                cy={cy}
+                r={isSelected ? 5 : 3}
+                fill={colorMeta.bg}
+                opacity={isSelected ? 1 : 0.8}
+                stroke={isSelected ? "#fff" : "transparent"}
+                strokeWidth={1}
+                className="mindmap-minimap-node"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCenterOnNode(n);
+                }}
+              />
+            );
+          })}
+
+          {/* Camera Viewport Indicator Box */}
+          <rect
+            x={vpRectX}
+            y={vpRectY}
+            width={vpRectW}
+            height={vpRectH}
+            fill="var(--ds-accent)"
+            fillOpacity={0.16}
+            stroke="var(--ds-accent)"
+            strokeWidth={1.5}
+            rx={2}
+            className="mindmap-minimap-viewport"
+            pointerEvents="none"
+          />
+        </svg>
+      </div>
+
+      {/* Selected Node Glass Drawer / Info Card */}
+      {selectedNode && (
+        <div className="mindmap-detail-card no-drag animate-in">
+          <div className="mindmap-detail-header">
+            <div className="mindmap-detail-title-row">
+              <span
+                className="mindmap-detail-badge"
+                style={{
+                  backgroundColor:
+                    COLOR_MAP[selectedNode.color ?? "default"]?.bg ?? COLOR_MAP.default.bg,
+                }}
+              />
+              <span className="mindmap-detail-title">{selectedNode.label}</span>
+            </div>
+            <button
+              type="button"
+              className="icon-btn icon-btn-square"
+              onClick={() => setSelectedNode(null)}
+              aria-label="Close"
+            >
+              <IconClose size={12} />
+            </button>
+          </div>
+          {selectedNode.file && (
+            <button
+              type="button"
+              className="mindmap-detail-file-btn"
+              onClick={() => openFile(selectedNode.file!)}
+            >
+              <IconFileText size={13} />
+              <span className="mindmap-detail-file-text">{selectedNode.file}</span>
+              <IconExternal size={12} className="mindmap-detail-ext-icon" />
+            </button>
+          )}
+          {selectedNode.detail && (
+            <div className="mindmap-detail-body">
+              {selectedNode.detail}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

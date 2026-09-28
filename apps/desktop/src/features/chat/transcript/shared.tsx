@@ -33,6 +33,7 @@ import { getToolAction, type ToolAction } from "../../../lib/tool-display";
 import { calculateTokenRate } from "../../../lib/context-usage";
 import { useAppStore } from "../../../stores/app-store";
 import { Markdown, useCopy } from "../../../components/Markdown";
+import { PixelAgentsOffice } from "./PixelAgentsOffice";
 import {
   IconArchive,
   IconAudio,
@@ -48,6 +49,7 @@ import {
   IconFolder,
   IconGlobe,
   IconImage,
+  IconMonitor,
   IconPencil,
   IconSearch,
   IconSheet,
@@ -57,7 +59,7 @@ import {
   IconWrench,
   IconX,
 } from "../../../components/icons";
-import { TooltipButton } from "../../../components/ui";
+import { TooltipButton, cx } from "../../../components/ui";
 
 /**
  * Legacy message navigation reveals the row it names, at message precision.
@@ -602,6 +604,7 @@ export const ThinkingRow = memo(function ThinkingRow({
   }
   const text = thinkingText(message);
   const summary = text.replace(/\s+/g, " ").trim();
+  const [viewMode, setViewMode] = useState<"office" | "prose">("office");
   return (
     <div className={`tool-row thinking ${open ? "open" : ""}`}>
       <button
@@ -629,7 +632,40 @@ export const ThinkingRow = memo(function ThinkingRow({
             label={t("chat.thinkingHide")}
             onCollapse={collapseRow}
           />
-          <div className="prose-chat thinking-prose">
+          {/* Switcher between Isometric Office Room and Prose Markdown */}
+          <div className="thinking-view-switch-bar">
+            <div className="thinking-switch-pill" role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === "office"}
+                className={cx("thinking-tab-btn", viewMode === "office" && "is-selected")}
+                onClick={() => setViewMode("office")}
+              >
+                <IconMonitor size={12} />
+                <span>Pixel Agents Office</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={viewMode === "prose"}
+                className={cx("thinking-tab-btn", viewMode === "prose" && "is-selected")}
+                onClick={() => setViewMode("prose")}
+              >
+                <IconFileText size={12} />
+                <span>Text Raw Thought</span>
+              </button>
+            </div>
+          </div>
+
+          {viewMode === "office" ? (
+            <PixelAgentsOffice streaming={streaming} thoughtText={text} />
+          ) : null}
+
+          <div
+            className="prose-chat thinking-prose"
+            style={viewMode === "office" ? { display: "none" } : undefined}
+          >
             <Markdown source={text} renderDiagrams={false} />
           </div>
         </div>

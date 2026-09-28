@@ -17,6 +17,8 @@ import {
   IconCheck,
   IconChevronDown,
   IconFileText,
+  IconPencil,
+  IconPlay,
 } from "./icons";
 import { TooltipButton } from "./ui";
 import { AnchoredMenu } from "./settings/AnchoredMenu";
@@ -134,6 +136,11 @@ export function PlanApprovalBar({ proposal }: { proposal: PlanProposal }) {
     );
   };
 
+  const handleEditPlan = () => {
+    openArtifact();
+    focusComposer();
+  };
+
   const onMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") {
       event.preventDefault();
@@ -226,6 +233,17 @@ export function PlanApprovalBar({ proposal }: { proposal: PlanProposal }) {
           >
             {copy("reject")}
           </button>
+          <button
+            type="button"
+            className="plan-approval-edit"
+            data-testid="plan-approval-edit"
+            disabled={busy}
+            title={copy("edit")}
+            onClick={handleEditPlan}
+          >
+            <IconPencil size={13} aria-hidden />
+            <span>{copy("edit")}</span>
+          </button>
           <AnchoredMenu
             className="plan-approval-split"
             open={menuOpen}
@@ -239,14 +257,18 @@ export function PlanApprovalBar({ proposal }: { proposal: PlanProposal }) {
               <>
                 <button
                   type="button"
-                  className="plan-approval-approve-main"
+                  className="plan-approval-approve-main plan-approval-proceed"
+                  data-testid="plan-approval-proceed"
                   disabled={busy}
-                  aria-label={copy(APPROVE_LABELS[approvalMode])}
+                  aria-label={`${copy("proceed")} - ${copy(APPROVE_LABELS[approvalMode])}`}
                   onClick={() => void resolve("approve", approvalMode)}
                 >
-                  {resolving
-                    ? copy("approving")
-                    : copy(APPROVE_LABELS[approvalMode])}
+                  <IconPlay size={13} aria-hidden style={{ marginRight: 6, display: "inline-block", verticalAlign: "middle" }} />
+                  <span>
+                    {resolving
+                      ? copy("approving")
+                      : `${copy("proceed")} (${copy(APPROVAL_MODE_LABELS[approvalMode])})`}
+                  </span>
                 </button>
                 <TooltipButton
                   ref={ref}

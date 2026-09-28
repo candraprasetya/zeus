@@ -33,6 +33,13 @@ import {
   IconSparkles,
   IconCloudDown,
   IconMic,
+  IconFolder,
+  IconGear,
+  IconPlug,
+  IconClose,
+  IconCode,
+  IconLayout,
+  IconShield,
 } from "../../components/icons";
 import { Badge, Button, cx, SegmentedControl, SettingsToggle } from "../../components/ui";
 import { ModelConfigPage } from "../../components/settings/ModelConfigPage";
@@ -78,6 +85,49 @@ type NavItem = {
   keywordKeys: string[];
 };
 
+const GROUP_ICONS: Record<SettingsNavGroupId | "extensions", ReactNode> = {
+  preferences: <IconSliders size={13} />,
+  agent: <IconBot size={13} />,
+  workspace: <IconArchive size={13} />,
+  system: <IconGear size={13} />,
+  extensions: <IconPlug size={13} />,
+};
+
+function getTabSubtitle(tab: SettingsTab): string {
+  switch (tab) {
+    case "general":
+      return "Personalize your experience with themes, appearance, and system settings";
+    case "ai":
+      return "Configure default AI models, agent execution modes, and permissions";
+    case "shortcuts":
+      return "View and customize keyboard shortcuts across the application";
+    case "instructions":
+      return "Manage project guidelines, agent instructions, and system prompts";
+    case "agent":
+      return "Configure agent behavior, tool execution limits, and permissions";
+    case "skills":
+      return "Discover and configure installed agent skills and capabilities";
+    case "mcp":
+      return "Connect and manage Model Context Protocol servers and tool integrations";
+    case "subagents":
+      return "Define specialized autonomous subagents and specialist roles";
+    case "import":
+      return "Import sessions, workspace configs, and migration archives";
+    case "projects":
+      return "Manage workspaces, active projects, and repository links";
+    case "sync":
+      return "Cloud synchronization and remote settings backup";
+    case "remoteHosts":
+      return "Configure remote development hosts and SSH gateways";
+    case "voice":
+      return "Speech to text, voice input, and audio feedback configuration";
+    case "about":
+      return "Application version, release updates, and diagnostics";
+    default:
+      return "Personalize your experience with themes, appearance, and system settings";
+  }
+}
+
 export function SettingsPage() {
   const { t } = useTranslation();
   const tab = useAppStore((s) => s.settingsTab);
@@ -115,6 +165,65 @@ export function SettingsPage() {
     if (activeExtension) setActiveExtension(null);
   }
   const contentRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [activeSubSection, setActiveSubSection] = useState<string>("theme");
+
+  useEffect(() => {
+    if (tab === "general") {
+      setActiveSubSection("theme");
+    } else if (tab === "ai") {
+      setActiveSubSection("permissions");
+    }
+  }, [tab, activeExtension]);
+
+  const scrollToSection = useCallback((targetSelector: string, sectionId: string) => {
+    setActiveSubSection(sectionId);
+    if (!targetSelector) {
+      contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    const el = contentRef.current?.querySelector<HTMLElement>(targetSelector);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.classList.add("settings-anchor-flash");
+      window.setTimeout(() => el.classList.remove("settings-anchor-flash"), 1600);
+    }
+  }, []);
+
+  // Keyboard navigation: Escape returns to chat (or clears query), '/' focuses search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isInput =
+        activeEl?.tagName === "INPUT" || activeEl?.tagName === "TEXTAREA";
+
+      if (e.key === "Escape") {
+        if (query) {
+          e.preventDefault();
+          setQuery("");
+          searchInputRef.current?.focus();
+          return;
+        }
+        if (isInput) {
+          (activeEl as HTMLElement)?.blur();
+          return;
+        }
+        e.preventDefault();
+        setPage("chat");
+        return;
+      }
+
+      if (e.key === "/" && !isInput && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [query, setPage]);
+
   const destination = activeExtension ? `extension:${activeExtension.ref}` : `builtin:${tab}`;
 
   useLayoutEffect(() => {
@@ -221,21 +330,21 @@ export function SettingsPage() {
   // are view-level.
   const navItems: NavItem[] = useMemo(() => {
     const iconFor: Record<SettingsTab, ReactNode> = {
-      // Semantic Lucide glyphs for the settings destinations.
-      general: <IconSliders size={14} />,
-      ai: <IconSparkles size={14} />,
-      shortcuts: <IconKeyboard size={14} />,
-      instructions: <IconFileText size={14} />,
-      agent: <IconBot size={14} />,
-      skills: <IconBookOpen size={14} />,
-      mcp: <IconServer size={14} />,
-      subagents: <IconBot size={14} />,
-      import: <IconDownload size={14} />,
-      projects: <IconArchive size={14} />,
-      sync: <IconCloudDown size={14} />,
-      remoteHosts: <IconGlobe size={14} />,
-      voice: <IconMic size={14} />,
-      about: <IconInfo size={14} />,
+      // HugeIcons glyphs for the settings destinations.
+      general: <IconSliders size={16} strokeWidth={1.8} />,
+      ai: <IconSparkles size={16} strokeWidth={1.8} />,
+      shortcuts: <IconKeyboard size={16} strokeWidth={1.8} />,
+      instructions: <IconFileText size={16} strokeWidth={1.8} />,
+      agent: <IconBot size={16} strokeWidth={1.8} />,
+      skills: <IconBookOpen size={16} strokeWidth={1.8} />,
+      mcp: <IconServer size={16} strokeWidth={1.8} />,
+      subagents: <IconBot size={16} strokeWidth={1.8} />,
+      import: <IconDownload size={16} strokeWidth={1.8} />,
+      projects: <IconArchive size={16} strokeWidth={1.8} />,
+      sync: <IconCloudDown size={16} strokeWidth={1.8} />,
+      remoteHosts: <IconGlobe size={16} strokeWidth={1.8} />,
+      voice: <IconMic size={16} strokeWidth={1.8} />,
+      about: <IconInfo size={16} strokeWidth={1.8} />,
     };
     return navEntries.map((entry) => ({
       id: entry.id,
@@ -282,9 +391,22 @@ export function SettingsPage() {
       <div className="settings-titlebar" aria-hidden="true" />
       <aside className="settings-nav sidebar-surface" aria-label={t("settings.title")}>
         <div className="settings-nav-top drag">
+          <div className="settings-nav-header no-drag">
+            <button
+              type="button"
+              className="settings-header-back"
+              onClick={() => setPage("chat")}
+              title={t("settings.backToApp")}
+              aria-label={t("settings.backToApp")}
+            >
+              <IconChevronLeft size={18} strokeWidth={2.2} />
+              <span className="settings-header-title">{t("settings.title")}</span>
+            </button>
+          </div>
           <div className="settings-search-wrap no-drag">
             <IconSearch size={14} />
             <input
+              ref={searchInputRef}
               className="settings-search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -294,6 +416,20 @@ export function SettingsPage() {
               autoCorrect="off"
               autoCapitalize="off"
             />
+            {query.length > 0 && (
+              <button
+                type="button"
+                className="settings-search-clear no-drag"
+                onClick={() => {
+                  setQuery("");
+                  searchInputRef.current?.focus();
+                }}
+                aria-label={t("common.clear", { defaultValue: "Clear search" })}
+                title={t("common.clear", { defaultValue: "Clear search" })}
+              >
+                <IconClose size={12} strokeWidth={2.2} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -304,44 +440,58 @@ export function SettingsPage() {
             filteredGroups.map(({ id, items }) => (
               <div key={id} className="settings-nav-group">
                 <div className="settings-nav-group-label">
-                  {t(SETTINGS_NAV_GROUP_LABELS[id])}
+                  <span className="settings-nav-group-label-icon">{GROUP_ICONS[id]}</span>
+                  <span>{t(SETTINGS_NAV_GROUP_LABELS[id])}</span>
                 </div>
-                {items.map((item) => (
-                  <button
-                    key={item.id}
-                    className={cx("settings-nav-item", tab === item.id && "active")}
-                    onClick={() => {
-                      setActiveExtension(null);
-                      setSettingsTab(item.id);
-                    }}
-                  >
-                    <span className="settings-nav-icon">{item.icon}</span>
-                    <span className="settings-nav-label">{t(item.labelKey)}</span>
-                    {item.experimentalBadgeKey ? (
-                      <Badge tone="warning" className="settings-nav-experimental">
-                        {t(item.experimentalBadgeKey)}
-                      </Badge>
-                    ) : null}
-                  </button>
-                ))}
+                {items.map((item) => {
+                  const isActive = tab === item.id && !activeExtension;
+                  return (
+                    <button
+                      key={item.id}
+                      className={cx("settings-nav-item", isActive && "active")}
+                      onClick={() => {
+                        setActiveExtension(null);
+                        setSettingsTab(item.id);
+                      }}
+                    >
+                      {isActive ? (
+                        <span className="settings-nav-indicator" aria-hidden="true" />
+                      ) : null}
+                      <span className="settings-nav-icon">{item.icon}</span>
+                      <span className="settings-nav-label">{t(item.labelKey)}</span>
+                      {item.experimentalBadgeKey ? (
+                        <Badge tone="warning" className="settings-nav-experimental">
+                          {t(item.experimentalBadgeKey)}
+                        </Badge>
+                      ) : null}
+                    </button>
+                  );
+                })}
               </div>
             ))
           )}
           {extensions.length > 0 && (
             <div className="settings-nav-group">
-              <div className="settings-nav-group-label">{t("settings.groupExtensions")}</div>
+              <div className="settings-nav-group-label">
+                <span className="settings-nav-group-label-icon">{GROUP_ICONS.extensions}</span>
+                <span>{t("settings.groupExtensions")}</span>
+              </div>
               {extensions.filter((entry) => {
                 const q = query.trim().toLowerCase();
                 return !q || [entry.label, ...entry.keywords].some((value) => value.toLowerCase().includes(q));
               }).map((entry) => {
                 const ExtensionIcon = pluginViewIcon(entry.icon) ?? IconPalette;
+                const isExtActive = activeExtension?.ref === entry.ref;
                 return (
                   <button
                     key={entry.ref}
-                    className={cx("settings-nav-item", activeExtension?.ref === entry.ref && "active")}
+                    className={cx("settings-nav-item", isExtActive && "active")}
                     onClick={() => setActiveExtension(entry)}
                   >
-                    <span className="settings-nav-icon"><ExtensionIcon size={14} /></span>
+                    {isExtActive ? (
+                      <span className="settings-nav-indicator" aria-hidden="true" />
+                    ) : null}
+                    <span className="settings-nav-icon"><ExtensionIcon size={16} strokeWidth={1.8} /></span>
                     <span className="settings-nav-label">{entry.label}</span>
                   </button>
                 );
@@ -350,9 +500,6 @@ export function SettingsPage() {
           )}
         </div>
 
-        {/* Pinned to the rail's bottom so it lands on the same line as the
-            main shell's sidebar footer icon row. Both the band and the control
-            stay explicitly non-draggable, like the rail's other controls. */}
         <div className="settings-nav-footer no-drag">
           <button
             type="button"
@@ -363,18 +510,98 @@ export function SettingsPage() {
             <IconChevronLeft size={15} />
             <span>{t("settings.backToApp")}</span>
           </button>
+          <span className="settings-nav-version">
+            {version ? `v${version}` : "v1.0.3"}
+          </span>
         </div>
       </aside>
 
       <div className="settings-content" ref={contentRef}>
         <div className="settings-content-inner">
           <div className="settings-content-enter">
-          <h1 className="settings-section-title">
-            <span>{activeExtension?.label ?? t(activeTitleKey)}</span>
-            {!activeExtension && activeNavItem?.experimentalBadgeKey ? (
-              <Badge tone="warning">{t(activeNavItem.experimentalBadgeKey)}</Badge>
-            ) : null}
-          </h1>
+            <div className="settings-hero-card">
+              <div className="settings-hero-left">
+                <div className="settings-hero-icon-badge" aria-hidden="true">
+                  {activeExtension ? (
+                    <IconPalette size={22} strokeWidth={1.8} />
+                  ) : (
+                    activeNavItem?.icon ?? <IconSliders size={22} strokeWidth={1.8} />
+                  )}
+                </div>
+                <div className="settings-hero-copy">
+                  <h1 className="settings-hero-title">
+                    <span>{activeExtension?.label ?? t(activeTitleKey)}</span>
+                    {!activeExtension && activeNavItem?.experimentalBadgeKey ? (
+                      <Badge tone="warning">{t(activeNavItem.experimentalBadgeKey)}</Badge>
+                    ) : null}
+                  </h1>
+                  <p className="settings-hero-subtitle">
+                    {activeExtension ? activeExtension.description : getTabSubtitle(tab)}
+                  </p>
+                </div>
+              </div>
+              <div className="settings-hero-actions">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="settings-hero-back-btn"
+                  onClick={() => setPage("chat")}
+                >
+                  <IconChevronLeft size={14} />
+                  <span>{t("settings.backToApp")}</span>
+                </Button>
+              </div>
+            </div>
+
+            {tab === "general" && !activeExtension && (
+              <div className="settings-subnav-bar">
+                <SegmentedControl
+                  value={activeSubSection}
+                  onChange={(val) => {
+                    const targets: Record<string, string> = {
+                      theme: ".settings-card:has(.settings-theme-trigger)",
+                      layout: ".settings-card:has(.settings-font-size), .settings-card:has(.settings-toggle)",
+                      editor: ".settings-card:has(.settings-font-trigger)",
+                    };
+                    scrollToSection(targets[val] ?? "", val);
+                  }}
+                  label={t("settings.groupPreferences")}
+                  role="tablist"
+                  className="settings-subnav-segment"
+                  options={[
+                    { value: "theme", label: "Theme", icon: <IconPalette size={15} /> },
+                    { value: "layout", label: "Layout", icon: <IconLayout size={15} /> },
+                    { value: "editor", label: "Code Editor", icon: <IconCode size={15} /> },
+                  ]}
+                />
+              </div>
+            )}
+
+            {tab === "ai" && !activeExtension && (
+              <div className="settings-subnav-bar">
+                <SegmentedControl
+                  value={activeSubSection}
+                  onChange={(val) => {
+                    const targets: Record<string, string> = {
+                      permissions: ".settings-card-block:nth-of-type(1)",
+                      defaults: ".settings-card-block:nth-of-type(2)",
+                      prompt: ".settings-card-block:has(.prompt-enhancement-card)",
+                      models: ".model-config-page, .provider-list-panel",
+                    };
+                    scrollToSection(targets[val] ?? "", val);
+                  }}
+                  label={t("settings.ai")}
+                  role="tablist"
+                  className="settings-subnav-segment"
+                  options={[
+                    { value: "permissions", label: t("settings.permissions", { defaultValue: "Permissions" }), icon: <IconShield size={15} /> },
+                    { value: "defaults", label: t("settings.defaultsTitle", { defaultValue: "Editor Defaults" }), icon: <IconCode size={15} /> },
+                    { value: "prompt", label: t("settings.promptEnhancementTitle", { defaultValue: "Prompt" }), icon: <IconSparkles size={15} /> },
+                    { value: "models", label: t("settings.models", { defaultValue: "Models" }), icon: <IconBot size={15} /> },
+                  ]}
+                />
+              </div>
+            )}
 
           {activeExtension ? (
             <PluginScenicThemesDestination destination={activeExtension} selectTheme={selectPluginTheme} />

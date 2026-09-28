@@ -42,6 +42,13 @@ import {
   sidebarSessionStatus,
   type SidebarSessionStatus,
 } from "../lib/sidebar-session-status";
+import { useWorkspaceViewStore } from "../stores/workspace-view-store";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
+  Building03Icon,
+  Route01Icon,
+  WorkflowSquare01Icon,
+} from "@hugeicons/core-free-icons";
 import { ErrorCodes } from "@pi-desktop/shared";
 import type { SessionSummary } from "@pi-desktop/shared";
 import type {
@@ -241,6 +248,8 @@ export function Sidebar({
   const navBack = useAppStore((s) => s.navBack);
   const canNavBack = useAppStore((s) => s.canNavBack);
   const page = useAppStore((s) => s.page);
+  const activeWorkspaceView = useWorkspaceViewStore((s) => s.activeView);
+  const setWorkspaceActiveView = useWorkspaceViewStore((s) => s.setActiveView);
   const settings = useAppStore((s) => s.settings);
   const prefetchSession = useAppStore((s) => s.prefetchSession);
   const selectSession = useAppStore((s) => s.selectSession);
@@ -1123,6 +1132,7 @@ export function Sidebar({
 
   const selectProjectSession = async (session: SessionSummary): Promise<boolean> => {
     try {
+      setWorkspaceActiveView("chat");
       await selectSession(session.id);
       focusComposer();
       return true;
@@ -1134,6 +1144,7 @@ export function Sidebar({
 
   const selectTemporarySession = async (sessionId: string) => {
     try {
+      setWorkspaceActiveView("chat");
       await selectSession(sessionId);
       focusComposer();
     } catch (error) {
@@ -2486,6 +2497,57 @@ export function Sidebar({
               </div>
             </section>
           )}
+        </div>
+
+        {/* Dynamic Workspace Views Section in Sidebar */}
+        <div className="sidebar-workspace-views-nav" role="navigation" aria-label="Workspace Views">
+          <div className="sidebar-workspace-view-items">
+            <button
+              type="button"
+              className={cx(
+                "sidebar-workspace-view-btn",
+                page === "chat" && activeWorkspaceView === "office" && "is-active",
+              )}
+              onClick={() => {
+                setWorkspaceActiveView("office");
+                if (page !== "chat") setPage("chat");
+              }}
+              title="Live Office (Virtual Team Studio)"
+            >
+              <HugeiconsIcon icon={Building03Icon} size={14} className="ws-nav-icon" />
+              <span>Live Office</span>
+            </button>
+            <button
+              type="button"
+              className={cx(
+                "sidebar-workspace-view-btn",
+                page === "chat" && activeWorkspaceView === "mindmap" && "is-active",
+              )}
+              onClick={() => {
+                setWorkspaceActiveView("mindmap");
+                if (page !== "chat") setPage("chat");
+              }}
+              title="Mindmap (Project Architecture Graph)"
+            >
+              <HugeiconsIcon icon={Route01Icon} size={14} className="ws-nav-icon" />
+              <span>Mindmap</span>
+            </button>
+            <button
+              type="button"
+              className={cx(
+                "sidebar-workspace-view-btn",
+                page === "chat" && activeWorkspaceView === "pipeline" && "is-active",
+              )}
+              onClick={() => {
+                setWorkspaceActiveView("pipeline");
+                if (page !== "chat") setPage("chat");
+              }}
+              title="Pipeline (Kanban Task Flow)"
+            >
+              <HugeiconsIcon icon={WorkflowSquare01Icon} size={14} className="ws-nav-icon" />
+              <span>Pipeline</span>
+            </button>
+          </div>
         </div>
 
         <div className="sidebar-footer no-drag">

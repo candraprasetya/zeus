@@ -22,6 +22,7 @@ import {
   ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ChevronUpIcon,
   CircleCheckIcon,
   ClipboardPasteIcon,
   Clock01Icon,
@@ -52,6 +53,7 @@ import {
   KeyRoundIcon,
   Link01Icon,
   ListChecksIcon,
+  LayoutLeftIcon,
   LogOutIcon,
   Maximize01Icon,
   MessageSquareIcon,
@@ -202,6 +204,7 @@ export const IconBot = icon(BotIcon);
 export const IconCheckCheck = icon(CheckCheckIcon);
 export const IconShield = icon(Shield01Icon);
 export const IconChevronDown = icon(ChevronDownIcon);
+export const IconChevronUp = icon(ChevronUpIcon);
 export const IconClose = icon(Cancel01Icon);
 /* Frameless window chrome (WindowControls): minimize / maximize / restore. */
 export const IconMinus = icon(MinusSignIcon);
@@ -237,8 +240,11 @@ export const IconTarget = icon(Target01Icon);
 export const IconBrowser = icon(AppWindowIcon);
 export const IconHook = icon(WebhookIcon);
 export const IconWorkflow = icon(WorkflowIcon);
+export const IconMindmap = icon(WorkflowIcon);
+export const IconFork = icon(GitForkIcon);
 export const IconLink = icon(Link01Icon);
 export const IconPalette = icon(PaletteIcon);
+export const IconLayout = icon(LayoutLeftIcon);
 export const IconPerson = icon(SmileIcon);
 export const IconInfo = icon(InformationCircleIcon);
 export const IconServer = icon(ServerIcon);

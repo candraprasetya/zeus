@@ -38,9 +38,12 @@ import {
   IconPanelRestore,
   IconPlug,
   IconPlus,
+  IconWorkflow,
 } from "../icons";
 import { ReviewTab } from "./ReviewTab";
 import { FilesTab } from "./FilesTab";
+import { MindmapTab } from "./MindmapTab";
+import { SquadTab } from "./SquadTab";
 import { PluginViewTab } from "./PluginViewTab";
 import { SubagentTranscriptTab } from "./SubagentTranscriptTab";
 import {
@@ -57,6 +60,8 @@ const TAB_ICONS = {
   new: IconPlus,
   review: IconDiff,
   file: IconFileText,
+  mindmap: IconWorkflow,
+  squad: IconBot,
   plugin: IconPlug,
   subagent: IconBot,
 } as const;
@@ -112,6 +117,7 @@ function tabLabel(
   }
   if (tab.kind === "new") return t("panel.new.title");
   if (tab.kind === "subagent") return tab.label ?? t("panel.tabs.subagent");
+  if (tab.kind === "squad") return "Squad Roles";
   if (tab.kind !== "file") return t(`panel.tabs.${tab.kind}`);
   const path = tab.resource ?? "";
   return path.split("/").filter(Boolean).pop() || t("panel.tabs.file");
@@ -121,7 +127,7 @@ function workPanelTools(
   t: (key: string) => string,
   pluginViews: PluginViewMeta[],
 ): WorkPanelTool[] {
-  // Review is the only host-owned launcher. Files, Browser, and every future
+  // Review, Mindmap, and Squad are host-owned launchers. Files, Browser, and every future
   // tool are plugin-contributed views, so their list stays data-driven.
   return [
     {
@@ -129,6 +135,20 @@ function workPanelTools(
       tab: toolWorkPanelTab("review"),
       label: t("panel.tabs.review"),
       icon: IconDiff,
+    },
+    {
+      id: "mindmap",
+      tab: toolWorkPanelTab("mindmap"),
+      label: t("panel.tabs.mindmap"),
+      icon: IconWorkflow,
+      description: t("panel.mindmap.title"),
+    },
+    {
+      id: "squad",
+      tab: toolWorkPanelTab("squad"),
+      label: "Squad Roles",
+      icon: IconBot,
+      description: "Mobile Banking Roles, Leaders, & Skills",
     },
     ...pluginViews.map((view) => {
       const Icon = pluginViewIcon(view.icon);
@@ -932,6 +952,28 @@ export function WorkPanel({
               aria-labelledby={`work-panel-tab-${activeTab.id}`}
             >
               <FilesTab />
+            </div>
+          )}
+          {activeTab?.kind === "mindmap" && (
+            <div
+              key={activeTab.id}
+              id={`work-panel-surface-${activeTab.id}`}
+              className="work-panel-tabpane"
+              role="tabpanel"
+              aria-labelledby={`work-panel-tab-${activeTab.id}`}
+            >
+              <MindmapTab />
+            </div>
+          )}
+          {activeTab?.kind === "squad" && (
+            <div
+              key={activeTab.id}
+              id={`work-panel-surface-${activeTab.id}`}
+              className="work-panel-tabpane"
+              role="tabpanel"
+              aria-labelledby={`work-panel-tab-${activeTab.id}`}
+            >
+              <SquadTab />
             </div>
           )}
           {activeTab?.kind === "plugin" &&

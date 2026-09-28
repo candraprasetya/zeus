@@ -302,6 +302,8 @@ export type MdastNode = {
   type: string;
   value?: string;
   url?: string;
+  title?: string | null;
+  data?: Record<string, unknown>;
   children?: MdastNode[];
 };
 
@@ -314,10 +316,32 @@ const SKIP_MDAST = new Set([
   "html",
 ]);
 
+const WIKILINK_RE = /\[\[([^\]\r\n]+)\]\]/g;
+
+export type WikilinkToken = {
+  raw: string;
+  target: string;
+  label: string;
+  anchor?: string;
+};
+
+export function parseWikilinkToken(raw: string): WikilinkToken | null {
+  const match = /^\[\[([^\]\r\n]+)\]\]$/.exec(raw.trim());
+  if (!match) return null;
+  const inner = match[1];
+  const [targetPart, aliasPart] = inner.split("|");
+  const [pathPart, anchorPart] = (targetPart ?? "").split("#");
+  const target = pathPart ? pathPart.trim() : "";
+  const anchor = anchorPart ? anchorPart.trim() : undefined;
+  const label = aliasPart ? aliasPart.trim() : (target || inner.trim());
+  return { raw, target, label, anchor };
+}
+
 /**
- * Turn bare file/URL tokens in markdown phrasing into link nodes so the
- * existing markdown Anchor handler can preview them. Skips fenced code,
- * inline code, and existing links/images.
+ * Turn bare file/URL tokens and Obsidian-style wikilinks [[Note Title]]
+ * in markdown phrasing into link nodes so the existing markdown Anchor
+ * handler can preview and navigate them. Skips fenced code, inline code,
+ * and existing links/images.
  */
 export function linkifyMdastTree(
   tree: MdastNode | null | undefined,
@@ -334,26 +358,106 @@ export function linkifyMdastTree(
     for (const child of node.children) {
       if (!child || typeof child.type !== "string") continue;
       if (!nextSkip && child.type === "text" && typeof child.value === "string") {
-        const segments = splitChatText(child.value, root, baseDir);
-        if (segments.length === 1 && segments[0].kind === "text") {
-          next.push(child);
-          continue;
-        }
-        for (const segment of segments) {
-          if (segment.kind === "text") {
-            next.push({ type: "text", value: segment.text });
+        const text = child.value;
+        const wikilinkMatches = [...text.matchAll(WIKILINK_RE)];
+        if (wikilinkMatches.length === 0) {
+          const segments = splitChatText(text, root, baseDir);
+          if (segments.length === 1 && segments[0].kind === "text") {
+            next.push(child);
             continue;
           }
-          const url =
-            segment.target.kind === "url"
-              ? segment.target.url
-              : segment.target.path;
-          next.push({
-            type: "link",
-            url,
-            children: [{ type: "text", value: segment.text }],
-          });
+          for (const segment of segments) {
+            if (segment.kind === "text") {
+              next.push({ type: "text", value: segment.text });
+              continue;
+            }
+            const url =
+              segment.target.kind === "url"
+                ? segment.target.url
+                : segment.target.path;
+            next.push({
+              type: "link",
+              url,
+              children: [{ type: "text", value: segment.text }],
+            });
+          }
+          continue;
         }
+
+        // Process text that contains wikilinks
+        let lastIdx = 0;
+        for (const m of wikilinkMatches) {
+          const start = m.index;
+          if (start > lastIdx) {
+            const beforeText = text.slice(lastIdx, start);
+            const segments = splitChatText(beforeText, root, baseDir);
+            for (const segment of segments) {
+              if (segment.kind === "text") {
+                next.push({ type: "text", value: segment.text });
+              } else {
+                const url =
+                  segment.target.kind === "url"
+                    ? segment.target.url
+                    : segment.target.path;
+                next.push({
+                  type: "link",
+                  url,
+                  children: [{ type: "text", value: segment.text }],
+                });
+              }
+            }
+          }
+
+          const raw = m[0];
+          const inner = m[1];
+          const [targetPart, aliasPart] = inner.split("|");
+          const [pathPart, anchorPart] = (targetPart ?? "").split("#");
+          const target = pathPart ? pathPart.trim() : "";
+          const anchor = anchorPart ? anchorPart.trim() : undefined;
+          const label = aliasPart ? aliasPart.trim() : (target || inner.trim());
+
+          if (target) {
+            const url = anchor ? `${target}#${anchor}` : target;
+            next.push({
+              type: "link",
+              url,
+              title: target,
+              data: {
+                hProperties: {
+                  className: "markdown-wikilink",
+                  "data-wikilink": "true",
+                  title: target,
+                },
+              },
+              children: [{ type: "text", value: label }],
+            });
+          } else {
+            next.push({ type: "text", value: raw });
+          }
+
+          lastIdx = start + raw.length;
+        }
+
+        if (lastIdx < text.length) {
+          const remainingText = text.slice(lastIdx);
+          const segments = splitChatText(remainingText, root, baseDir);
+          for (const segment of segments) {
+            if (segment.kind === "text") {
+              next.push({ type: "text", value: segment.text });
+            } else {
+              const url =
+                segment.target.kind === "url"
+                  ? segment.target.url
+                  : segment.target.path;
+              next.push({
+                type: "link",
+                url,
+                children: [{ type: "text", value: segment.text }],
+              });
+            }
+          }
+        }
+
         continue;
       }
       walk(child, nextSkip);

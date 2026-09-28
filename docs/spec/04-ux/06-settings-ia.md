@@ -483,20 +483,70 @@ system while preserving their different data ownership:
   search field with a clear affordance, the selected-project picker, and the
   page's primary actions right-aligned. Subagents omits the filter and the
   picker because it is global-only, keeping only search and its actions.
-  The panel still uses two in-panel groups: **Built-in** (the five shipped
-  definitions `explorer`, `code-reviewer`, `test-runner`, `fixer`, and
-  `ui-designer`) and **Global** (`~/.agents/subagents`, user-owned). An enabled
-  user document of the same name shadows that builtin in the Task catalog, so
-  the Built-in row is omitted while the user row remains. A disabled user
-  document of the same name leaves the builtin in the catalog (and on the
-  Built-in list) because Task uses the shipped definition again. Built-in rows
-  carry a source badge, **Copy as mine** (opens the create sheet pre-filled from
-  that definition, with the matching template chip selected), and the same
-  enablement switch a user row has (D202 activation, ADR 0270): turning one off
-  writes app-local state rather than a document, the row stays listed and dimmed
-  so the switch is still the way back on, and the next catalog load stops
-  offering it to `Task`. Reveal and delete remain absent because a builtin is
-  not a file.
+  The panel still uses the squad workspace groups described below plus
+  **Global** (`~/.agents/subagents`, user-owned). The five shipped definitions
+  (`explorer`, `code-reviewer`, `test-runner`, `fixer`, `ui-designer`) no
+  longer get a row of their own: they are a delegation catalog, not a roster,
+  so the host keeps reading them on every launch (and the host API that
+  switches one off is unchanged) while Settings renders the user's teams. An
+  enabled user document of the same name still shadows that builtin in the
+  Task catalog, and a disabled one still leaves the shipped definition in
+  place for `Task` to use again.
+- **Teams** leads the panel: every team, with the default `Zeus Squad` team
+  first, each row showing its member count and an **Active** badge on the one
+  the roster surfaces render. The group header creates a team through a name
+  sheet and switches to it, so the next action is filling its roster; a row
+  offers *show this team*, *rename*, and *delete* while it is not the last
+  team. Deleting a team never deletes people: its user-created members move to
+  the team taking over, shipped members fall back to the default team, and the
+  pipelines owned by that team go with it. Team ids survive a rename, so the
+  active team stays active across one.
+- **Members** follows, headed by the active team's name, and holds that team's
+  roster: the six shipped squad roles (`ui-designer`, `ux-designer`,
+  `android-lead`, `ios-lead`, `security-checker`, `qa-specialist`) on the
+  default team in default order, plus any member the user adds to any team.
+  They are not host documents — only the user's changes are kept, as
+  renderer-side per-member overrides — and the same roster is what the chat
+  team strip, the Work Panel's Squad Roles tab, and the desks on the Live
+  Office floor render, so this group is the single place a squad member is
+  added, renamed, badged, recolored, given skills or a character, moved to
+  another team, or hidden. The Live Office keeps the Zeus lead desk as the hub
+  and draws one desk per enabled member of the active team in roster order, so
+  a member hidden here loses its desk immediately, and a runtime subagent is no
+  longer a desk of its own: it still supplies the live tool activity and the
+  walking permission prompt that land on a desk whose id it shares. The
+  shipped roles are defaults rather than a fixed coding crew: the group header
+  carries an add action that opens the member sheet in create mode, and the
+  sheet takes name, role/badge, description, skills, a character, an icon, a
+  color, and — once a second team exists — the team the member belongs to, so
+  a roster for design or data work reads the same as one for code. Skills are
+  a comma-separated field rendered as mono chips, and the character is picked
+  from the same archetype chips the sub-agent editor offers; until one is
+  picked, the character follows the chosen icon, which is also what the Live
+  Office sprite resolves when no character is stored. A row carries the
+  member's colored glyph, name, badge, a character badge, the shipped skill id
+  as its command when the role has one, the member's skill chips in mono meta,
+  and the shared enablement switch. Row actions are Edit and an overflow menu: a
+  changed shipped role offers Reset to drop its override and return to the
+  default, and a user-created role offers Delete, which removes it from the
+  roster. A disabled member stays listed and dimmed, drops out of the chat
+  team strip, and can always be switched back on. Squad rows participate in
+  the page search like every other group.
+- **Pipelines** closes the workspace: every pipeline the user created, each
+  followed inline by its cards as numbered rows. The group header creates a
+  pipeline through a name sheet and makes it active; a pipeline row offers
+  *show in the Live Office*, *add card*, *rename*, and *delete*, and carries
+  its team name and card count. A card row shows its step number, title, the
+  assignee's name as a badge (or *Unassigned*), its detail, and the team in
+  mono meta; the card sheet takes title, details, team, and assignee, and only
+  that team's enabled members are offered for assignment, so a card cannot
+  name someone the roster does not show. The Live Office pipeline view draws
+  the active pipeline's cards when one belongs to the active team, with stage
+  status derived from the live turn (completed / running / waiting permission
+  / queued) and the owner under each card, and falls back to one stage per
+  enabled member of the active team when no pipeline applies — never a
+  hardcoded crew. The Teams and Pipelines groups are hidden while the page
+  search is active, because neither group's rows are searched.
 - The level filter narrows which groups the panel renders; it never hides the
   toolbar or moves the actions. New capabilities are created at the level the
   filter points at — Global under All or Global, Project under Project — and

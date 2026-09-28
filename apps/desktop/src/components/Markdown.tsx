@@ -581,10 +581,13 @@ function Anchor({
       openHttpUrl(href);
       return;
     }
+    // toWorkspaceRel normalises the path; the anchor fragment (#section) in
+    // wikilinks is stripped here so the file resolver can find the file.
     const rel = toWorkspaceRel(safeDecodeUri(href), root, baseDir);
     if (rel) {
       e.preventDefault();
-      openFileRef(rel, baseDir);
+      // Strip anchor from the resolved rel path before opening (wikilinks).
+      openFileRef(rel.split("#")[0], baseDir);
     }
   };
   return (

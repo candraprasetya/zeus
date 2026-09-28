@@ -6,6 +6,7 @@ import {
   isHttpUrl,
   linkifyMdastTree,
   parseFileRef,
+  parseWikilinkToken,
   remarkChatFileLinks,
   resolvePreviewTarget,
   splitChatText,
@@ -350,3 +351,69 @@ test("adjacent parenthesis-wrapped URLs all remain independently linkable", () =
   assert.equal(segments.filter(s => s.kind === "target").length, 1000);
   assert.equal(segments.map(s => s.text).join(""), source);
 });
+
+test("parseWikilinkToken extracts target, label, and anchor correctly", () => {
+  assert.deepEqual(parseWikilinkToken("[[Core Network & DI]]"), {
+    raw: "[[Core Network & DI]]",
+    target: "Core Network & DI",
+    label: "Core Network & DI",
+    anchor: undefined,
+  });
+
+  assert.deepEqual(parseWikilinkToken("[[Design System|UI Components]]"), {
+    raw: "[[Design System|UI Components]]",
+    target: "Design System",
+    label: "UI Components",
+    anchor: undefined,
+  });
+
+  assert.deepEqual(parseWikilinkToken("[[Feature Auth#Login|Auth Flow]]"), {
+    raw: "[[Feature Auth#Login|Auth Flow]]",
+    target: "Feature Auth",
+    label: "Auth Flow",
+    anchor: "Login",
+  });
+
+  assert.deepEqual(parseWikilinkToken("[[knowledge/architecture.md]]"), {
+    raw: "[[knowledge/architecture.md]]",
+    target: "knowledge/architecture.md",
+    label: "knowledge/architecture.md",
+    anchor: undefined,
+  });
+
+  assert.equal(parseWikilinkToken("not a wikilink"), null);
+  assert.equal(parseWikilinkToken("[[unclosed"), null);
+});
+
+test("linkifyMdastTree converts wikilinks in markdown list into clickable link nodes", () => {
+  const tree = {
+    type: "root",
+    children: [
+      {
+        type: "paragraph",
+        children: [{ type: "text", value: "- [[Core Network & DI]]" }],
+      },
+      {
+        type: "paragraph",
+        children: [{ type: "text", value: "- [[Design System|Design Tokens]]" }],
+      },
+    ],
+  };
+
+  linkifyMdastTree(tree, ROOT);
+
+  const p1 = tree.children[0].children;
+  assert.equal(p1[0].value, "- ");
+  assert.equal(p1[1].type, "link");
+  assert.equal(p1[1].url, "Core Network & DI");
+  assert.equal(p1[1].children[0].value, "Core Network & DI");
+  assert.equal(p1[1].data?.hProperties?.className, "markdown-wikilink");
+  assert.equal(p1[1].data?.hProperties?.["data-wikilink"], "true");
+
+  const p2 = tree.children[1].children;
+  assert.equal(p2[0].value, "- ");
+  assert.equal(p2[1].type, "link");
+  assert.equal(p2[1].url, "Design System");
+  assert.equal(p2[1].children[0].value, "Design Tokens");
+});
+

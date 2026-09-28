@@ -17,6 +17,24 @@ export const PLUGIN_DEV_SKILL_FILE = "plugin-development.md";
 export const PLUGIN_DEV_SKILL_ID = "pi-desktop/plugin-development";
 export const IMAGE_GENERATION_SKILL_ID = "pi-desktop/imagegen";
 const IMAGE_GENERATION_SKILL_FILE = "image-generation.md";
+export const ZEUS_PANTAU_SKILL_ID = "zeus-pantau";
+const ZEUS_PANTAU_SKILL_FILE = "zeus-pantau.md";
+export const ZEUS_SQUAD_SKILL_ID = "zeus-squad";
+const ZEUS_SQUAD_SKILL_FILE = "zeus-squad.md";
+export const ZEUS_DEBATE_SKILL_ID = "zeus-debate";
+const ZEUS_DEBATE_SKILL_FILE = "zeus-debate.md";
+export const ZEUS_PREDEV_SKILL_ID = "zeus-predev";
+const ZEUS_PREDEV_SKILL_FILE = "zeus-predev.md";
+export const ZEUS_UI_DESIGNER_SKILL_ID = "zeus-ui-designer";
+const ZEUS_UI_DESIGNER_SKILL_FILE = "zeus-ui-designer.md";
+export const ZEUS_UX_DESIGNER_SKILL_ID = "zeus-ux-designer";
+const ZEUS_UX_DESIGNER_SKILL_FILE = "zeus-ux-designer.md";
+export const ZEUS_SECURITY_SKILL_ID = "zeus-security";
+const ZEUS_SECURITY_SKILL_FILE = "zeus-security.md";
+export const ZEUS_QA_SKILL_ID = "zeus-qa";
+const ZEUS_QA_SKILL_FILE = "zeus-qa.md";
+export const ZEUS_MOCK_SKILL_ID = "zeus-mock";
+const ZEUS_MOCK_SKILL_FILE = "zeus-mock.md";
 
 /** electron-builder copies `resources/skills` to `<resources>/skills`. */
 function resolveBuiltinSkillPath(fileName: string): string | null {
@@ -88,10 +106,42 @@ export type BuiltinSkillInput = {
  * fresh so a packaged update takes effect without a restart.
  */
 export function builtinSkills(input: BuiltinSkillInput): PluginSkillDef[] {
-  const ids = [IMAGE_GENERATION_SKILL_ID];
+  const ids = [
+    IMAGE_GENERATION_SKILL_ID,
+    ZEUS_PANTAU_SKILL_ID,
+    ZEUS_SQUAD_SKILL_ID,
+    ZEUS_DEBATE_SKILL_ID,
+    ZEUS_PREDEV_SKILL_ID,
+    ZEUS_UI_DESIGNER_SKILL_ID,
+    ZEUS_UX_DESIGNER_SKILL_ID,
+    ZEUS_SECURITY_SKILL_ID,
+    ZEUS_QA_SKILL_ID,
+    ZEUS_MOCK_SKILL_ID,
+  ];
   if (isPluginWorkspace(input.workspacePath, input.pluginPaths)) ids.push(PLUGIN_DEV_SKILL_ID);
   return ids.flatMap((id) => {
-    const file = id === IMAGE_GENERATION_SKILL_ID ? IMAGE_GENERATION_SKILL_FILE : PLUGIN_DEV_SKILL_FILE;
+    const file =
+      id === IMAGE_GENERATION_SKILL_ID
+        ? IMAGE_GENERATION_SKILL_FILE
+        : id === ZEUS_PANTAU_SKILL_ID
+          ? ZEUS_PANTAU_SKILL_FILE
+          : id === ZEUS_SQUAD_SKILL_ID
+            ? ZEUS_SQUAD_SKILL_FILE
+            : id === ZEUS_DEBATE_SKILL_ID
+              ? ZEUS_DEBATE_SKILL_FILE
+              : id === ZEUS_PREDEV_SKILL_ID
+                ? ZEUS_PREDEV_SKILL_FILE
+                : id === ZEUS_UI_DESIGNER_SKILL_ID
+                  ? ZEUS_UI_DESIGNER_SKILL_FILE
+                  : id === ZEUS_UX_DESIGNER_SKILL_ID
+                    ? ZEUS_UX_DESIGNER_SKILL_FILE
+                    : id === ZEUS_SECURITY_SKILL_ID
+                      ? ZEUS_SECURITY_SKILL_FILE
+                      : id === ZEUS_QA_SKILL_ID
+                        ? ZEUS_QA_SKILL_FILE
+                        : id === ZEUS_MOCK_SKILL_ID
+                          ? ZEUS_MOCK_SKILL_FILE
+                          : PLUGIN_DEV_SKILL_FILE;
     const raw = readBuiltinSkill(file);
     if (!raw?.trim()) return [];
     const parsed = parseSkillFrontmatter(raw);
@@ -106,8 +156,44 @@ export function builtinSkills(input: BuiltinSkillInput): PluginSkillDef[] {
 export function loadBuiltinSkillBody(
   id: string,
 ): { id: string; name: string; body: string } | null {
-  if (id !== PLUGIN_DEV_SKILL_ID && id !== IMAGE_GENERATION_SKILL_ID) return null;
-  const raw = readBuiltinSkill(id === IMAGE_GENERATION_SKILL_ID ? IMAGE_GENERATION_SKILL_FILE : PLUGIN_DEV_SKILL_FILE);
+  if (
+    id !== PLUGIN_DEV_SKILL_ID &&
+    id !== IMAGE_GENERATION_SKILL_ID &&
+    id !== ZEUS_PANTAU_SKILL_ID &&
+    id !== ZEUS_SQUAD_SKILL_ID &&
+    id !== ZEUS_DEBATE_SKILL_ID &&
+    id !== ZEUS_PREDEV_SKILL_ID &&
+    id !== ZEUS_UI_DESIGNER_SKILL_ID &&
+    id !== ZEUS_UX_DESIGNER_SKILL_ID &&
+    id !== ZEUS_SECURITY_SKILL_ID &&
+    id !== ZEUS_QA_SKILL_ID &&
+    id !== ZEUS_MOCK_SKILL_ID
+  ) {
+    return null;
+  }
+  const file =
+    id === IMAGE_GENERATION_SKILL_ID
+      ? IMAGE_GENERATION_SKILL_FILE
+      : id === ZEUS_PANTAU_SKILL_ID
+        ? ZEUS_PANTAU_SKILL_FILE
+        : id === ZEUS_SQUAD_SKILL_ID
+          ? ZEUS_SQUAD_SKILL_FILE
+          : id === ZEUS_DEBATE_SKILL_ID
+            ? ZEUS_DEBATE_SKILL_FILE
+            : id === ZEUS_PREDEV_SKILL_ID
+              ? ZEUS_PREDEV_SKILL_FILE
+              : id === ZEUS_UI_DESIGNER_SKILL_ID
+                ? ZEUS_UI_DESIGNER_SKILL_FILE
+                : id === ZEUS_UX_DESIGNER_SKILL_ID
+                  ? ZEUS_UX_DESIGNER_SKILL_FILE
+                  : id === ZEUS_SECURITY_SKILL_ID
+                    ? ZEUS_SECURITY_SKILL_FILE
+                    : id === ZEUS_QA_SKILL_ID
+                      ? ZEUS_QA_SKILL_FILE
+                      : id === ZEUS_MOCK_SKILL_ID
+                        ? ZEUS_MOCK_SKILL_FILE
+                        : PLUGIN_DEV_SKILL_FILE;
+    const raw = readBuiltinSkill(file);
   if (!raw?.trim()) return null;
   const parsed = parseSkillFrontmatter(raw);
   if (!parsed.body) return null;

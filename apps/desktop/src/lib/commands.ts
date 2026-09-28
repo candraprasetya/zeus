@@ -17,6 +17,10 @@ export async function runPaletteCommand(commandId: string): Promise<void> {
     case "builtin.agent.compact":
       await store.compactContext();
       break;
+    case "builtin.zeus.pantau": {
+      store.openWorkPanelTab({ id: "mindmap", kind: "mindmap" });
+      break;
+    }
     case "builtin.mode.agent":
     case "builtin.mode.plan":
     case "builtin.mode.goal": {
