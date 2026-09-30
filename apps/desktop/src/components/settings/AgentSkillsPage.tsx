@@ -608,6 +608,11 @@ export function AgentSkillsPage() {
           saving={saving}
           level={editor.level}
           projectName={projectName}
+          skills={[...globalSkills, ...projectSkills]}
+          onSelectSkill={(skill) => {
+            void openEdit(skill, skill.level ?? editor.level);
+          }}
+          onNewSkill={openCreate}
           onClose={() => {
             if (!saving) setEditor(null);
           }}

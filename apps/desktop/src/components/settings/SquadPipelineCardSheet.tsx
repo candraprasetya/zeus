@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Field, Input, Textarea, TooltipButton, portalOverlay } from "../ui";
+import { Button, Checkbox, Field, Input, Textarea, TooltipButton, portalOverlay } from "../ui";
 import { IconX } from "../icons";
 import { SettingsMenuSelect } from "./SettingsMenuSelect";
 import {
@@ -11,27 +11,31 @@ import {
 
 /**
  * One pipeline stage: what it is, what it produces, and who does it — the
- * team and the member the user assigns. The assignee list only offers the
- * chosen team's members, so a card can never point at someone invisible.
+ * team and the member the user assigns, plus Goal Ancestry and Approval Gates.
  */
 export function SquadPipelineCardSheet({
   card,
   pipelineTeamId,
+  otherCards = [],
   onClose,
   onSubmit,
 }: {
   /** `null` appends a new card to the pipeline. */
   card: SquadPipelineCard | null;
   pipelineTeamId: string;
+  otherCards?: SquadPipelineCard[];
   onClose: () => void;
   onSubmit: (draft: SquadPipelineCardDraft) => void;
 }) {
   const { t } = useTranslation();
   const { teams, members } = useSquadWorkspace();
   const [title, setTitle] = useState(card?.title ?? "");
+  const [goal, setGoal] = useState(card?.goal ?? "");
   const [detail, setDetail] = useState(card?.detail ?? "");
   const [teamId, setTeamId] = useState(card?.teamId || pipelineTeamId);
   const [assigneeId, setAssigneeId] = useState(card?.assigneeId ?? "");
+  const [requiresApproval, setRequiresApproval] = useState(Boolean(card?.requiresApproval));
+  const [blockedBy, setBlockedBy] = useState<string[]>(card?.blockedBy ?? []);
   const created = card === null;
 
   useEffect(() => {
@@ -51,10 +55,26 @@ export function SquadPipelineCardSheet({
     ? assigneeId
     : "";
 
+  const toggleBlockedBy = (targetCardId: string) => {
+    setBlockedBy((prev) =>
+      prev.includes(targetCardId)
+        ? prev.filter((id) => id !== targetCardId)
+        : [...prev, targetCardId],
+    );
+  };
+
   const submit = () => {
     const nextTitle = title.trim();
     if (!nextTitle) return;
-    onSubmit({ title: nextTitle, detail: detail.trim(), teamId, assigneeId: selectedAssignee });
+    onSubmit({
+      title: nextTitle,
+      goal: goal.trim() || undefined,
+      detail: detail.trim(),
+      teamId,
+      assigneeId: selectedAssignee,
+      requiresApproval,
+      blockedBy,
+    });
   };
 
   const selectGroup = (label: string, control: ReactNode) => (
@@ -104,6 +124,14 @@ export function SquadPipelineCardSheet({
             />
           </Field>
 
+          <Field label={t("settings.zeusSquad.cardGoal")}>
+            <Input
+              value={goal}
+              placeholder={t("settings.zeusSquad.cardGoalPlaceholder")}
+              onChange={(event) => setGoal(event.target.value)}
+            />
+          </Field>
+
           <Field label={t("settings.zeusSquad.cardDetails")}>
             <Textarea
               value={detail}
@@ -146,6 +174,48 @@ export function SquadPipelineCardSheet({
               onChange={setAssigneeId}
             />,
           )}
+
+          <div style={{ marginTop: "4px" }}>
+            <Checkbox
+              checked={requiresApproval}
+              label={
+                <span style={{ fontSize: "13px", fontWeight: 500 }}>
+                  {t("settings.zeusSquad.cardRequiresApproval")}
+                </span>
+              }
+              onChange={(event) => setRequiresApproval(event.target.checked)}
+            />
+          </div>
+
+          {otherCards.length > 0 ? (
+            <div className="ext-field-group" style={{ marginTop: "6px" }}>
+              <div className="ext-field-label" style={{ marginBottom: "6px" }}>
+                {t("settings.zeusSquad.cardBlockedBy")}
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "6px",
+                  maxHeight: "120px",
+                  overflowY: "auto",
+                  padding: "8px 10px",
+                  borderRadius: "6px",
+                  background: "var(--ds-bg-hover)",
+                  border: "1px solid var(--ds-border-subtle)",
+                }}
+              >
+                {otherCards.map((other) => (
+                  <Checkbox
+                    key={other.id}
+                    checked={blockedBy.includes(other.id)}
+                    label={<span style={{ fontSize: "12px" }}>{other.title}</span>}
+                    onChange={() => toggleBlockedBy(other.id)}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="ext-sheet-actions">

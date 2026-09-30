@@ -488,10 +488,14 @@ system while preserving their different data ownership:
   (`explorer`, `code-reviewer`, `test-runner`, `fixer`, `ui-designer`) no
   longer get a row of their own: they are a delegation catalog, not a roster,
   so the host keeps reading them on every launch (and the host API that
-  switches one off is unchanged) while Settings renders the user's teams. An
-  enabled user document of the same name still shadows that builtin in the
-  Task catalog, and a disabled one still leaves the shipped definition in
-  place for `Task` to use again.
+  switches one off is unchanged) while Settings renders the user's teams. They
+  reach the user where a roster member is made instead: the member sheet in
+  create mode offers them, alongside the shipped squad roles the team does not
+  hold yet, as one-tap suggestions that only fill the form — a builtin joins no
+  roster until the user saves the member it pre-filled. An enabled user
+  document of the same name still shadows that builtin in the Task catalog,
+  and a disabled one still leaves the shipped definition in place for `Task`
+  to use again.
 - **Teams** leads the panel: every team, with the default `Zeus Squad` team
   first, each row showing its member count and an **Active** badge on the one
   the roster surfaces render. The group header creates a team through a name
@@ -506,22 +510,34 @@ system while preserving their different data ownership:
   `android-lead`, `ios-lead`, `security-checker`, `qa-specialist`) on the
   default team in default order, plus any member the user adds to any team.
   They are not host documents — only the user's changes are kept, as
-  renderer-side per-member overrides — and the same roster is what the chat
-  team strip, the Work Panel's Squad Roles tab, and the desks on the Live
-  Office floor render, so this group is the single place a squad member is
-  added, renamed, badged, recolored, given skills or a character, moved to
-  another team, or hidden. The Live Office keeps the Zeus lead desk as the hub
-  and draws one desk per enabled member of the active team in roster order, so
-  a member hidden here loses its desk immediately, and a runtime subagent is no
+  renderer-side per-member overrides — and the same roster is what the Work
+  Panel's Squad Roles tab and the desks on the Live Office floor render, so
+  this group is the single place a squad member is added, renamed, badged,
+  recolored, given skills or a character, moved to another team, or hidden.
+  The Live Office keeps the Zeus lead desk as the hub and draws one desk per
+  enabled member of the active team in roster order: up to six keep their
+  handcrafted slots, a larger roster packs into a scaled grid instead of
+  paging through wings, and at most sixteen members stand on one floor — the
+  header badge reports the drawn count and says when the roster is capped. That
+  header also carries **Assign to Team**, which switches the shared active
+  team, so the floor, the badge, and the pipeline view all redraw from the
+  team picked there; a member hidden here loses its desk immediately, and a
+  runtime subagent is no
   longer a desk of its own: it still supplies the live tool activity and the
   walking permission prompt that land on a desk whose id it shares. The
   shipped roles are defaults rather than a fixed coding crew: the group header
   carries an add action that opens the member sheet in create mode, and the
   sheet takes name, role/badge, description, skills, a character, an icon, a
   color, and — once a second team exists — the team the member belongs to, so
-  a roster for design or data work reads the same as one for code. Skills are
+  a roster for design or data work reads the same as one for code. In create
+  mode the sheet opens with a **Suggestions** row — the shipped roles this
+  team does not hold yet and the built-in definitions the page passes in,
+  de-duplicated against the roster — and picking one fills every field below;
+  nothing is stored until the user saves. Skills are
   a comma-separated field rendered as mono chips, and the character is picked
-  from the same archetype chips the sub-agent editor offers; until one is
+  from the same archetype chips the sub-agent editor offers — the same list,
+  so the extra styles (Poseidon, Hera, Helios, Metis) are available to a
+  member as they are to a sub-agent; until one is
   picked, the character follows the chosen icon, which is also what the Live
   Office sprite resolves when no character is stored. A row carries the
   member's colored glyph, name, badge, a character badge, the shipped skill id
@@ -529,8 +545,8 @@ system while preserving their different data ownership:
   and the shared enablement switch. Row actions are Edit and an overflow menu: a
   changed shipped role offers Reset to drop its override and return to the
   default, and a user-created role offers Delete, which removes it from the
-  roster. A disabled member stays listed and dimmed, drops out of the chat
-  team strip, and can always be switched back on. Squad rows participate in
+  roster. A disabled member stays listed and dimmed, loses its desk on the
+  Live Office floor, and can always be switched back on. Squad rows participate in
   the page search like every other group.
 - **Pipelines** closes the workspace: every pipeline the user created, each
   followed inline by its cards as numbered rows. The group header creates a

@@ -807,6 +807,7 @@ export function AgentSubagentsPage() {
     const menuKey = `card:${pipeline.id}:${card.id}`;
     const assignee = workspace.members.find((member) => member.id === card.assigneeId);
     const team = workspace.teams.find((entry) => entry.id === card.teamId);
+    const isBlocked = (card.blockedBy?.length ?? 0) > 0;
     return (
       <CapabilityRow
         key={card.id}
@@ -825,9 +826,47 @@ export function AgentSubagentsPage() {
         name={card.title}
         menuOpen={menuFor === menuKey}
         badges={
-          <span className="agent-capability-badge">
-            {assignee ? assignee.name : t("settings.zeusSquad.unassigned")}
-          </span>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <span className="agent-capability-badge">
+              {assignee ? assignee.name : t("settings.zeusSquad.unassigned")}
+            </span>
+            {card.goal ? (
+              <span
+                className="agent-capability-badge"
+                style={{
+                  background: "rgba(59, 130, 246, 0.12)",
+                  borderColor: "rgba(59, 130, 246, 0.3)",
+                  color: "#60a5fa",
+                }}
+              >
+                {card.goal}
+              </span>
+            ) : null}
+            {card.requiresApproval ? (
+              <span
+                className="agent-capability-badge"
+                style={{
+                  background: "rgba(245, 158, 11, 0.12)",
+                  borderColor: "rgba(245, 158, 11, 0.3)",
+                  color: "#fbbf24",
+                }}
+              >
+                {t("settings.zeusSquad.approvalGateBadge")}
+              </span>
+            ) : null}
+            {isBlocked ? (
+              <span
+                className="agent-capability-badge"
+                style={{
+                  background: "rgba(239, 68, 68, 0.12)",
+                  borderColor: "rgba(239, 68, 68, 0.3)",
+                  color: "#f87171",
+                }}
+              >
+                {t("settings.zeusSquad.blockedBadge")} ({card.blockedBy?.length})
+              </span>
+            ) : null}
+          </div>
         }
         description={card.detail || t("settings.noCapabilityDescription")}
         meta={team ? <code>{team.name}</code> : undefined}
@@ -943,7 +982,23 @@ export function AgentSubagentsPage() {
                     </TooltipButton>
                   }
                 />
-                {visibleSquadMembers.map(renderSquadMember)}
+                {visibleSquadMembers.length === 0 && !searching ? (
+                  <CapabilityEmpty
+                    message={`Belum ada squad member di tim "${activeTeamName}". Mulai tambahkan member spesialisasi pertama Anda.`}
+                    icon={<IconUser size={18} />}
+                    action={
+                      <CapabilityButton
+                        variant="primary"
+                        onClick={() => setSquadSheet({ member: null })}
+                      >
+                        <IconPlus size={14} />
+                        {t("settings.zeusSquad.add")}
+                      </CapabilityButton>
+                    }
+                  />
+                ) : (
+                  visibleSquadMembers.map(renderSquadMember)
+                )}
               </>
             ) : null}
 
@@ -1071,6 +1126,11 @@ export function AgentSubagentsPage() {
           pipelineTeamId={
             workspace.pipelines.find((pipeline) => pipeline.id === cardSheet.pipelineId)
               ?.teamId ?? workspace.activeTeamId
+          }
+          otherCards={
+            workspace.pipelines
+              .find((pipeline) => pipeline.id === cardSheet.pipelineId)
+              ?.cards.filter((c) => c.id !== cardSheet.card?.id) ?? []
           }
           onClose={() => setCardSheet(null)}
           onSubmit={(draft) => {

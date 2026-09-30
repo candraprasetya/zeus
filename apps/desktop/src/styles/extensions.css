@@ -978,6 +978,10 @@
   width: min(100%, 480px);
 }
 
+.ext-sheet.is-wide {
+  width: min(100%, 860px);
+}
+
 /* D297: head, body and actions are set apart by spacing, not rules. */
 .ext-sheet-head {
   display: flex;

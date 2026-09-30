@@ -648,6 +648,9 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
         key: card.id,
         title: card.title,
         desc: card.detail,
+        goal: card.goal,
+        requiresApproval: card.requiresApproval,
+        blockedBy: card.blockedBy ?? [],
         member: card.assigneeId ? memberById.get(card.assigneeId) : undefined,
       }))
       .filter((stage) => stage.title)
@@ -658,6 +661,9 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               key: member.id,
               title: member.badge || member.name,
               desc: member.description,
+              goal: undefined,
+              requiresApproval: false,
+              blockedBy: [] as string[],
               member,
             })),
       );
@@ -667,10 +673,9 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
     return {
       name: activePipeline?.name ?? activeTeam?.name ?? "Zeus Squad",
       teamName: activeTeam?.name ?? "Zeus Squad",
-      stages: stages.map((stage, index) => ({
-        ...stage,
-        step: String(index + 1).padStart(2, "0"),
-        status:
+      stages: stages.map((stage, index) => {
+        const isBlocked = stage.blockedBy.length > 0;
+        let status =
           index < currentIndex
             ? isWorking
               ? "Completed"
@@ -679,11 +684,21 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
               ? isWaitingPermission
                 ? "Waiting Permission"
                 : isWorking
-                  ? "Running"
+                  ? stage.requiresApproval
+                    ? "In Review (Approval Gate)"
+                    : "Running"
                   : "Standby"
-              : "Queued",
-        owner: stage.member?.name ?? "Unassigned",
-      })),
+              : "Queued";
+        if (isBlocked && index >= currentIndex) {
+          status = `Blocked (${stage.blockedBy.length})`;
+        }
+        return {
+          ...stage,
+          step: String(index + 1).padStart(2, "0"),
+          status,
+          owner: stage.member?.name ?? "Unassigned",
+        };
+      }),
     };
   }, [squadWorkspace, memberById, squadRoster, activeTeam, isWorking, isWaitingPermission]);
 
@@ -2340,19 +2355,53 @@ export const PixelAgentsOffice = memo(function PixelAgentsOffice({
                         "step-status-chip",
                         stage.status === "Running"
                           ? "is-live"
-                          : stage.status.includes("Waiting")
+                          : stage.status.includes("Waiting") || stage.status.includes("Review")
                             ? "is-warning"
-                            : "is-idle",
+                            : stage.status.includes("Blocked")
+                              ? "is-danger"
+                              : "is-idle",
                       )}
                     >
                       {stage.status}
                     </span>
                   </div>
+                  {stage.goal ? (
+                    <div style={{ margin: "4px 0 2px 0" }}>
+                      <span
+                        style={{
+                          fontSize: "10px",
+                          fontWeight: 600,
+                          padding: "2px 6px",
+                          borderRadius: "4px",
+                          background: "rgba(59, 130, 246, 0.15)",
+                          color: "#60a5fa",
+                          border: "1px solid rgba(59, 130, 246, 0.3)",
+                        }}
+                      >
+                        🎯 {stage.goal}
+                      </span>
+                    </div>
+                  ) : null}
                   <h4 className="step-card-title">{stage.title}</h4>
                   <p className="step-card-desc">{stage.desc}</p>
                   <div className="step-card-scratchpad">
                     <span className="scratchpad-label">Owner:</span>
                     <code className="scratchpad-val">{stage.owner}</code>
+                    {stage.requiresApproval ? (
+                      <span
+                        style={{
+                          marginLeft: "auto",
+                          fontSize: "9px",
+                          fontWeight: 600,
+                          padding: "1px 5px",
+                          borderRadius: "3px",
+                          background: "rgba(245, 158, 11, 0.15)",
+                          color: "#fbbf24",
+                        }}
+                      >
+                        🛡️ Gate
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               ))}

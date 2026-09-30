@@ -24,6 +24,7 @@ import {
 } from "./zeus-squad";
 
 export * from "./zeus-squad";
+export * from "./zeus-squad-templates";
 
 /** Renderer icon component shared by the strip, the panel, and Settings. */
 export type ZeusSquadIcon = typeof IconBot;

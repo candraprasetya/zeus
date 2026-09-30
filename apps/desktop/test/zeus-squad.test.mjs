@@ -272,15 +272,35 @@ test("a team owns its roster and the pipeline the Live Office draws", () => {
     detail: "Sketch the screens",
     teamId,
     assigneeId: memberId,
+    goal: "Revamp Navigation",
+    requiresApproval: true,
   });
   assert.equal(cardId, "card-1");
-  assert.deepEqual(
-    resolveActivePipeline().cards.map((card) => [card.title, card.assigneeId]),
-    [["Wireframe", memberId]],
-  );
+  const card1 = resolveActivePipeline().cards[0];
+  assert.equal(card1.title, "Wireframe");
+  assert.equal(card1.assigneeId, memberId);
+  assert.equal(card1.goal, "Revamp Navigation");
+  assert.equal(card1.requiresApproval, true);
+  assert.deepEqual(card1.blockedBy, []);
 
-  updateSquadPipelineCard(pipelineId, cardId, { title: "Wireframe v2" });
+  // Add dependent card 2 that is blocked by card-1
+  const card2Id = addSquadPipelineCard(pipelineId, {
+    title: "Component Specs",
+    detail: "Tokens and themes",
+    teamId,
+    assigneeId: memberId,
+    goal: "Revamp Navigation",
+    blockedBy: [cardId],
+  });
+  assert.equal(card2Id, "card-2");
+  const card2 = resolveActivePipeline().cards[1];
+  assert.deepEqual(card2.blockedBy, [cardId]);
+
+  updateSquadPipelineCard(pipelineId, cardId, { title: "Wireframe v2", requiresApproval: false });
   assert.equal(resolveActivePipeline().cards[0].title, "Wireframe v2");
+  assert.equal(resolveActivePipeline().cards[0].requiresApproval, false);
+
+  removeSquadPipelineCard(pipelineId, card2Id);
 
   // Deleting the assignee leaves the card, not a dangling id.
   removeZeusSquadMember(memberId);
@@ -441,3 +461,29 @@ test("the member sheet offers built-ins and shipped roles as pre-fills only", as
   assert.match(sheetSrc, /settings\.zeusSquad\.templates/);
   assert.match(sheetSrc, /createZeusSquadMember\(draft\)/);
 });
+
+test("all predefined squad skills have enriched catalog entries with GitHub source repo references", async () => {
+  const templatesModule = await import("../src/features/zeus-squad/zeus-squad-templates.ts");
+  const { PREDEFINED_SKILL_CATEGORIES, SQUAD_SKILL_CATALOG, getSquadSkillDetail } = templatesModule;
+
+  const allCategories = new Set(PREDEFINED_SKILL_CATEGORIES.map((g) => g.category));
+  for (const group of PREDEFINED_SKILL_CATEGORIES) {
+    for (const skillName of group.skills) {
+      const detail = getSquadSkillDetail(skillName);
+      assert.ok(detail, `Skill detail should exist for ${skillName}`);
+      assert.equal(detail.name, skillName);
+      assert.ok(allCategories.has(detail.category), `Category ${detail.category} must be known for ${skillName}`);
+      assert.ok(detail.summary.length > 10, `Summary should be descriptive for ${skillName}`);
+      assert.ok(detail.content.includes("## Purpose & Authority"), `Content should have authoritative section for ${skillName}`);
+      assert.ok(detail.sourceRepo, `Skill ${skillName} must define sourceRepo from popular GitHub repository`);
+      assert.ok(detail.stars, `Skill ${skillName} must declare stars count`);
+    }
+  }
+
+  // Check fallback behavior for custom skill
+  const customDetail = getSquadSkillDetail("Custom Solana Smart Contract");
+  assert.equal(customDetail.category, "Custom Skill");
+  assert.equal(customDetail.name, "Custom Solana Smart Contract");
+  assert.equal(customDetail.sourceRepo, undefined);
+});
+

@@ -140,6 +140,12 @@ export interface SquadPipelineCard {
   detail: string;
   teamId: string;
   assigneeId: string;
+  /** High-level goal or epic this stage/card belongs to (Paperclip Goal Ancestry). */
+  goal?: string;
+  /** If true, advancing past or completing this stage requires human sign-off (Approval Gate). */
+  requiresApproval?: boolean;
+  /** IDs of predecessor cards that must be completed before this card can begin. */
+  blockedBy?: string[];
 }
 
 export interface SquadPipeline {
@@ -182,18 +188,18 @@ export const DEFAULT_ZEUS_SQUAD: readonly ZeusSquadMemberDefinition[] = [
     badge: "Design Tokens & System",
     category: "Design",
     description:
-      "Mengonversi blueprint & wireframe ke Design Tokens bank (Light/Dark mode), skala tipografi, 4/8pt grid, dan komponen siap pakai untuk Compose & SwiftUI.",
+      "Converts wireframes and blueprints into scalable design tokens (Light/Dark themes), typography scales, 4/8pt spacing grids, and production-ready components for Compose & SwiftUI.",
     skillId: "zeus-ui-designer",
     skills: ["Design Tokens", "Compose", "SwiftUI"],
     character: "iris",
     checklist: [
-      "Zero hardcoded color (Wajib semantic token bank)",
-      "Typography scale baku (Display, Headline, Body, Caption)",
-      "8pt/4pt Spacing & Radius grid",
-      "Asset vector & Icon spec siap import",
+      "Zero hardcoded color values (Strict semantic tokens)",
+      "Standardized typography scale (Display, Headline, Body, Caption)",
+      "8pt/4pt Spacing & Radius grid system",
+      "Vector assets & icon specs ready for import",
     ],
     samplePrompt:
-      "Tolong susun token warna semantik dan spesifikasi komponen Compose & SwiftUI untuk fitur: ",
+      "Please generate semantic design tokens and component specs for Compose & SwiftUI for the following feature: ",
     iconId: "palette",
     color: "#06b6d4",
   },
@@ -204,18 +210,18 @@ export const DEFAULT_ZEUS_SQUAD: readonly ZeusSquadMemberDefinition[] = [
     badge: "User Flow & a11y",
     category: "Design",
     description:
-      "Merancang alur perjalanan nasabah, diagram flow interaktif Mermaid, handling 5 state layar (Shimmer, Empty, Partial/Offline 2G, Error), dan kepatuhan a11y WCAG AAA.",
+      "Designs end-to-end customer journeys, interactive Mermaid flow diagrams, 5-state UI matrices (Shimmer, Empty, Offline 2G, Error, Populated), and enforces WCAG AAA accessibility compliance.",
     skillId: "zeus-ux-designer",
     skills: ["User Flow", "Mermaid", "WCAG AAA"],
     character: "athena",
     checklist: [
-      "5 Interactive States (Shimmer, Populated, Empty, Offline, Error)",
-      "Diagram alur Mermaid (Happy path & Negative branch)",
-      "Touch target min 48x48dp (Android) & 44x44pt (iOS)",
-      "Screen Reader label accessibility (a11y)",
+      "5 Interactive UI States (Shimmer, Populated, Empty, Offline, Error)",
+      "Mermaid sequence and flowchart diagrams (Happy & negative branches)",
+      "Minimum touch targets: 48x48dp (Android) & 44x44pt (iOS)",
+      "Screen reader accessibility labels (a11y audit)",
     ],
     samplePrompt:
-      "Rancang Customer Journey dan matriks 5 state interaktif lengkap dengan diagram Mermaid untuk fitur: ",
+      "Design a customer journey flow and a 5-state interactive UI matrix with Mermaid diagrams for the following feature: ",
     iconId: "person",
     color: "#8b5cf6",
   },
@@ -226,19 +232,19 @@ export const DEFAULT_ZEUS_SQUAD: readonly ZeusSquadMemberDefinition[] = [
     badge: "Android Native / Kotlin",
     category: "Mobile Dev",
     description:
-      "Spesialis Android Native Kotlin, Clean Architecture (Domain, Data, Presentation), Coroutines StateFlow, Hilt DI, Room DB, enkripsi AndroidKeyStore, dan otomatisasi Android via Zeus Mobile MCP.",
+      "Specialist in Android Native Kotlin, Clean Architecture (Domain, Data, Presentation), Coroutines StateFlow, Hilt DI, Room DB, AndroidKeyStore encryption, and mobile device automation via Zeus Mobile MCP.",
     skillId: "zeus-squad",
     skills: ["Kotlin", "Compose", "Hilt", "Zeus Mobile MCP"],
     character: "hermes",
     checklist: [
-      "Clean Architecture (Domain/Data/Presentation)",
-      "Jetpack Compose UI dengan BankTheme tokens",
+      "Clean Architecture layers (Domain / Data / Presentation)",
+      "Jetpack Compose UI adhering to design system tokens",
       "Coroutines & StateFlow unidirectional data flow",
       "AndroidKeyStore & FLAG_SECURE window protection",
-      "Otomatisasi pengujian via Zeus Mobile MCP (ADB/Emulator)",
+      "Automated testing execution via Zeus Mobile MCP (ADB/Emulator)",
     ],
     samplePrompt:
-      "Evan, tolong implementasikan modul Android Native Kotlin dengan Clean Architecture untuk fitur: ",
+      "Evan, please implement an Android Native Kotlin module following Clean Architecture for the following feature: ",
     iconId: "bot",
     color: "#10b981",
   },
@@ -249,19 +255,19 @@ export const DEFAULT_ZEUS_SQUAD: readonly ZeusSquadMemberDefinition[] = [
     badge: "iOS Native / SwiftUI",
     category: "Mobile Dev",
     description:
-      "Spesialis iOS Native Swift, Clean Architecture, SwiftUI declarative views, Swift Concurrency (async/await), Combine/Observation, Keychain Services, dan otomatisasi iOS via Zeus Mobile MCP.",
+      "Specialist in iOS Native Swift, Clean Architecture, SwiftUI declarative views, Swift Concurrency (async/await), Combine/Observation, Keychain Services, and iOS automation via Zeus Mobile MCP.",
     skillId: "zeus-squad",
     skills: ["Swift", "SwiftUI", "Concurrency", "Zeus Mobile MCP"],
     character: "hephaestus",
     checklist: [
-      "Clean Architecture (Domain/Data/Presentation)",
-      "SwiftUI declarative views dengan ThemeModifier",
-      "Swift Concurrency (async/await & Task lifecycle)",
+      "Clean Architecture layers (Domain / Data / Presentation)",
+      "Declarative SwiftUI views with ThemeModifiers",
+      "Swift Concurrency (async/await & structured task lifecycles)",
       "Keychain Services & background snapshot masking",
-      "Otomatisasi pengujian via Zeus Mobile MCP (Simulator/Device)",
+      "Automated test execution via Zeus Mobile MCP (Simulator/Device)",
     ],
     samplePrompt:
-      "Candra, tolong implementasikan modul iOS Native SwiftUI dengan Clean Architecture untuk fitur: ",
+      "Candra, please implement an iOS Native SwiftUI module with Clean Architecture for the following feature: ",
     iconId: "bot",
     color: "#3b82f6",
   },
@@ -272,18 +278,18 @@ export const DEFAULT_ZEUS_SQUAD: readonly ZeusSquadMemberDefinition[] = [
     badge: "OWASP MASVS & PCI-DSS",
     category: "Quality & Security",
     description:
-      "Audit kepatuhan standar bank PCI-DSS & MASVS: Keystore/Keychain, Certificate Pinning, Anti-Root/Jailbreak, Anti-tamper, memory wipe, dan zero plain-text logging.",
+      "Performs security audits adhering to OWASP MASVS and banking PCI-DSS standards: Keystore/Keychain, Certificate Pinning, Anti-Root/Jailbreak, anti-tampering, and zero plain-text logging.",
     skillId: "zeus-security",
     skills: ["MASVS", "Pinning", "Keystore"],
     character: "artemis",
     checklist: [
-      "MASVS-STORAGE (No plain credentials, Hardware Keystore/Keychain)",
+      "MASVS-STORAGE (Hardware Keystore/Keychain, no plaintext secrets)",
       "MASVS-CRYPTO (AES-GCM, Bcrypt $2b$, Argon2id)",
       "MASVS-NETWORK (TLS 1.3 & Certificate Pinning)",
-      "Anti-Root / Jailbreak & Memory Sensitive Data Wipe",
+      "Anti-Root / Jailbreak detection & sensitive memory wiping",
     ],
     samplePrompt:
-      "Audit celah keamanan arsitektur, proteksi keystore/keychain, dan sertifikasi MASVS untuk kode berikut: ",
+      "Audit the security architecture, Keystore/Keychain protection, and MASVS compliance for the following code: ",
     iconId: "shield",
     color: "#ef4444",
   },
@@ -294,18 +300,18 @@ export const DEFAULT_ZEUS_SQUAD: readonly ZeusSquadMemberDefinition[] = [
     badge: "BDD & Data Dictionary",
     category: "Quality & Security",
     description:
-      "Memvalidasi kesesuaian implementasi terhadap Excel Data Dictionary & Blueprint, BDD Gherkin scenarios, skenario boundary testing, dan resilient error handling.",
+      "Validates implementations against Data Dictionaries, authored BDD Gherkin test scenarios, boundary value testing, and resilient failure recovery paths.",
     skillId: "zeus-qa",
     skills: ["Gherkin", "Boundary", "Data Dictionary"],
     character: "apollo",
     checklist: [
-      "Validasi field & regex terhadap Excel Data Dictionary",
-      "BDD Gherkin scenario (Given-When-Then)",
-      "Boundary Value Testing (Saldo 0, max limit, invalid chars)",
-      "Simulasi Timeout 504 & Session Expiry",
+      "Field & regex validation against the Data Dictionary",
+      "BDD Gherkin scenarios (Given-When-Then)",
+      "Boundary Value Testing (Zero balance, max thresholds, invalid characters)",
+      "Timeout 504 & session expiration simulation",
     ],
     samplePrompt:
-      "Buatkan skenario pengujian BDD Gherkin dan test cases komprehensif berdasarkan Data Dictionary untuk fitur: ",
+      "Write comprehensive BDD Gherkin test suites and test cases based on the Data Dictionary for the following feature: ",
     iconId: "checks",
     color: "#f59e0b",
   },
@@ -500,6 +506,9 @@ export interface SquadMemberTemplate {
   character?: string;
   iconId: ZeusSquadIconId;
   color: string;
+  prompt?: string;
+  samplePrompt?: string;
+  checklist?: string[];
 }
 
 /**
@@ -526,6 +535,8 @@ export function resolveSquadMemberTemplates(
     character: role.character,
     iconId: role.iconId,
     color: role.color,
+    samplePrompt: role.samplePrompt,
+    checklist: [...(role.checklist || [])],
   }));
 
   const suggestions: SquadMemberTemplate[] = [];
@@ -826,6 +837,9 @@ export interface SquadPipelineCardDraft {
   detail?: string;
   teamId?: string;
   assigneeId?: string;
+  goal?: string;
+  requiresApproval?: boolean;
+  blockedBy?: string[];
 }
 
 /**
@@ -839,6 +853,7 @@ function coercePipeline(store: ZeusSquadStore, pipeline: SquadPipeline): SquadPi
     ...DEFAULT_ZEUS_SQUAD.map((member) => member.id),
     ...store.custom.map((member) => member.id),
   ]);
+  const knownCardIds = new Set((pipeline.cards ?? []).map((card) => card.id));
   return {
     ...pipeline,
     teamId,
@@ -846,6 +861,11 @@ function coercePipeline(store: ZeusSquadStore, pipeline: SquadPipeline): SquadPi
       ...card,
       teamId: teams.some((team) => team.id === card.teamId) ? card.teamId : teamId,
       assigneeId: knownMembers.has(card.assigneeId) ? card.assigneeId : "",
+      goal: card.goal ? card.goal.trim() : undefined,
+      requiresApproval: Boolean(card.requiresApproval),
+      blockedBy: Array.isArray(card.blockedBy)
+        ? card.blockedBy.filter((id) => knownCardIds.has(id) && id !== card.id)
+        : [],
     })),
   };
 }
@@ -952,6 +972,9 @@ export function addSquadPipelineCard(
         ? draft.teamId
         : pipelines[index].teamId,
     assigneeId: draft.assigneeId?.trim() ?? "",
+    goal: draft.goal?.trim() || undefined,
+    requiresApproval: Boolean(draft.requiresApproval),
+    blockedBy: Array.isArray(draft.blockedBy) ? draft.blockedBy.filter(Boolean) : [],
   });
   pipelines[index] = { ...pipelines[index], cards };
   store.pipelines = pipelines;
@@ -982,6 +1005,17 @@ export function updateSquadPipelineCard(
         ? draft.teamId
         : current.teamId,
     assigneeId: draft.assigneeId ?? current.assigneeId,
+    goal: draft.goal !== undefined ? draft.goal.trim() || undefined : current.goal,
+    requiresApproval:
+      draft.requiresApproval !== undefined
+        ? Boolean(draft.requiresApproval)
+        : current.requiresApproval,
+    blockedBy:
+      draft.blockedBy !== undefined
+        ? Array.isArray(draft.blockedBy)
+          ? draft.blockedBy.filter((b) => b !== cardId)
+          : []
+        : current.blockedBy,
   };
   pipelines[index] = { ...pipelines[index], cards };
   store.pipelines = pipelines;

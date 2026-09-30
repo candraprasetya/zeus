@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Kind</key>
+    <string>Xcode.IDEFoundation.TextSubstitutionFileTemplateKind</string>
+    <key>Description</key>
+    <string>Basic SwiftUI MVVM Model</string>
+    <key>Summary</key>
+    <string>MVVM Model</string>
+    <key>SortOrder</key>
+    <string>3</string>
+    <key>Destination</key>
+    <string>group</string>
+    <key>Definitions</key>
+    <dict>
+        <key>___FILEBASENAME___Model.swift</key>
+        <dict>
+            <key>Path</key>
+            <string>___FILEBASENAME___Model.swift</string>
+        </dict>
+    </dict>
+</dict>
+</plist>
